@@ -1,0 +1,1195 @@
+/* ==========================================================================
+   product-custom.css
+   Styles for sections/main-product-custom.liquid
+   Everything is scoped under .pdp-custom so the rest of the theme is untouched.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Design tokens
+   -------------------------------------------------------------------------- */
+
+.pdp-custom {
+  /* Palette */
+  --navy: #16295c;
+  --navy-deep: #0f1e45;
+  --orange: #f26a21;
+  --orange-soft: #fdf0e8;
+  --cream: #f7f3ea;
+  --blue-wash: linear-gradient(180deg, #edf3fb 0%, #f7f3ea 100%);
+  --ink: #1a1a2e;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --white: #ffffff;
+
+  /* Support colours (derived, not part of the brand token list) */
+  --green: #1f9d55;
+  --green-soft: #e6f6ed;
+  --blue-tint: #eef4fd;
+  --yellow: #f5b301;
+  --grey-soft: #f3f4f6;
+
+  /* Shape */
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+  --shadow: 0 4px 24px rgba(22, 41, 92, 0.08);
+  --shadow-lift: 0 12px 40px rgba(22, 41, 92, 0.14);
+
+  /* Layout */
+  --container: 1180px;
+  --gutter: 24px;
+
+  /* Type */
+  --font-head: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-body: var(--font-head);
+
+  font-family: var(--font-body);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* --------------------------------------------------------------------------
+   2. Scoped base
+   -------------------------------------------------------------------------- */
+
+.pdp-custom *,
+.pdp-custom *::before,
+.pdp-custom *::after {
+  box-sizing: border-box;
+}
+
+/* :where() keeps these defaults at zero specificity so any component rule
+   that sets an explicit width/height wins without needing !important. */
+:where(.pdp-custom) :where(img, video, svg) {
+  max-width: 100%;
+}
+
+:where(.pdp-custom) :where(img, video) {
+  display: block;
+  height: auto;
+}
+
+:where(.pdp-custom) :where(p) {
+  margin: 0;
+}
+
+/* font-size is inherited on purpose: every heading takes its size from a
+   component class, so no UA default (h2 = 1.5em) leaks into the design. */
+:where(.pdp-custom) :where(h1, h2, h3, h4) {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--navy);
+}
+
+:where(.pdp-custom) :where(ul) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.pdp-custom) :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.pdp-custom) :where(a) {
+  color: inherit;
+}
+
+/* Visible focus everywhere — never remove the outline, only restyle it. */
+.pdp-custom :focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pdp-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   3. Layout primitives
+   -------------------------------------------------------------------------- */
+
+.pdp-container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.pdp-section {
+  padding-block: 72px;
+}
+
+.pdp-section--tight {
+  padding-block: 48px;
+}
+
+/* Grid children must be allowed to shrink or long words force overflow. */
+.pdp-custom [class*="pdp-grid"] > * {
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------------------
+   4. Typography helpers
+   -------------------------------------------------------------------------- */
+
+.pdp-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The leading orange dash called for in the brief. */
+.pdp-eyebrow::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 18px;
+  height: 2px;
+  background: var(--orange);
+}
+
+.pdp-eyebrow--center {
+  justify-content: center;
+}
+
+.pdp-eyebrow--light {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.pdp-title {
+  font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.75rem);
+}
+
+.pdp-title--sm {
+  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.125rem);
+}
+
+.pdp-lead {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.pdp-head-center {
+  max-width: 720px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+/* Heading with an inline orange dash, as used on the UGC / steps titles. */
+.pdp-title--dashed::before {
+  content: "—";
+  margin-right: 12px;
+  color: var(--orange);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   5. Buttons
+   -------------------------------------------------------------------------- */
+
+.pdp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 28px;
+  min-height: 52px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-head);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.pdp-btn:hover {
+  transform: translateY(-1px);
+}
+
+.pdp-btn:active {
+  transform: translateY(0);
+}
+
+.pdp-btn--navy {
+  background: var(--navy);
+  color: var(--white);
+  box-shadow: 0 6px 18px rgba(22, 41, 92, 0.22);
+}
+
+.pdp-btn--navy:hover {
+  background: var(--navy-deep);
+}
+
+.pdp-btn--orange {
+  background: var(--orange);
+  color: var(--white);
+  box-shadow: 0 6px 18px rgba(242, 106, 33, 0.3);
+}
+
+.pdp-btn--orange:hover {
+  background: #e05c15;
+}
+
+.pdp-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+.pdp-btn--lg {
+  min-height: 56px;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.pdp-btn[disabled],
+.pdp-btn[aria-disabled="true"] {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* Loading state: swap the label for a spinner without changing button size. */
+.pdp-btn.is-loading {
+  pointer-events: none;
+  position: relative;
+  color: transparent;
+}
+
+.pdp-btn.is-loading > * {
+  visibility: hidden;
+}
+
+.pdp-btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pdp-spin 0.7s linear infinite;
+}
+
+@keyframes pdp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pdp-btn__arrow {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   6. Stars
+   Two stacked rows; the filled row is clipped to --pdp-star-pct.
+   -------------------------------------------------------------------------- */
+
+.pdp-stars {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.pdp-stars__row {
+  display: flex;
+  gap: 2px;
+}
+
+.pdp-stars__row svg {
+  flex: 0 0 auto;
+  width: var(--pdp-star-size, 15px);
+  height: var(--pdp-star-size, 15px);
+}
+
+.pdp-stars__row--empty {
+  color: var(--line);
+}
+
+.pdp-stars__row--full {
+  position: absolute;
+  inset: 0;
+  width: var(--pdp-star-pct, 100%);
+  overflow: hidden;
+  color: var(--yellow);
+}
+
+.pdp-stars--green .pdp-stars__row--full {
+  color: #00b67a;
+}
+
+/* --------------------------------------------------------------------------
+   7. Icon helpers
+   -------------------------------------------------------------------------- */
+
+.pdp-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+/* Round icon chip used by the quiz, trust and guarantee cards. */
+.pdp-icon-chip {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--blue-tint);
+  color: var(--navy);
+}
+
+.pdp-icon-chip--orange {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+.pdp-icon-chip svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Small blue circled check used by bullets and pills. */
+.pdp-check {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--blue-tint);
+  color: var(--navy);
+}
+
+.pdp-check svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* ==========================================================================
+   BLOCK 1 — Announcement bar
+   ========================================================================== */
+
+.pdp-announce {
+  background: var(--navy);
+  color: var(--white);
+}
+
+.pdp-announce__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  padding-block: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.pdp-announce__sep {
+  opacity: 0.45;
+}
+
+/* ==========================================================================
+   BLOCK 2 — Hero
+   ========================================================================== */
+
+.pdp-hero {
+  background: var(--blue-wash);
+  padding-block: 40px 64px;
+}
+
+.pdp-hero__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+  align-items: start;
+}
+
+/* ---- 2a. Gallery ---- */
+
+.pdp-gallery__stage {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.pdp-gallery__media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+}
+
+.pdp-gallery__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Only the active slide is shown; the rest stay in the DOM for instant swaps. */
+.pdp-gallery__media[hidden] {
+  display: none;
+}
+
+.pdp-gallery__placeholder {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1 / 1;
+  background: var(--grey-soft);
+  color: var(--muted);
+}
+
+.pdp-gallery__placeholder svg {
+  width: 30%;
+  height: auto;
+  opacity: 0.35;
+}
+
+/* Floating review badge over the bottom of the main image. */
+.pdp-gallery__badge {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 28px);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  box-shadow: 0 4px 14px rgba(15, 30, 69, 0.16);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.pdp-gallery__badge-logo {
+  width: auto;
+  height: 15px;
+}
+
+/* ---- 2b. Thumbnails ---- */
+
+.pdp-thumbs {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* position:relative so any absolutely-positioned child (e.g. a visually
+   hidden label) resolves against the button instead of escaping the
+   horizontal scroll container and widening the document. */
+.pdp-thumbs__btn {
+  position: relative;
+  flex: 0 0 auto;
+  width: 62px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--white);
+  overflow: hidden;
+  line-height: 0;
+  transition: border-color 0.16s ease;
+}
+
+.pdp-thumbs__btn img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.pdp-thumbs__btn[aria-selected="true"] {
+  border-color: var(--orange);
+}
+
+/* ---- 2c. Engagement banner ---- */
+
+.pdp-engage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.pdp-engage__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--blue-tint);
+  color: var(--navy);
+}
+
+.pdp-engage__icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.pdp-engage__text {
+  flex: 1 1 auto;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.pdp-engage__text strong {
+  font-weight: 700;
+}
+
+.pdp-engage__info {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--muted);
+}
+
+.pdp-engage__info svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- 2d. Product info column ---- */
+
+.pdp-info__title {
+  font-size: clamp(1.6rem, 1.1rem + 1.9vw, 2.25rem);
+}
+
+.pdp-info__rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pdp-info__rating-link {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pdp-bullets {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.pdp-bullets li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pdp-bullets .pdp-check {
+  margin-top: 1px;
+}
+
+/* ---- 2e. Plan selector ---- */
+
+.pdp-plans {
+  margin-top: 24px;
+}
+
+.pdp-plans__group {
+  display: grid;
+  gap: 12px;
+}
+
+.pdp-plan {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+/* Selected card: 2px orange + shadow. The border width is constant so the
+   card never shifts by 1px when selection changes. */
+.pdp-plan {
+  border-width: 2px;
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.pdp-plan[data-selected="true"] {
+  border-color: var(--orange);
+  box-shadow: var(--shadow);
+}
+
+.pdp-plan__head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+}
+
+/* Transparent overlay carrying role="radio". It makes the whole head a click
+   and keyboard target while leaving the tooltip button above it clickable. */
+.pdp-plan__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  appearance: none;
+}
+
+.pdp-plan__radio {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  transition: border-color 0.16s ease;
+}
+
+.pdp-plan__radio::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--navy);
+  transform: scale(0);
+  transition: transform 0.16s ease;
+}
+
+.pdp-plan[data-selected="true"] .pdp-plan__radio {
+  border-color: var(--navy);
+}
+
+.pdp-plan[data-selected="true"] .pdp-plan__radio::after {
+  transform: scale(1);
+}
+
+.pdp-plan__labels {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pdp-plan__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.pdp-plan__sub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pdp-plan__price {
+  flex: 0 0 auto;
+  text-align: right;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.pdp-plan__price-was {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* Navy "X% cheaper" badge, top-right of the subscription card. */
+.pdp-plan__badge {
+  position: absolute;
+  top: 0;
+  right: 14px;
+  transform: translateY(-50%);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--navy);
+  color: var(--white);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Tooltip trigger next to the plan name. */
+.pdp-tip {
+  position: relative;
+  z-index: 2;
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+}
+
+.pdp-tip svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* display:none rather than visibility:hidden — a hidden-but-laid-out bubble
+   still contributes to document scroll width and breaks the 375px budget. */
+.pdp-tip__bubble {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 3;
+  width: max-content;
+  max-width: min(220px, calc(100vw - 40px));
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--navy);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  transform: translateX(-50%);
+}
+
+.pdp-tip[aria-expanded="true"] .pdp-tip__bubble,
+.pdp-tip:hover .pdp-tip__bubble {
+  display: block;
+  animation: pdp-fade-in 0.14s ease both;
+}
+
+@keyframes pdp-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The engagement banner's info button sits flush right, so its bubble is
+   anchored to the right edge instead of being centred on the trigger. */
+.pdp-engage__info .pdp-tip__bubble {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+/* ---- 2f. Plan body: what's in the order + frequency ---- */
+
+.pdp-plan__body {
+  padding: 0 18px 18px;
+}
+
+.pdp-includes {
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--blue-tint);
+}
+
+.pdp-includes__title {
+  margin: 0 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pdp-includes__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pdp-include {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pdp-include + .pdp-include {
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+
+.pdp-include__img {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--white);
+}
+
+.pdp-include__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.pdp-include__badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--navy);
+  color: var(--white);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.pdp-include__badge--orange {
+  background: var(--orange);
+}
+
+/* Frequency header row */
+.pdp-freq__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pdp-freq__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pdp-freq__help {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pdp-freq__help svg {
+  width: 11px;
+  height: 11px;
+  transition: transform 0.2s ease;
+}
+
+.pdp-freq__help[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* Collapsible help panel */
+.pdp-collapse {
+  overflow: hidden;
+  height: 0;
+  transition: height 0.28s ease;
+}
+
+.pdp-collapse__inner {
+  padding-top: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* Segmented frequency buttons */
+.pdp-freq__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.pdp-freq__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  text-align: left;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.pdp-freq__btn[aria-checked="true"] {
+  border-color: var(--orange);
+  background: var(--orange-soft);
+}
+
+.pdp-freq__btn-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pdp-freq__name {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--navy);
+}
+
+.pdp-freq__save {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--blue-tint);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.pdp-freq__btn[aria-checked="true"] .pdp-freq__save {
+  background: rgba(242, 106, 33, 0.16);
+  color: #b8480d;
+}
+
+.pdp-freq__icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--navy);
+  opacity: 0.55;
+}
+
+/* ---- 2g. Add to cart + reassurance ---- */
+
+.pdp-atc {
+  margin-top: 18px;
+}
+
+.pdp-atc__error {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdecec;
+  color: #a12020;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pdp-atc__error[hidden] {
+  display: none;
+}
+
+.pdp-reassure {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+
+.pdp-reassure li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.pdp-reassure svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--orange);
+}
+
+/* ---- 2h. FAQ accordion ---- */
+
+.pdp-faq {
+  margin-top: 26px;
+}
+
+.pdp-faq__list {
+  display: grid;
+  gap: 8px;
+}
+
+.pdp-faq__item {
+  border-radius: 12px;
+  background: var(--white);
+  overflow: hidden;
+}
+
+.pdp-faq__trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.pdp-faq__trigger svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.24s ease;
+}
+
+.pdp-faq__trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.pdp-faq__panel .pdp-collapse__inner {
+  padding: 0 16px 16px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — hero
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 1024px) {
+  .pdp-hero__grid {
+    gap: 28px;
+  }
+
+  .pdp-section {
+    padding-block: 56px;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .pdp-custom {
+    --gutter: 20px;
+  }
+
+  .pdp-section {
+    padding-block: 44px;
+  }
+
+  .pdp-section--tight {
+    padding-block: 32px;
+  }
+
+  .pdp-hero {
+    padding-block: 24px 44px;
+  }
+
+  .pdp-hero__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .pdp-announce__inner {
+    font-size: 10px;
+  }
+
+  .pdp-reassure {
+    justify-content: flex-start;
+  }
+
+  .pdp-freq__options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdp-custom *,
+  .pdp-custom *::before,
+  .pdp-custom *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
