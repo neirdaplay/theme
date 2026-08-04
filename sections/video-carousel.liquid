@@ -1,0 +1,319 @@
+{% comment %}
+  video-carousel.liquid
+  Standalone vertical-video carousel with a centred heading.
+  Assets: assets/video-carousel.css, assets/video-carousel.js
+{% endcomment %}
+
+{{ 'video-carousel.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'video-carousel.js' | asset_url }}" defer></script>
+
+{%- liquid
+  assign s = section.settings
+  assign video_blocks = section.blocks | where: 'type', 'video'
+  assign preload_mode = 'none'
+  if s.autoplay_in_view
+    assign preload_mode = 'metadata'
+  endif
+-%}
+
+{%- capture icon_play -%}<svg class="vcar__icon--play" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M6.4 3.7a1 1 0 011.5-.87l8.2 5.3a1 1 0 010 1.74l-8.2 5.3A1 1 0 016.4 14.3z"/></svg>{%- endcapture -%}
+{%- capture icon_pause -%}<svg class="vcar__icon--pause" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><rect x="5" y="3.6" width="3.6" height="12.8" rx="1.2"/><rect x="11.4" y="3.6" width="3.6" height="12.8" rx="1.2"/></svg>{%- endcapture -%}
+{%- capture icon_heart -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 17.2s-6.7-4.2-6.7-8.6A3.8 3.8 0 0110 6.1a3.8 3.8 0 016.7 2.5c0 4.4-6.7 8.6-6.7 8.6z"/></svg>{%- endcapture -%}
+{%- capture icon_muted -%}<svg class="vcar__icon--on" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7.6h2.6L9.4 4.4v11.2L5.6 12.4H3z" fill="currentColor" stroke="none"/><path d="M13 7.6l4 4.8M17 7.6l-4 4.8"/></svg>{%- endcapture -%}
+{%- capture icon_unmuted -%}<svg class="vcar__icon--off" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7.6h2.6L9.4 4.4v11.2L5.6 12.4H3z" fill="currentColor" stroke="none"/><path d="M12.6 7.2a4 4 0 010 5.6M15 5a7 7 0 010 10"/></svg>{%- endcapture -%}
+
+<div
+  class="vcar"
+  id="vcar-{{ section.id }}"
+  data-vcar-root
+  data-vcar-autoplay="{{ s.autoplay_in_view }}"
+  data-label-tone="{{ s.label_tone }}"
+  style="
+    --vcar-bg: {{ s.color_bg }};
+    --vcar-navy: {{ s.color_title }};
+    --vcar-orange: {{ s.color_accent }};
+    --vcar-card-w: {{ s.card_width }}px;
+    --vcar-gap: {{ s.card_gap }}px;
+    --vcar-radius: {{ s.card_radius }}px;
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+  "
+>
+  <div class="vcar__inner">
+    {%- if s.title != blank or s.subtitle != blank -%}
+      <div class="vcar__head">
+        {%- if s.title != blank -%}
+          <h2 class="vcar__title">
+            {%- if s.show_dash -%}
+              <span class="vcar__dash" aria-hidden="true">—</span>
+            {%- endif -%}
+            {{ s.title | escape }}
+          </h2>
+        {%- endif -%}
+        {%- if s.subtitle != blank -%}
+          <div class="vcar__subtitle">{{ s.subtitle }}</div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    <div class="vcar__viewport">
+      {%- if video_blocks.size > 0 -%}
+        <div
+          class="vcar__track"
+          data-vcar-track
+          role="group"
+          aria-roledescription="{{ s.carousel_role_label }}"
+          aria-label="{{ s.carousel_label }}"
+          tabindex="0"
+        >
+          {%- for block in video_blocks -%}
+            {%- liquid
+              assign b = block.settings
+              assign video_obj = b.video
+
+              comment
+                Poster priority: explicit image, then the video's own preview.
+              endcomment
+              assign poster_img = b.poster
+              if poster_img == blank
+                assign poster_img = video_obj.preview_image
+              endif
+
+              assign has_source = false
+              if video_obj != blank or b.video_url != blank
+                assign has_source = true
+              endif
+            -%}
+
+            <article class="vcar__card" data-vcar-card {{ block.shopify_attributes }}>
+              {%- if has_source -%}
+                <video
+                  class="vcar__video"
+                  data-vcar-video
+                  width="720"
+                  height="1280"
+                  {% if poster_img != blank %}poster="{{ poster_img | image_url: width: 720 }}"{% endif %}
+                  preload="{{ preload_mode }}"
+                  playsinline
+                  muted
+                  {% if s.loop_video %}loop{% endif %}
+                  aria-label="{{ b.label | default: s.carousel_label | escape }}"
+                >
+                  {%- if video_obj != blank -%}
+                    {%- for source in video_obj.sources -%}
+                      {%- if source.format == 'mp4' -%}
+                        <source src="{{ source.url }}" type="{{ source.mime_type }}">
+                      {%- endif -%}
+                    {%- endfor -%}
+                  {%- elsif b.video_url != blank -%}
+                    <source src="{{ b.video_url }}" type="video/mp4">
+                  {%- endif -%}
+                </video>
+              {%- elsif poster_img != blank -%}
+                {%- liquid
+                  assign poster_h = 720
+                  if poster_img.aspect_ratio > 0
+                    assign poster_h = 720 | divided_by: poster_img.aspect_ratio | round
+                  endif
+                -%}
+                {{
+                  poster_img
+                  | image_url: width: 720
+                  | image_tag:
+                    width: 720,
+                    height: poster_h,
+                    widths: '300,450,600,720',
+                    sizes: '(min-width: 768px) 280px, 72vw',
+                    loading: 'lazy',
+                    alt: poster_img.alt
+                }}
+              {%- else -%}
+                <div class="vcar__media vcar__placeholder">
+                  {{ 'image' | placeholder_svg_tag }}
+                </div>
+              {%- endif -%}
+
+              {%- if s.show_scrim -%}
+                <span class="vcar__scrim" aria-hidden="true"></span>
+              {%- endif -%}
+
+              {%- if s.show_labels and b.label != blank -%}
+                <span class="vcar__label">{{ b.label }}</span>
+              {%- endif -%}
+
+              {%- if s.show_play and has_source -%}
+                <button
+                  type="button"
+                  class="vcar__play"
+                  data-vcar-play
+                  aria-label="{{ s.label_play }}"
+                  data-label-play="{{ s.label_play | escape }}"
+                  data-label-pause="{{ s.label_pause | escape }}"
+                >
+                  {{ icon_play }}
+                  {{ icon_pause }}
+                </button>
+              {%- endif -%}
+
+              {%- if s.show_likes and b.likes != blank -%}
+                <span class="vcar__likes">
+                  {{ icon_heart }}
+                  <span>{{ b.likes }}</span>
+                </span>
+              {%- endif -%}
+
+              {%- if s.show_sound and has_source -%}
+                <button
+                  type="button"
+                  class="vcar__sound"
+                  data-vcar-sound
+                  data-muted="true"
+                  aria-pressed="true"
+                  aria-label="{{ s.label_unmute }}"
+                  data-label-unmute="{{ s.label_unmute | escape }}"
+                  data-label-mute="{{ s.label_mute | escape }}"
+                >
+                  {{ icon_muted }}
+                  {{ icon_unmuted }}
+                </button>
+              {%- endif -%}
+            </article>
+          {%- endfor -%}
+        </div>
+
+        {%- if s.show_arrows -%}
+          <button
+            type="button"
+            class="vcar__nav vcar__nav--prev"
+            data-vcar-prev
+            aria-label="{{ s.label_prev }}"
+            hidden
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3L5 8l5 5"/></svg>
+          </button>
+          <button
+            type="button"
+            class="vcar__nav vcar__nav--next"
+            data-vcar-next
+            aria-label="{{ s.label_next }}"
+            hidden
+          >
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3l5 5-5 5"/></svg>
+          </button>
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Carrousel vidéo",
+  "tag": "section",
+  "class": "video-carousel-section",
+  "max_blocks": 12,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Titre"
+    },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Vois et ressens la différence" },
+    { "type": "checkbox", "id": "show_dash", "label": "Afficher le tiret orange avant le titre", "default": true },
+    { "type": "richtext", "id": "subtitle", "label": "Sous-titre (optionnel)" },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond de section", "default": "#F7F3EA" },
+    { "type": "color", "id": "color_title", "label": "Titre", "default": "#16295C" },
+    { "type": "color", "id": "color_accent", "label": "Accent (tiret, focus)", "default": "#F26A21" },
+
+    {
+      "type": "header",
+      "content": "Cartes"
+    },
+    { "type": "range", "id": "card_width", "label": "Largeur d'une carte", "min": 180, "max": 380, "step": 4, "unit": "px", "default": 268 },
+    { "type": "range", "id": "card_gap", "label": "Espace entre les cartes", "min": 8, "max": 48, "step": 2, "unit": "px", "default": 20 },
+    { "type": "range", "id": "card_radius", "label": "Arrondi des coins", "min": 0, "max": 36, "step": 2, "unit": "px", "default": 20 },
+
+    {
+      "type": "header",
+      "content": "Éléments affichés"
+    },
+    { "type": "checkbox", "id": "show_labels", "label": "Étiquettes en haut à gauche", "default": true },
+    {
+      "type": "select",
+      "id": "label_tone",
+      "label": "Fond des étiquettes",
+      "info": "Passe en sombre si tes vidéos sont très claires en haut.",
+      "options": [
+        { "value": "light", "label": "Clair translucide" },
+        { "value": "dark", "label": "Sombre translucide" }
+      ],
+      "default": "light"
+    },
+    { "type": "checkbox", "id": "show_play", "label": "Bouton de lecture", "default": true },
+    { "type": "checkbox", "id": "show_likes", "label": "Compteur de likes", "default": true },
+    { "type": "checkbox", "id": "show_sound", "label": "Bouton de son", "default": true },
+    { "type": "checkbox", "id": "show_scrim", "label": "Dégradé de lisibilité en bas", "default": true },
+    { "type": "checkbox", "id": "show_arrows", "label": "Flèches de navigation", "info": "Visibles uniquement quand le carrousel dépasse la largeur disponible.", "default": true },
+
+    {
+      "type": "header",
+      "content": "Lecture"
+    },
+    { "type": "checkbox", "id": "loop_video", "label": "Lire en boucle", "default": true },
+    { "type": "checkbox", "id": "autoplay_in_view", "label": "Lancer automatiquement à l'affichage", "info": "Les vidéos démarrent sans son, comme l'exigent les navigateurs.", "default": false },
+
+    {
+      "type": "header",
+      "content": "Espacements"
+    },
+    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 140, "step": 4, "unit": "px", "default": 80 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 140, "step": 4, "unit": "px", "default": 80 },
+
+    {
+      "type": "header",
+      "content": "Accessibilité"
+    },
+    { "type": "text", "id": "carousel_label", "label": "Nom du carrousel", "default": "Vidéos clients" },
+    { "type": "text", "id": "carousel_role_label", "label": "Type de composant", "default": "Carrousel" },
+    { "type": "text", "id": "label_play", "label": "Bouton lecture", "default": "Lire la vidéo" },
+    { "type": "text", "id": "label_pause", "label": "Bouton pause", "default": "Mettre la vidéo en pause" },
+    { "type": "text", "id": "label_unmute", "label": "Bouton activer le son", "default": "Activer le son" },
+    { "type": "text", "id": "label_mute", "label": "Bouton couper le son", "default": "Couper le son" },
+    { "type": "text", "id": "label_prev", "label": "Flèche précédente", "default": "Vidéo précédente" },
+    { "type": "text", "id": "label_next", "label": "Flèche suivante", "default": "Vidéo suivante" }
+  ],
+  "blocks": [
+    {
+      "type": "video",
+      "name": "Vidéo",
+      "settings": [
+        { "type": "video", "id": "video", "label": "Vidéo" },
+        {
+          "type": "text",
+          "id": "video_url",
+          "label": "Ou URL d'un fichier MP4",
+          "info": "Utilisé seulement si aucune vidéo n'est sélectionnée ci-dessus."
+        },
+        {
+          "type": "image_picker",
+          "id": "poster",
+          "label": "Image de couverture",
+          "info": "Recommandée en 9:16. À défaut, la vignette de la vidéo est utilisée."
+        },
+        { "type": "text", "id": "label", "label": "Étiquette", "default": "Décris la vidéo en quelques mots" },
+        { "type": "text", "id": "likes", "label": "Compteur de likes", "default": "0" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Carrousel vidéo",
+      "blocks": [{ "type": "video" }, { "type": "video" }, { "type": "video" }]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,420 @@
+/* ==========================================================================
+   video-carousel.css
+   Styles for sections/video-carousel.liquid
+   Everything is scoped under .vcar so the rest of the theme is untouched.
+   ========================================================================== */
+
+.vcar {
+  /* Palette */
+  --vcar-navy: #16295c;
+  --vcar-orange: #f26a21;
+  --vcar-bg: #f7f3ea;
+
+  /* Card metrics (overridden inline from the schema) */
+  --vcar-card-w: 268px;
+  --vcar-gap: 20px;
+  --vcar-radius: 20px;
+
+  /* Layout */
+  --vcar-container: 1180px;
+  --vcar-gutter: 24px;
+
+  /* Shadows: the track scrolls, so it needs inner room for the card shadow */
+  --vcar-shadow: 0 6px 24px rgba(22, 41, 92, 0.1);
+  --vcar-shadow-room: 14px;
+
+  --vcar-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  background: var(--vcar-bg);
+  font-family: var(--vcar-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.vcar *,
+.vcar *::before,
+.vcar *::after {
+  box-sizing: border-box;
+}
+
+:where(.vcar) :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.vcar) :where(p) {
+  margin: 0;
+}
+
+:where(.vcar) :where(h2) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+:where(.vcar) :where(img, video) {
+  display: block;
+  max-width: 100%;
+}
+
+.vcar :focus-visible {
+  outline: 2px solid var(--vcar-orange);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Shell
+   -------------------------------------------------------------------------- */
+
+.vcar__inner {
+  position: relative;
+  max-width: var(--vcar-container);
+  margin-inline: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Heading
+   -------------------------------------------------------------------------- */
+
+.vcar__head {
+  max-width: 760px;
+  margin-inline: auto;
+  padding-inline: var(--vcar-gutter);
+  text-align: center;
+}
+
+.vcar__title {
+  font-size: clamp(1.625rem, 1.1rem + 2.1vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  color: var(--vcar-navy);
+}
+
+/* The leading orange dash from the reference design. */
+.vcar__dash {
+  margin-right: 0.22em;
+  color: var(--vcar-orange);
+}
+
+.vcar__subtitle {
+  margin-top: 14px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #6b7280;
+}
+
+.vcar__head + .vcar__viewport {
+  margin-top: 40px;
+}
+
+/* --------------------------------------------------------------------------
+   Track
+   -------------------------------------------------------------------------- */
+
+.vcar__track {
+  display: flex;
+  gap: var(--vcar-gap);
+  /* Inline padding keeps the first/last card shadow from being clipped and
+     doubles as the mobile peek offset. Block padding does the same vertically. */
+  padding: var(--vcar-shadow-room) var(--vcar-gutter);
+  margin-block: calc(var(--vcar-shadow-room) * -1);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--vcar-gutter);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.vcar__track::-webkit-scrollbar {
+  display: none;
+}
+
+/* Centred while everything fits; left-aligned once it scrolls, so no card
+   is ever unreachable behind the start edge. */
+.vcar__track:not(.is-scrollable) {
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .vcar__track {
+    scroll-behavior: smooth;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Card
+   -------------------------------------------------------------------------- */
+
+.vcar__card {
+  position: relative;
+  flex: 0 0 var(--vcar-card-w);
+  max-width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--vcar-radius);
+  overflow: hidden;
+  background: #0e1526;
+  box-shadow: var(--vcar-shadow);
+  scroll-snap-align: center;
+  isolation: isolate;
+}
+
+.vcar__media,
+.vcar__card video,
+.vcar__card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vcar__placeholder {
+  display: grid;
+  place-items: center;
+  background: #dfe4ec;
+  color: #9aa4b5;
+}
+
+.vcar__placeholder svg {
+  width: 40%;
+  height: auto;
+}
+
+/* Bottom scrim so white overlay text stays legible on bright footage. */
+.vcar__scrim {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 34%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
+
+/* ---- Label pill (top-left) ---- */
+
+.vcar__label {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  max-width: calc(100% - 28px);
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+/* Frosted-dark variant, for footage that is too bright behind the pill. */
+.vcar[data-label-tone="dark"] .vcar__label {
+  background: rgba(14, 21, 38, 0.42);
+  text-shadow: none;
+}
+
+/* ---- Play / pause (centre) ---- */
+
+.vcar__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease, transform 0.16s ease, background-color 0.16s ease;
+}
+
+.vcar__play:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.vcar__play svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* While playing the button fades out, and comes back on hover/focus so the
+   video can still be paused. */
+.vcar__card.is-playing .vcar__play {
+  opacity: 0;
+}
+
+.vcar__card.is-playing:hover .vcar__play,
+.vcar__card.is-playing .vcar__play:focus-visible {
+  opacity: 1;
+}
+
+.vcar__play .vcar__icon--pause,
+.vcar__card.is-playing .vcar__play .vcar__icon--play {
+  display: none;
+}
+
+.vcar__card.is-playing .vcar__play .vcar__icon--pause {
+  display: block;
+}
+
+/* ---- Likes (bottom-left) ---- */
+
+.vcar__likes {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.vcar__likes svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---- Sound toggle (bottom-right) ---- */
+
+.vcar__sound {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  transition: background-color 0.16s ease;
+}
+
+.vcar__sound:hover {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.vcar__sound svg {
+  width: 15px;
+  height: 15px;
+}
+
+.vcar__sound .vcar__icon--on,
+.vcar__sound[data-muted="true"] .vcar__icon--off {
+  display: none;
+}
+
+.vcar__sound[data-muted="true"] .vcar__icon--on {
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   Arrows — only rendered useful when the track actually scrolls
+   -------------------------------------------------------------------------- */
+
+.vcar__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(22, 41, 92, 0.18);
+  color: var(--vcar-navy);
+  transform: translateY(-50%);
+  transition: opacity 0.18s ease, background-color 0.16s ease;
+}
+
+.vcar__nav svg {
+  width: 16px;
+  height: 16px;
+}
+
+.vcar__nav--prev {
+  left: 2px;
+}
+
+.vcar__nav--next {
+  right: 2px;
+}
+
+/* display:grid above would otherwise beat the UA [hidden] rule and leave the
+   arrows in the layout when there is nothing to scroll. */
+.vcar__nav[hidden] {
+  display: none;
+}
+
+.vcar__nav[disabled] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 1023px) {
+  .vcar {
+    --vcar-card-w: 232px;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .vcar {
+    --vcar-gutter: 20px;
+    --vcar-gap: 14px;
+    /* Peek the next card so the carousel reads as swipeable. */
+    --vcar-card-w: min(72vw, 280px);
+  }
+
+  .vcar__head + .vcar__viewport {
+    margin-top: 28px;
+  }
+
+  .vcar__nav {
+    display: none;
+  }
+
+  .vcar__card {
+    scroll-snap-align: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vcar *,
+  .vcar *::before,
+  .vcar *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
