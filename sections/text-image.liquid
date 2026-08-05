@@ -312,9 +312,11 @@
 
   comment
     Shopify colour settings expose their channels, which is the only way to
-    build a translucent fill from a picker.
+    build a translucent fill from a picker. The opacity comes from a select
+    rather than a range: a select has no step arithmetic for Shopify to
+    reject, and presets are all this control needs.
   endcomment
-  assign stats_alpha = s.stats_opacity | divided_by: 100.0
+  assign stats_alpha = s.stats_opacity | plus: 0 | divided_by: 100.0
 
   assign root_classes = 'tximg'
   unless s.show_dash
@@ -497,7 +499,19 @@
       "default": 10.5
     },
     { "type": "color", "id": "color_stats", "label": "Fond de la pastille", "default": "#121826" },
-    { "type": "range", "id": "stats_opacity", "label": "Opacité de la pastille", "min": 20, "max": 100, "step": 5, "unit": "%", "default": 60 },
+    {
+      "type": "select",
+      "id": "stats_opacity",
+      "label": "Opacité de la pastille",
+      "options": [
+        { "value": "40", "label": "40 % — très transparent" },
+        { "value": "55", "label": "55 %" },
+        { "value": "70", "label": "70 %" },
+        { "value": "85", "label": "85 %" },
+        { "value": "100", "label": "100 % — opaque" }
+      ],
+      "default": "70"
+    },
 
     {
       "type": "header",
