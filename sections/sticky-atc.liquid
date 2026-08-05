@@ -1,0 +1,746 @@
+{% comment %}
+  sticky-atc.liquid
+  Floating buy bar that slides in once the product form's add-to-cart button
+  has scrolled out of view, and slides away again when it returns.
+
+  Self-contained: styles and behaviour are both inlined, so this file is the
+  only thing that needs to exist in the theme. Drop it on a product template.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Sticky buy bar — scoped under .satc so the rest of the theme is untouched.
+   ========================================================================== */
+
+.satc {
+  /* Palette */
+  --sa-navy: #16295c;
+  --sa-muted: #8a8f9a;
+  --sa-orange: #f26a21;
+  --sa-btn-fg: #ffffff;
+  --sa-bar: #ffffff;
+  --sa-star: #f5b301;
+
+  /* Shape */
+  --sa-max: var(--sa-max-set, 1060px);
+  --sa-radius: var(--sa-radius-set, 18px);
+  --sa-offset: var(--sa-offset-set, 16px);
+  --sa-gutter: 16px;
+
+  --sa-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  position: fixed;
+  left: 50%;
+  bottom: var(--sa-offset);
+  z-index: 50;
+  width: min(calc(100% - var(--sa-gutter) * 2), var(--sa-max));
+  font-family: var(--sa-font);
+  -webkit-font-smoothing: antialiased;
+
+  /* Parked below the fold until the trigger scrolls past. */
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, calc(100% + var(--sa-offset) + 24px));
+  transition: transform 0.42s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.3s ease, visibility 0.42s;
+}
+
+.satc.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.satc *,
+.satc *::before,
+.satc *::after {
+  box-sizing: border-box;
+}
+
+:where(.satc) :where(p) {
+  margin: 0;
+}
+
+:where(.satc) :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.satc) :where(img) {
+  display: block;
+  max-width: 100%;
+}
+
+.satc :focus-visible {
+  outline: 2px solid var(--sa-orange);
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Bar
+   -------------------------------------------------------------------------- */
+
+.satc__inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 9px 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--sa-radius);
+  background: var(--sa-bar);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 34px rgba(22, 41, 92, 0.17);
+}
+
+.satc__info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.satc__thumb {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #eef1f7;
+}
+
+.satc__text {
+  min-width: 0;
+}
+
+.satc__title {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--sa-navy);
+  /* One line only: a long product name must never push the button off. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.satc__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 3px;
+}
+
+.satc__rating {
+  font-size: 12.5px;
+  line-height: 1.2;
+  color: var(--sa-muted);
+  white-space: nowrap;
+}
+
+.satc__price {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sa-navy);
+  white-space: nowrap;
+}
+
+/* ---- Stars ---- */
+
+.satc__stars {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.satc__stars-row {
+  display: flex;
+  gap: 1px;
+}
+
+.satc__stars-row svg {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+}
+
+.satc__stars-row--empty {
+  color: #dfe3ea;
+}
+
+.satc__stars-row--full {
+  position: absolute;
+  inset: 0;
+  width: var(--sa-star-pct, 100%);
+  overflow: hidden;
+  color: var(--sa-star);
+}
+
+/* ---- Button ---- */
+
+.satc__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sa-orange);
+  color: var(--sa-btn-fg);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: transform 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+  box-shadow: 0 6px 18px rgba(242, 106, 33, 0.3);
+}
+
+.satc__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(242, 106, 33, 0.38);
+}
+
+.satc__btn:active {
+  transform: translateY(0);
+}
+
+.satc__btn svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.satc__btn[disabled],
+.satc__btn[aria-disabled="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Loading: swap the label for a spinner without resizing the button. */
+.satc__btn.is-loading {
+  pointer-events: none;
+  position: relative;
+  color: transparent;
+}
+
+.satc__btn.is-loading > * {
+  visibility: hidden;
+}
+
+.satc__btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: satc-spin 0.7s linear infinite;
+}
+
+@keyframes satc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.satc__error {
+  margin-top: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #fdecec;
+  color: #a12020;
+  font-size: 12.5px;
+  line-height: 1.45;
+  box-shadow: 0 6px 20px rgba(22, 41, 92, 0.12);
+}
+
+.satc__error[hidden] {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 749px) {
+  .satc {
+    --sa-gutter: 10px;
+    --sa-offset: min(var(--sa-offset-set, 16px), 10px);
+  }
+
+  .satc__inner {
+    gap: 10px;
+    padding: 8px 8px 8px 10px;
+  }
+
+  .satc__thumb {
+    width: 38px;
+    height: 38px;
+  }
+
+  .satc__title {
+    font-size: 14px;
+  }
+
+  /* The review count is the first thing to go when space is tight. */
+  .satc__rating {
+    display: none;
+  }
+
+  .satc__btn {
+    min-height: 42px;
+    padding: 0 16px;
+  }
+}
+
+@media screen and (max-width: 429px) {
+  .satc__meta {
+    display: none;
+  }
+}
+
+.satc--hide-mobile {
+  display: none;
+}
+
+@media screen and (min-width: 750px) {
+  .satc--hide-mobile {
+    display: block;
+  }
+
+  .satc--hide-desktop {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .satc {
+    transition-duration: 0.001ms;
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign variant = product.selected_or_first_available_variant
+
+  assign bar_title = s.custom_title
+  if bar_title == blank
+    assign bar_title = product.title
+  endif
+
+  assign thumb = s.custom_image
+  if thumb == blank
+    assign thumb = product.featured_image
+  endif
+
+  assign rating_pct = s.rating_value | divided_by: 5.0 | times: 100
+
+  comment
+    root_url is "/" on a single-locale shop and "/fr" on a localised one, so
+    append then collapse the double slash rather than hardcoding "/checkout".
+  endcomment
+  assign checkout_url = routes.root_url | append: '/checkout' | replace: '//', '/'
+
+  assign root_classes = 'satc'
+  unless s.show_on_mobile
+    assign root_classes = root_classes | append: ' satc--hide-mobile'
+  endunless
+  unless s.show_on_desktop
+    assign root_classes = root_classes | append: ' satc--hide-desktop'
+  endunless
+-%}
+
+{%- capture icon_star -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.5l2.6 5.3 5.8.85-4.2 4.1.99 5.8L10 14.8l-5.19 2.75.99-5.8-4.2-4.1 5.8-.85z"/></svg>{%- endcapture -%}
+{%- capture icon_stars_row -%}{{ icon_star }}{{ icon_star }}{{ icon_star }}{{ icon_star }}{{ icon_star }}{%- endcapture -%}
+
+{%- if product != blank and s.enabled -%}
+  <div
+    class="{{ root_classes }}"
+    id="satc-{{ section.id }}"
+    data-satc-root
+    data-action="{{ s.cta_action }}"
+    data-threshold="{{ s.fallback_threshold }}"
+    data-debug="{{ s.debug }}"
+    style="
+      --sa-navy: {{ s.color_title }};
+      --sa-muted: {{ s.color_muted }};
+      --sa-orange: {{ s.color_button }};
+      --sa-btn-fg: {{ s.color_button_text }};
+      --sa-bar: {{ s.color_bar }};
+      --sa-star: {{ s.color_stars }};
+      --sa-max-set: {{ s.bar_width }}px;
+      --sa-radius-set: {{ s.bar_radius }}px;
+      --sa-offset-set: {{ s.bottom_offset }}px;
+    "
+  >
+    <script type="application/json" data-satc-config>
+      {
+        "cartAddUrl": {{ routes.cart_add_url | json }},
+        "cartUrl": {{ routes.cart_url | json }},
+        "checkoutUrl": {{ checkout_url | json }},
+        "variantId": {{ variant.id | json }},
+        "available": {{ variant.available | json }},
+        "strings": {
+          "label": {{ s.button_label | json }},
+          "added": {{ s.button_added_label | json }},
+          "soldOut": {{ s.sold_out_label | json }},
+          "error": {{ s.error_label | json }}
+        }
+      }
+    </script>
+
+    <div class="satc__inner">
+      <div class="satc__info">
+        {%- if s.show_image and thumb != blank -%}
+          {{
+            thumb
+            | image_url: width: 120
+            | image_tag:
+              width: 60,
+              height: 60,
+              class: 'satc__thumb',
+              loading: 'lazy',
+              alt: ''
+          }}
+        {%- endif -%}
+
+        <div class="satc__text">
+          <span class="satc__title">{{ bar_title }}</span>
+
+          {%- if s.show_rating and s.rating_value > 0 -%}
+            <span class="satc__meta">
+              <span
+                class="satc__stars"
+                style="--sa-star-pct: {{ rating_pct }}%;"
+                role="img"
+                aria-label="{{ s.rating_aria_label }}"
+              >
+                <span class="satc__stars-row satc__stars-row--empty" aria-hidden="true">{{ icon_stars_row }}</span>
+                <span class="satc__stars-row satc__stars-row--full" aria-hidden="true">{{ icon_stars_row }}</span>
+              </span>
+              <span class="satc__rating">{{ s.rating_text }}</span>
+            </span>
+          {%- endif -%}
+        </div>
+      </div>
+
+      {%- if s.show_price -%}
+        <span class="satc__price">{{ variant.price | money }}</span>
+      {%- endif -%}
+
+      <button
+        type="button"
+        class="satc__btn"
+        data-satc-add
+        {% unless variant.available %}aria-disabled="true"{% endunless %}
+      >
+        {%- if s.show_button_icon -%}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.4 6.2h13.2l-1 9.2a2 2 0 01-2 1.8H6.4a2 2 0 01-2-1.8z"/><path d="M7.2 6.2V4.9a2.8 2.8 0 015.6 0v1.3"/></svg>
+        {%- endif -%}
+        <span data-satc-label>
+          {%- if variant.available -%}{{ s.button_label }}{%- else -%}{{ s.sold_out_label }}{%- endif -%}
+        </span>
+      </button>
+    </div>
+
+    <p class="satc__error" role="alert" data-satc-error hidden></p>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.getElementById('satc-{{ section.id }}');
+      if (!root || root.dataset.satcReady === 'true') return;
+      root.dataset.satcReady = 'true';
+
+      var DEBUG = root.getAttribute('data-debug') === 'true';
+      var ACTION = root.getAttribute('data-action');
+      var THRESHOLD = parseInt(root.getAttribute('data-threshold'), 10);
+      if (isNaN(THRESHOLD)) THRESHOLD = 600;
+
+      var config;
+      try {
+        config = JSON.parse(root.querySelector('[data-satc-config]').textContent);
+      } catch (error) {
+        console.warn('[barre achat] configuration illisible', error);
+        return;
+      }
+
+      var button = root.querySelector('[data-satc-add]');
+      var label = root.querySelector('[data-satc-label]');
+      var errorBox = root.querySelector('[data-satc-error]');
+
+      function log() {
+        if (!DEBUG) return;
+        console.info.apply(console, ['[barre achat]'].concat([].slice.call(arguments)));
+      }
+
+      /* ------------------------------------------------------------ *
+       * Visibility
+       *
+       * The bar follows the theme's own add-to-cart button, whichever
+       * markup it uses. name="add" is the Shopify convention and covers
+       * most themes on its own.
+       * ------------------------------------------------------------ */
+
+      var TRIGGER_SELECTORS = [
+        '[data-pdp-add]',
+        '[name="add"]',
+        '.product-form__submit',
+        'form[action*="/cart/add"] [type="submit"]',
+        'product-form',
+        'form[action*="/cart/add"]'
+      ];
+
+      function findTrigger() {
+        for (var i = 0; i < TRIGGER_SELECTORS.length; i++) {
+          var el;
+          try {
+            el = document.querySelector(TRIGGER_SELECTORS[i]);
+          } catch (error) {
+            continue;
+          }
+          if (el && !root.contains(el)) return { el: el, how: TRIGGER_SELECTORS[i] };
+        }
+        return null;
+      }
+
+      function setVisible(visible) {
+        root.classList.toggle('is-visible', visible);
+      }
+
+      var trigger = findTrigger();
+
+      if (trigger && typeof IntersectionObserver === 'function') {
+        log('déclencheur', trigger.how);
+        new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              /* Show only once the button has gone past upwards. While it is
+                 still below the fold the visitor has not reached it yet. */
+              var scrolledPast = entry.boundingClientRect.top < 0;
+              setVisible(!entry.isIntersecting && scrolledPast);
+            });
+          },
+          { threshold: 0 }
+        ).observe(trigger.el);
+      } else {
+        /* No product form on the page: fall back to a plain scroll distance so
+           the bar still works instead of never appearing. */
+        log('aucun déclencheur trouvé, repli sur le seuil de', THRESHOLD + 'px');
+        var onScroll = function () {
+          setVisible(window.pageYOffset > THRESHOLD);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+      }
+
+      /* ------------------------------------------------------------ *
+       * Add to cart
+       * ------------------------------------------------------------ */
+
+      function showError(message) {
+        if (!errorBox) return;
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+      }
+
+      function clearError() {
+        if (errorBox) errorBox.hidden = true;
+      }
+
+      /**
+       * Post the theme's own product form when there is one, so the visitor's
+       * variant, quantity, selling plan and line item properties all carry
+       * over. Only when no form exists do we fall back to the variant that was
+       * current at render time.
+       */
+      function buildRequest() {
+        var form = document.querySelector('form[action*="/cart/add"]');
+        if (form && !root.contains(form)) {
+          log('envoi du formulaire produit du thème');
+          return { body: new FormData(form), headers: { Accept: 'application/javascript' } };
+        }
+        log('aucun formulaire, envoi de la variante', config.variantId);
+        return {
+          body: JSON.stringify({ items: [{ id: config.variantId, quantity: 1 }] }),
+          headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' }
+        };
+      }
+
+      function afterAdd(payload) {
+        document.dispatchEvent(
+          new CustomEvent('satc:cart-added', { bubbles: true, detail: payload })
+        );
+
+        if (ACTION === 'checkout') {
+          window.location.href = config.checkoutUrl;
+          return;
+        }
+        if (ACTION === 'cart_page') {
+          window.location.href = config.cartUrl;
+          return;
+        }
+
+        /* Stay on the page: open the theme's drawer if it has one, and give
+           the button a moment of feedback either way. */
+        var drawer = document.querySelector('cart-drawer, [data-cart-drawer]');
+        if (drawer && typeof drawer.open === 'function') drawer.open();
+
+        button.classList.remove('is-loading');
+        if (label) {
+          var previous = label.textContent;
+          label.textContent = config.strings.added;
+          setTimeout(function () {
+            label.textContent = previous;
+          }, 2200);
+        }
+      }
+
+      if (button) {
+        button.addEventListener('click', function () {
+          if (button.classList.contains('is-loading')) return;
+          if (button.getAttribute('aria-disabled') === 'true') return;
+
+          clearError();
+          button.classList.add('is-loading');
+
+          var request = buildRequest();
+
+          fetch(config.cartAddUrl, {
+            method: 'POST',
+            headers: request.headers,
+            body: request.body
+          })
+            .then(function (response) {
+              return response.json().then(function (data) {
+                if (!response.ok) {
+                  throw new Error(data.description || data.message || config.strings.error);
+                }
+                return data;
+              });
+            })
+            .then(afterAdd)
+            .catch(function (error) {
+              button.classList.remove('is-loading');
+              showError(error.message || config.strings.error);
+            });
+        });
+      }
+
+      log('prêt', { action: ACTION, variante: config.variantId });
+    })();
+  </script>
+{%- elsif request.design_mode -%}
+  <p style="padding:20px;text-align:center;font:500 14px sans-serif;color:#8a8f9a;">
+    La barre d'achat n'apparaît que sur une page produit.
+  </p>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Barre d'achat",
+  "tag": "section",
+  "class": "sticky-atc-section",
+  "settings": [
+    { "type": "checkbox", "id": "enabled", "label": "Activer la barre", "default": true },
+
+    {
+      "type": "header",
+      "content": "Bouton"
+    },
+    { "type": "text", "id": "button_label", "label": "Texte du bouton", "default": "Acheter" },
+    { "type": "checkbox", "id": "show_button_icon", "label": "Afficher l'icône panier", "default": true },
+    {
+      "type": "select",
+      "id": "cta_action",
+      "label": "Destination du bouton",
+      "options": [
+        { "value": "cart", "label": "Ajouter au panier (rester sur la page)" },
+        { "value": "cart_page", "label": "Ajouter et aller au panier" },
+        { "value": "checkout", "label": "Passer au paiement directement" }
+      ],
+      "default": "cart"
+    },
+    { "type": "text", "id": "button_added_label", "label": "Confirmation après ajout", "default": "Ajouté ✓" },
+    { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
+    { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Ajout impossible pour le moment. Réessaie dans un instant." },
+
+    {
+      "type": "header",
+      "content": "Contenu affiché"
+    },
+    { "type": "checkbox", "id": "show_image", "label": "Afficher la vignette", "default": true },
+    { "type": "image_picker", "id": "custom_image", "label": "Vignette personnalisée", "info": "Par défaut, l'image principale du produit." },
+    { "type": "text", "id": "custom_title", "label": "Nom affiché", "info": "Par défaut, le titre du produit." },
+    { "type": "checkbox", "id": "show_price", "label": "Afficher le prix", "default": false },
+
+    {
+      "type": "header",
+      "content": "Avis"
+    },
+    { "type": "checkbox", "id": "show_rating", "label": "Afficher la note", "default": true },
+    { "type": "range", "id": "rating_value", "label": "Note", "min": 0, "max": 5, "step": 0.1, "default": 4.8 },
+    { "type": "text", "id": "rating_text", "label": "Texte à côté des étoiles", "default": "4,8 · 1,3k avis" },
+    { "type": "text", "id": "rating_aria_label", "label": "Description de la note (accessibilité)", "default": "Note de 4,8 sur 5" },
+
+    {
+      "type": "header",
+      "content": "Apparition"
+    },
+    {
+      "type": "range",
+      "id": "fallback_threshold",
+      "label": "Seuil de secours",
+      "info": "La barre suit le bouton d'ajout au panier du thème. Ce seuil ne sert que si aucun bouton n'est trouvé sur la page.",
+      "min": 100,
+      "max": 2000,
+      "step": 50,
+      "unit": "px",
+      "default": 600
+    },
+    { "type": "checkbox", "id": "show_on_desktop", "label": "Afficher sur ordinateur", "default": true },
+    { "type": "checkbox", "id": "show_on_mobile", "label": "Afficher sur mobile", "default": true },
+    {
+      "type": "checkbox",
+      "id": "debug",
+      "label": "Mode diagnostic",
+      "info": "Écrit dans la console ce que la barre détecte. À désactiver ensuite.",
+      "default": false
+    },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bar", "label": "Fond de la barre", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_title", "label": "Nom du produit", "default": "#16295C" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#8A8F9A" },
+    { "type": "color", "id": "color_stars", "label": "Étoiles", "default": "#F5B301" },
+    { "type": "color", "id": "color_button", "label": "Fond du bouton", "default": "#F26A21" },
+    { "type": "color", "id": "color_button_text", "label": "Texte du bouton", "default": "#FFFFFF" },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    { "type": "range", "id": "bar_width", "label": "Largeur maximale", "min": 600, "max": 1400, "step": 20, "unit": "px", "default": 1060 },
+    { "type": "range", "id": "bar_radius", "label": "Arrondi", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 18 },
+    { "type": "range", "id": "bottom_offset", "label": "Distance du bas", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 16 }
+  ],
+  "presets": [{ "name": "Barre d'achat" }]
+}
+{% endschema %}
