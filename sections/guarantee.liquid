@@ -25,10 +25,20 @@
 
   comment
     The CTA either scrolls to an anchor on the page or navigates to a URL.
+    A merchant may type the anchor with or without its leading #, so normalise
+    it rather than rendering a broken relative link.
   endcomment
   assign cta_href = s.button_url
   if s.link_type == 'anchor'
-    assign cta_href = s.anchor_id
+    assign anchor_value = s.anchor_id | strip
+    if anchor_value == blank
+      assign anchor_value = '#main-product'
+    endif
+    assign anchor_first = anchor_value | slice: 0
+    unless anchor_first == '#'
+      assign anchor_value = '#' | append: anchor_value
+    endunless
+    assign cta_href = anchor_value
   endif
 -%}
 
@@ -207,7 +217,7 @@
       "type": "text",
       "id": "anchor_id",
       "label": "Ancre cible",
-      "info": "Identifiant de l'élément à atteindre, précédé de #. La section produit sur-mesure expose #main-product.",
+      "info": "Identifiant de l'élément à atteindre, ex. #main-product. Si cet identifiant n'existe pas sur la page, le bouton vise automatiquement la zone produit du thème (formulaire d'ajout au panier).",
       "default": "#main-product"
     },
     { "type": "url", "id": "button_url", "label": "Lien", "info": "Utilisé quand le comportement est « Lien vers une page »." },
