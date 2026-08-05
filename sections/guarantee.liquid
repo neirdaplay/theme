@@ -6,7 +6,6 @@
 {% endcomment %}
 
 {{ 'guarantee.css' | asset_url | stylesheet_tag }}
-<script src="{{ 'guarantee.js' | asset_url }}" defer></script>
 
 {%- liquid
   assign s = section.settings
@@ -165,6 +164,94 @@
     </div>
   </div>
 </div>
+
+{%- comment -%}
+  The CTA behaviour lives here rather than in an asset file: a missing or
+  stale assets/*.js fails silently (the link just does nothing), and this
+  section only needs ~60 lines. Runs after the markup above, so the element
+  it looks up already exists.
+{%- endcomment -%}
+<script>
+  (function () {
+    var root = document.getElementById('guarantee-{{ section.id }}');
+    if (!root || root.dataset.guaranteeReady === 'true') return;
+    root.dataset.guaranteeReady = 'true';
+
+    /* Tried in order when the configured anchor is not on the page, which is
+       the normal case on a theme that has its own product section. Ordered
+       from this theme's own markers to ones nearly every product page has. */
+    var FALLBACKS = [
+      '#main-product',
+      '[data-pdp-root]',
+      'product-info',
+      '[id^="MainProduct-"]',
+      '[id^="ProductInfo-"]',
+      '.product__info-wrapper',
+      '.product__info-container',
+      'form[action*="/cart/add"]',
+      'main .product',
+      '.shopify-section--main-product'
+    ];
+
+    var offset = parseInt(root.getAttribute('data-scroll-offset'), 10);
+    if (isNaN(offset)) offset = 0;
+
+    function query(selector) {
+      try {
+        return document.querySelector(selector);
+      } catch (error) {
+        return null; // a merchant-typed anchor may not be a valid selector
+      }
+    }
+
+    function resolve(hash) {
+      if (hash && hash.length > 1) {
+        var exact = query(hash);
+        if (exact && !root.contains(exact)) return { el: exact, exact: true };
+      }
+      for (var i = 0; i < FALLBACKS.length; i++) {
+        var el = query(FALLBACKS[i]);
+        if (el && !root.contains(el)) return { el: el, exact: false };
+      }
+      return null;
+    }
+
+    root.addEventListener('click', function (event) {
+      var link = event.target.closest && event.target.closest('[data-guarantee-anchor]');
+      if (!link || !root.contains(link)) return;
+
+      var hash = link.getAttribute('href') || '';
+      var found = resolve(hash);
+      event.preventDefault();
+
+      if (!found) {
+        console.warn(
+          '[guarantee] Aucune cible trouvee pour "' + hash + '". Verifie que cet ' +
+            'identifiant existe sur la page, ou change l\'ancre dans les reglages ' +
+            'de la section. Selecteurs de repli essayes : ' + FALLBACKS.join(', ')
+        );
+        return;
+      }
+
+      var top = found.el.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({
+        top: top < 0 ? 0 : top,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth'
+      });
+
+      /* Keyboard and screen-reader users must follow the scroll too. */
+      if (!found.el.hasAttribute('tabindex')) found.el.setAttribute('tabindex', '-1');
+      found.el.focus({ preventScroll: true });
+
+      /* Only advertise the anchor in the URL when it is the one actually used. */
+      if (found.exact && window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', hash);
+      }
+    });
+  })();
+</script>
 
 {% schema %}
 {
