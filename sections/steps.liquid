@@ -1,0 +1,460 @@
+{% comment %}
+  steps.liquid
+  Numbered "how it works" steps: a centred heading, then image cards each
+  carrying a numbered badge straddling the bottom edge and a caption below.
+
+  Self-contained: the styles are inlined, so this file is the only thing that
+  needs to exist in the theme. No asset to upload alongside it.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Steps — scoped under .steps so the rest of the theme is untouched.
+   ========================================================================== */
+
+.steps {
+  /* Palette */
+  --st-navy: #16295c;
+  --st-orange: #f26a21;
+  --st-muted: #8a8f9a;
+  --st-bg: #eaeff8;
+  --st-badge-bg: #16295c;
+  --st-badge-fg: #ffffff;
+
+  /* Shape. The *-set variables are written inline by the schema; these derive
+     from them so the media queries below can still override (an inline custom
+     property would otherwise beat every stylesheet rule). */
+  --st-max: 1060px;
+  --st-gap: var(--st-gap-set, 24px);
+  --st-radius: var(--st-radius-set, 16px);
+  --st-badge: var(--st-badge-set, 34px);
+  --st-ratio: 1 / 1;
+
+  /* Layout */
+  --st-gutter: 24px;
+
+  --st-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  background: var(--st-bg);
+  font-family: var(--st-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.steps *,
+.steps *::before,
+.steps *::after {
+  box-sizing: border-box;
+}
+
+/* Zero-specificity defaults so component classes always win. */
+:where(.steps) :where(p) {
+  margin: 0;
+}
+
+:where(.steps) :where(h2, h3) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--st-navy);
+}
+
+:where(.steps) :where(ol, ul) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.steps) :where(img) {
+  display: block;
+  max-width: 100%;
+}
+
+.steps__container {
+  max-width: calc(var(--st-max) + var(--st-gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--st-gutter);
+}
+
+/* --------------------------------------------------------------------------
+   Heading
+   -------------------------------------------------------------------------- */
+
+.steps__head {
+  max-width: 760px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.steps__title {
+  font-size: clamp(1.625rem, 1.1rem + 2.1vw, 2.5rem);
+  line-height: 1.14;
+  color: var(--st-navy);
+}
+
+/* The leading orange dash from the reference design. */
+.steps__dash {
+  margin-right: 0.22em;
+  color: var(--st-orange);
+}
+
+.steps__subtitle {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--st-muted);
+}
+
+.steps__head + .steps__list {
+  margin-top: 44px;
+}
+
+/* --------------------------------------------------------------------------
+   Steps
+   -------------------------------------------------------------------------- */
+
+.steps__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--st-gap);
+}
+
+.steps__item {
+  min-width: 0;
+  text-align: center;
+}
+
+/* Positioning context for the badge, which deliberately overflows the frame. */
+.steps__media {
+  position: relative;
+}
+
+/* The rounding and clipping live here, not on .steps__media, so the badge is
+   not cut off by overflow:hidden. */
+.steps__frame {
+  aspect-ratio: var(--st-ratio);
+  border-radius: var(--st-radius);
+  overflow: hidden;
+  background: #dfe6f1;
+  box-shadow: 0 4px 20px rgba(22, 41, 92, 0.08);
+}
+
+.steps__frame img,
+.steps__frame svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.steps__placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #a9b6cb;
+}
+
+.steps__placeholder svg {
+  width: 38%;
+  height: auto;
+}
+
+.steps__badge {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: var(--st-badge);
+  height: var(--st-badge);
+  border-radius: 50%;
+  background: var(--st-badge-bg);
+  color: var(--st-badge-fg);
+  font-size: calc(var(--st-badge) * 0.41);
+  font-weight: 700;
+  line-height: 1;
+  transform: translate(-50%, 50%);
+  box-shadow: 0 3px 10px rgba(22, 41, 92, 0.28);
+}
+
+/* Screen-reader-only prefix ("Étape 2 — "), so the caption reads in context
+   without the number being announced twice from the badge. */
+.steps__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Clears the half of the badge hanging below the frame, then adds breathing
+   room, so the caption never collides with it whatever the badge size. */
+.steps__label {
+  margin-top: calc(var(--st-badge) / 2 + 14px);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--st-navy);
+}
+
+.steps--no-badge .steps__label {
+  margin-top: 18px;
+}
+
+.steps__text {
+  margin-top: 8px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--st-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 767px) {
+  .steps {
+    --st-gutter: 20px;
+    --st-gap: min(var(--st-gap-set, 24px), 18px);
+  }
+
+  .steps__head + .steps__list {
+    margin-top: 30px;
+  }
+
+  .steps__label {
+    font-size: 16px;
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign steps = section.blocks | where: 'type', 'step'
+
+  case s.image_ratio
+    when 'portrait'
+      assign ratio_css = '3 / 4'
+    when 'landscape'
+      assign ratio_css = '4 / 3'
+    when 'wide'
+      assign ratio_css = '16 / 9'
+    when 'natural'
+      assign ratio_css = 'auto'
+    else
+      assign ratio_css = '1 / 1'
+  endcase
+
+  assign root_classes = 'steps'
+  unless s.show_badges
+    assign root_classes = root_classes | append: ' steps--no-badge'
+  endunless
+-%}
+
+<div
+  class="{{ root_classes }}"
+  id="steps-{{ section.id }}"
+  style="
+    --st-bg: {{ s.color_bg }};
+    --st-navy: {{ s.color_title }};
+    --st-orange: {{ s.color_accent }};
+    --st-muted: {{ s.color_muted }};
+    --st-badge-bg: {{ s.color_badge_bg }};
+    --st-badge-fg: {{ s.color_badge_text }};
+    --st-max: {{ s.container_width }}px;
+    --st-gap-set: {{ s.column_gap }}px;
+    --st-radius-set: {{ s.image_radius }}px;
+    --st-badge-set: {{ s.badge_size }}px;
+    --st-ratio: {{ ratio_css }};
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+  "
+>
+  <div class="steps__container">
+    {%- if s.title != blank or s.subtitle != blank -%}
+      <div class="steps__head">
+        {%- if s.title != blank -%}
+          <h2 class="steps__title">
+            {%- if s.show_dash -%}
+              <span class="steps__dash" aria-hidden="true">—</span>
+            {%- endif -%}
+            {{ s.title | escape }}
+          </h2>
+        {%- endif -%}
+        {%- if s.subtitle != blank -%}
+          <div class="steps__subtitle">{{ s.subtitle }}</div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if steps.size > 0 -%}
+      <ol class="steps__list">
+        {%- for block in steps -%}
+          {%- liquid
+            assign b = block.settings
+
+            comment
+              Numbering follows the block order unless the merchant overrides it.
+            endcomment
+            assign badge_text = b.number | strip
+            if badge_text == blank
+              assign badge_text = forloop.index
+            endif
+          -%}
+          <li class="steps__item" {{ block.shopify_attributes }}>
+            <div class="steps__media">
+              <div class="steps__frame">
+                {%- if b.image != blank -%}
+                  {%- liquid
+                    assign img_h = 660
+                    if b.image.aspect_ratio > 0
+                      assign img_h = 660 | divided_by: b.image.aspect_ratio | round
+                    endif
+                  -%}
+                  {{
+                    b.image
+                    | image_url: width: 660
+                    | image_tag:
+                      width: 660,
+                      height: img_h,
+                      widths: '260,360,480,660',
+                      sizes: '(min-width: 768px) 340px, 90vw',
+                      loading: 'lazy',
+                      alt: b.image.alt
+                  }}
+                {%- else -%}
+                  <div class="steps__placeholder">
+                    {{ 'image' | placeholder_svg_tag }}
+                  </div>
+                {%- endif -%}
+              </div>
+
+              {%- if s.show_badges -%}
+                <span class="steps__badge" aria-hidden="true">{{ badge_text }}</span>
+              {%- endif -%}
+            </div>
+
+            {%- if b.label != blank -%}
+              <h3 class="steps__label">
+                {%- if s.show_badges -%}
+                  <span class="steps__sr">{{ s.step_prefix }} {{ badge_text }} — </span>
+                {%- endif -%}
+                {{ b.label }}
+              </h3>
+            {%- endif -%}
+
+            {%- if b.text != blank -%}
+              <p class="steps__text">{{ b.text }}</p>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ol>
+    {%- endif -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Étapes",
+  "tag": "section",
+  "class": "steps-section",
+  "max_blocks": 6,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Titre"
+    },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Trois étapes vers une eau plus pure" },
+    { "type": "checkbox", "id": "show_dash", "label": "Tiret orange avant le titre", "default": true },
+    {
+      "type": "richtext",
+      "id": "subtitle",
+      "label": "Sous-titre",
+      "default": "<p>Aucun plombier. Aucun outil. Le système est conçu pour que n'importe qui puisse l'installer.</p>"
+    },
+
+    {
+      "type": "header",
+      "content": "Images"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Format des images",
+      "options": [
+        { "value": "square", "label": "Carré (1:1)" },
+        { "value": "portrait", "label": "Portrait (3:4)" },
+        { "value": "landscape", "label": "Paysage (4:3)" },
+        { "value": "wide", "label": "Panoramique (16:9)" },
+        { "value": "natural", "label": "Format d'origine" }
+      ],
+      "default": "square"
+    },
+    { "type": "range", "id": "image_radius", "label": "Arrondi des images", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 16 },
+
+    {
+      "type": "header",
+      "content": "Pastilles numérotées"
+    },
+    { "type": "checkbox", "id": "show_badges", "label": "Afficher les pastilles", "default": true },
+    { "type": "range", "id": "badge_size", "label": "Taille des pastilles", "min": 24, "max": 56, "step": 2, "unit": "px", "default": 34 },
+    {
+      "type": "text",
+      "id": "step_prefix",
+      "label": "Mot avant le numéro (accessibilité)",
+      "info": "Lu par les lecteurs d'écran, invisible à l'écran.",
+      "default": "Étape"
+    },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond de section", "default": "#EAEFF8" },
+    { "type": "color", "id": "color_title", "label": "Titres", "default": "#16295C" },
+    { "type": "color", "id": "color_accent", "label": "Tiret orange", "default": "#F26A21" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#8A8F9A" },
+    { "type": "color", "id": "color_badge_bg", "label": "Fond des pastilles", "default": "#16295C" },
+    { "type": "color", "id": "color_badge_text", "label": "Numéro des pastilles", "default": "#FFFFFF" },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 800, "max": 1400, "step": 20, "unit": "px", "default": 1060 },
+    { "type": "range", "id": "column_gap", "label": "Espace entre les colonnes", "min": 8, "max": 60, "step": 2, "unit": "px", "default": 24 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 80 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 80 }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Étape",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "label", "label": "Libellé", "default": "Décris l'étape en trois mots" },
+        { "type": "text", "id": "text", "label": "Description (optionnelle)" },
+        {
+          "type": "text",
+          "id": "number",
+          "label": "Numéro",
+          "info": "Laisse vide pour numéroter automatiquement selon l'ordre des blocs."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Étapes",
+      "blocks": [{ "type": "step" }, { "type": "step" }, { "type": "step" }]
+    }
+  ]
+}
+{% endschema %}

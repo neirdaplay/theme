@@ -391,12 +391,16 @@
   endunless
 
   comment
-    The CTA either scrolls to an anchor on the page or navigates to a URL.
-    A merchant may type the anchor with or without its leading #, so normalise
+    The CTA scrolls to the top of the page, scrolls to an anchor, or navigates
+    to a URL. "#" is a deliberate href for the top mode: without JavaScript the
+    browser still jumps to the top of the document on its own.
+    A merchant may type an anchor with or without its leading #, so normalise
     it rather than rendering a broken relative link.
   endcomment
   assign cta_href = s.button_url
-  if s.link_type == 'anchor'
+  if s.link_type == 'top'
+    assign cta_href = '#'
+  elsif s.link_type == 'anchor'
     assign anchor_value = s.anchor_id | strip
     if anchor_value == blank
       assign anchor_value = '#main-product'
@@ -504,7 +508,7 @@
               <a
                 class="guarantee__btn"
                 href="{{ cta_href | default: '#' }}"
-                {% if s.link_type == 'anchor' %}data-guarantee-anchor{% endif %}
+                {% unless s.link_type == 'url' %}data-guarantee-scroll="{{ s.link_type }}"{% endunless %}
               >
                 <span>{{ s.button_label }}</span>
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.8 8h10.4M9 3.8L13.2 8 9 12.2"/></svg>
@@ -584,9 +588,26 @@
       return null;
     }
 
+    function smoothScrollTo(top) {
+      window.scrollTo({
+        top: top < 0 ? 0 : top,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth'
+      });
+    }
+
     root.addEventListener('click', function (event) {
-      var link = event.target.closest && event.target.closest('[data-guarantee-anchor]');
+      var link = event.target.closest && event.target.closest('[data-guarantee-scroll]');
       if (!link || !root.contains(link)) return;
+
+      /* Top mode needs no target lookup — the product sits at the top of the
+         page, so this is the reliable route on any theme. */
+      if (link.getAttribute('data-guarantee-scroll') === 'top') {
+        event.preventDefault();
+        smoothScrollTo(0);
+        return;
+      }
 
       var hash = link.getAttribute('href') || '';
       var found = resolve(hash);
@@ -601,13 +622,7 @@
         return;
       }
 
-      var top = found.el.getBoundingClientRect().top + window.pageYOffset - offset;
-      window.scrollTo({
-        top: top < 0 ? 0 : top,
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-          ? 'auto'
-          : 'smooth'
-      });
+      smoothScrollTo(found.el.getBoundingClientRect().top + window.pageYOffset - offset);
 
       /* Keyboard and screen-reader users must follow the scroll too. */
       if (!found.el.hasAttribute('tabindex')) found.el.setAttribute('tabindex', '-1');
@@ -663,24 +678,25 @@
       "id": "link_type",
       "label": "Comportement du bouton",
       "options": [
+        { "value": "top", "label": "Remonter en haut de page" },
         { "value": "anchor", "label": "Ancre sur la même page" },
         { "value": "url", "label": "Lien vers une page" }
       ],
-      "default": "anchor"
+      "default": "top"
     },
     {
       "type": "text",
       "id": "anchor_id",
       "label": "Ancre cible",
-      "info": "Identifiant de l'élément à atteindre, ex. #main-product. Si cet identifiant n'existe pas sur la page, le bouton vise automatiquement la zone produit du thème (formulaire d'ajout au panier).",
+      "info": "Utilisé uniquement en mode « Ancre ». Identifiant à atteindre, ex. #main-product. S'il n'existe pas, le bouton vise automatiquement la zone produit du thème.",
       "default": "#main-product"
     },
-    { "type": "url", "id": "button_url", "label": "Lien", "info": "Utilisé quand le comportement est « Lien vers une page »." },
+    { "type": "url", "id": "button_url", "label": "Lien", "info": "Utilisé uniquement en mode « Lien vers une page »." },
     {
       "type": "range",
       "id": "scroll_offset",
       "label": "Décalage de défilement",
-      "info": "À augmenter si ton en-tête est fixe et recouvre la cible.",
+      "info": "Utilisé uniquement en mode « Ancre ». À augmenter si ton en-tête fixe recouvre la cible.",
       "min": 0,
       "max": 200,
       "step": 5,
