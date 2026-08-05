@@ -440,6 +440,7 @@
   data-scroll-offset="{{ s.scroll_offset }}"
   data-scroll-duration="{{ s.scroll_duration }}"
   data-design-mode="{{ request.design_mode }}"
+  data-debug="{{ s.debug }}"
   style="
     --gt-bg: {{ s.color_bg }};
     --gt-card: {{ s.color_card }};
@@ -580,6 +581,7 @@
     root.dataset.guaranteeReady = 'true';
 
     var DESIGN = root.getAttribute('data-design-mode') === 'true';
+    var DEBUG = root.getAttribute('data-debug') === 'true' || DESIGN;
     var DURATION = parseInt(root.getAttribute('data-scroll-duration'), 10);
     if (isNaN(DURATION)) DURATION = 800;
     var OFFSET = parseInt(root.getAttribute('data-scroll-offset'), 10);
@@ -603,6 +605,11 @@
       '.shopify-section--main-product'
     ];
 
+    function log() {
+      if (!DEBUG) return;
+      console.info.apply(console, ['[garantie]'].concat([].slice.call(arguments)));
+    }
+
     function reduced() {
       return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
@@ -615,6 +622,59 @@
       }
     }
 
+    /* ---------------------------------------------------------------- *
+     * Scroll container
+     *
+     * The window is not always what scrolls. Themes that run a smooth-scroll
+     * library, or wrap the page in a fixed shell, move an inner element
+     * instead — and those libraries are commonly disabled on touch, which is
+     * exactly why a button can work on mobile and do nothing on desktop.
+     * ---------------------------------------------------------------- */
+
+    function findScroller(el) {
+      var node = el.parentElement;
+      while (node && node !== document.body && node !== document.documentElement) {
+        var style = window.getComputedStyle(node);
+        var overflowY = style.overflowY;
+        if (
+          (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+          node.scrollHeight > node.clientHeight + 1
+        ) {
+          return node;
+        }
+        node = node.parentElement;
+      }
+      return null; // the window scrolls
+    }
+
+    function currentY(scroller) {
+      return scroller ? scroller.scrollTop : window.pageYOffset;
+    }
+
+    function maxY(scroller) {
+      return scroller
+        ? scroller.scrollHeight - scroller.clientHeight
+        : Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    }
+
+    function setY(scroller, y) {
+      if (scroller) scroller.scrollTop = y;
+      else window.scrollTo(0, y);
+    }
+
+    /** Destination in the coordinate space of whatever actually scrolls. */
+    function destinationFor(el, scroller) {
+      if (scroller) {
+        return (
+          el.getBoundingClientRect().top -
+          scroller.getBoundingClientRect().top +
+          scroller.scrollTop -
+          OFFSET
+        );
+      }
+      return el.getBoundingClientRect().top + window.pageYOffset - OFFSET;
+    }
+
     /* Hand-rolled easing rather than behavior:"smooth". The native one has no
        controllable duration or curve, and Safari has been inconsistent about
        it; this gives the same deliberate ease-in-out everywhere. */
@@ -622,44 +682,81 @@
       return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
 
-    function animateScrollTo(targetY) {
-      var startY = window.pageYOffset;
-      var maxY = Math.max(
-        0,
-        document.documentElement.scrollHeight - window.innerHeight
-      );
-      var endY = Math.min(Math.max(targetY, 0), maxY);
+    /**
+     * Animate, then verify. If nothing has actually moved shortly after the
+     * start, the page is being scrolled by something we do not control, so
+     * hand over to scrollIntoView, which such libraries do hook.
+     */
+    function scrollToElement(el, mode) {
+      var scroller = findScroller(el);
+      var startY = currentY(scroller);
+      var endY = Math.min(Math.max(destinationFor(el, scroller), 0), maxY(scroller));
+      if (mode === 'top') endY = 0;
       var delta = endY - startY;
 
+      log('défilement', {
+        conteneur: scroller ? scroller.tagName + '.' + scroller.className : 'window',
+        de: Math.round(startY),
+        vers: Math.round(endY)
+      });
+
       if (Math.abs(delta) < 2) return;
+
       if (reduced()) {
-        window.scrollTo(0, endY);
+        setY(scroller, endY);
         return;
       }
 
       var startTime = null;
       var cancelled = false;
+      var handedOver = false;
 
-      /* Any real scroll gesture hands control straight back to the visitor. */
-      function abort() {
+      /* Only a real scroll gesture hands control back — a 0-delta wheel event
+         from a trackpad resting under the cursor must not abort anything. */
+      function abortOnWheel(event) {
+        if (event.deltaY) cancelled = true;
+      }
+      function abortOnTouch() {
         cancelled = true;
       }
-      window.addEventListener('wheel', abort, { passive: true });
-      window.addEventListener('touchstart', abort, { passive: true });
+      window.addEventListener('wheel', abortOnWheel, { passive: true });
+      window.addEventListener('touchstart', abortOnTouch, { passive: true });
 
       function cleanup() {
-        window.removeEventListener('wheel', abort);
-        window.removeEventListener('touchstart', abort);
+        window.removeEventListener('wheel', abortOnWheel);
+        window.removeEventListener('touchstart', abortOnTouch);
+      }
+
+      function handOver() {
+        handedOver = true;
+        cleanup();
+        log('la fenêtre ne bouge pas, bascule sur scrollIntoView');
+        try {
+          el.style.scrollMarginTop = OFFSET + 'px';
+          el.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
+        } catch (error) {
+          el.scrollIntoView(true);
+        }
       }
 
       function step(now) {
-        if (cancelled) {
+        if (cancelled || handedOver) {
           cleanup();
           return;
         }
         if (startTime === null) startTime = now;
-        var progress = Math.min((now - startTime) / DURATION, 1);
-        window.scrollTo(0, startY + delta * easeInOutCubic(progress));
+        var elapsed = now - startTime;
+        var progress = Math.min(elapsed / DURATION, 1);
+
+        setY(scroller, startY + delta * easeInOutCubic(progress));
+
+        /* Watchdog: by 180ms an 800ms ease has covered enough ground to be
+           measurable. Dead still means our writes are being ignored. */
+        if (elapsed > 180 && Math.abs(currentY(scroller) - startY) < 1) {
+          handOver();
+          return;
+        }
+
         if (progress < 1) {
           window.requestAnimationFrame(step);
         } else {
@@ -694,16 +791,26 @@
       }
     }
 
-    root.addEventListener('click', function (event) {
-      var link =
-        event.target.closest && event.target.closest('[data-guarantee-scroll]');
+    /** closest() is missing on SVG elements in a few older engines. */
+    function closestScrollLink(node) {
+      if (node && node.closest) return node.closest('[data-guarantee-scroll]');
+      while (node && node.getAttribute) {
+        if (node.getAttribute('data-guarantee-scroll') !== null) return node;
+        node = node.parentNode;
+      }
+      return null;
+    }
+
+    function onClick(event) {
+      var link = closestScrollLink(event.target);
       if (!link || !root.contains(link)) return;
 
       var mode = link.getAttribute('data-guarantee-scroll');
       event.preventDefault();
+      log('clic', mode);
 
       if (mode === 'top') {
-        animateScrollTo(0);
+        scrollToElement(root, 'top');
         return;
       }
 
@@ -723,9 +830,8 @@
         return;
       }
 
-      animateScrollTo(
-        found.el.getBoundingClientRect().top + window.pageYOffset - OFFSET
-      );
+      log('cible', found.how);
+      scrollToElement(found.el);
 
       /* Keyboard and screen-reader users must follow the scroll too. */
       if (!found.el.hasAttribute('tabindex')) {
@@ -737,9 +843,13 @@
       if (found.how === hash && window.history && window.history.replaceState) {
         window.history.replaceState(null, '', hash);
       }
+    }
 
-      if (DESIGN) console.info('[garantie] cible atteinte via : ' + found.how);
-    });
+    /* Capture phase on window: runs before any theme or theme-editor handler
+       further down the path that might swallow the event. */
+    window.addEventListener('click', onClick, true);
+
+    log('prêt', { duree: DURATION, decalage: OFFSET });
   })();
 </script>
 
@@ -792,6 +902,13 @@
         { "value": "url", "label": "Lien vers une page" }
       ],
       "default": "product"
+    },
+    {
+      "type": "checkbox",
+      "id": "debug",
+      "label": "Mode diagnostic",
+      "info": "Écrit dans la console du navigateur ce que le bouton cherche et trouve. À désactiver une fois le réglage terminé.",
+      "default": false
     },
     {
       "type": "range",
