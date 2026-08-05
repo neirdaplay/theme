@@ -63,6 +63,12 @@
   data-pdp-root
   style="--navy: {{ s.color_navy }}; --navy-deep: {{ s.color_navy_deep }}; --orange: {{ s.color_orange }}; --orange-soft: {{ s.color_orange_soft }}; --cream: {{ s.color_cream }};"
 >
+  {%- comment -%}
+    Stable anchor target for CTAs elsewhere on the page (the guarantee section
+    links here by default). Kept separate from the section id, which changes.
+  {%- endcomment -%}
+  <span id="main-product" class="pdp-anchor"></span>
+
   {%- comment -%} Price + cart config consumed by product-custom.js {%- endcomment -%}
   <script type="application/json" data-pdp-config>
     {

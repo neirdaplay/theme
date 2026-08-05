@@ -10,9 +10,11 @@
   --vcar-orange: #f26a21;
   --vcar-bg: #f7f3ea;
 
-  /* Card metrics (overridden inline from the schema) */
-  --vcar-card-w: 268px;
-  --vcar-gap: 20px;
+  /* Card metrics. The schema writes the *-set variables inline; these derive
+     from them so media queries can still override (an inline custom property
+     would otherwise beat every stylesheet rule). */
+  --vcar-card-w: var(--vcar-card-w-set, 268px);
+  --vcar-gap: var(--vcar-gap-set, 20px);
   --vcar-radius: 20px;
 
   /* Layout */
@@ -385,16 +387,16 @@
 
 @media screen and (max-width: 1023px) {
   .vcar {
-    --vcar-card-w: 232px;
+    --vcar-card-w: min(var(--vcar-card-w-set, 268px), 26vw);
   }
 }
 
 @media screen and (max-width: 767px) {
   .vcar {
     --vcar-gutter: 20px;
-    --vcar-gap: 14px;
+    --vcar-gap: min(var(--vcar-gap-set, 20px), 14px);
     /* Peek the next card so the carousel reads as swipeable. */
-    --vcar-card-w: min(72vw, 280px);
+    --vcar-card-w: min(var(--vcar-card-w-set, 280px), 72vw);
   }
 
   .vcar__head + .vcar__viewport {

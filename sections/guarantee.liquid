@@ -1,0 +1,305 @@
+{% comment %}
+  guarantee.liquid
+  Standalone risk-free guarantee band: orange medallion, headline, reassurance
+  cards and a CTA that anchor-scrolls back to the product section.
+  Assets: assets/guarantee.css, assets/guarantee.js
+{% endcomment %}
+
+{{ 'guarantee.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'guarantee.js' | asset_url }}" defer></script>
+
+{%- liquid
+  assign s = section.settings
+  assign items = section.blocks | where: 'type', 'item'
+
+  assign root_classes = 'guarantee'
+  unless s.show_dash
+    assign root_classes = root_classes | append: ' guarantee--no-dash'
+  endunless
+  unless s.show_medallion
+    assign root_classes = root_classes | append: ' guarantee--no-medallion'
+  endunless
+  unless s.show_glow
+    assign root_classes = root_classes | append: ' guarantee--no-glow'
+  endunless
+
+  comment
+    The CTA either scrolls to an anchor on the page or navigates to a URL.
+  endcomment
+  assign cta_href = s.button_url
+  if s.link_type == 'anchor'
+    assign cta_href = s.anchor_id
+  endif
+-%}
+
+<div
+  class="{{ root_classes }}"
+  id="guarantee-{{ section.id }}"
+  data-guarantee-root
+  data-scroll-offset="{{ s.scroll_offset }}"
+  style="
+    --gt-bg: {{ s.color_bg }};
+    --gt-card: {{ s.color_card }};
+    --gt-navy: {{ s.color_navy }};
+    --gt-orange: {{ s.color_orange }};
+    --gt-orange-soft: {{ s.color_orange_soft }};
+    --gt-muted: {{ s.color_muted }};
+    --gt-card-max: {{ s.card_max_width }}px;
+    --gt-card-radius: {{ s.card_radius }}px;
+    --gt-medallion-set: {{ s.medallion_size }}px;
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+  "
+>
+  <div class="guarantee__container">
+    <div class="guarantee__card">
+      <div class="guarantee__grid">
+        {%- if s.show_medallion -%}
+          <div class="guarantee__medallion-col">
+            <div class="guarantee__medallion">
+              {%- if s.medallion_number != blank -%}
+                <span class="guarantee__number">{{ s.medallion_number }}</span>
+              {%- endif -%}
+              {%- if s.medallion_unit != blank -%}
+                <span class="guarantee__unit">{{ s.medallion_unit }}</span>
+              {%- endif -%}
+              {%- if s.medallion_caption != blank -%}
+                <span class="guarantee__caption">{{ s.medallion_caption }}</span>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        <div class="guarantee__content">
+          {%- if s.eyebrow != blank -%}
+            <p class="guarantee__eyebrow">{{ s.eyebrow }}</p>
+          {%- endif -%}
+
+          {%- if s.title != blank -%}
+            <h2 class="guarantee__title">{{ s.title | escape }}</h2>
+          {%- endif -%}
+
+          {%- if s.text != blank -%}
+            <div class="guarantee__text">{{ s.text }}</div>
+          {%- endif -%}
+
+          {%- if items.size > 0 -%}
+            <ul class="guarantee__items">
+              {%- for block in items -%}
+                <li class="guarantee__item" {{ block.shopify_attributes }}>
+                  <span class="guarantee__item-icon" aria-hidden="true">
+                    {%- case block.settings.icon -%}
+                      {%- when 'calendar' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.8" y="4.2" width="14.4" height="13" rx="2.6"/><path d="M2.8 8.4h14.4M6.6 2.6v3.2M13.4 2.6v3.2"/><path d="M7.4 12.6l1.7 1.7 3.5-3.6"/></svg>
+                      {%- when 'message' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 6.2a2.4 2.4 0 012.4-2.4h9.2A2.4 2.4 0 0117 6.2v6a2.4 2.4 0 01-2.4 2.4H8.2L4.4 17.2v-2.6H5.4A2.4 2.4 0 013 12.2z"/><path d="M7 9.2h6"/></svg>
+                      {%- when 'heart' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 16.8s-6.4-4-6.4-8.2A3.6 3.6 0 0110 6.2a3.6 3.6 0 016.4 2.4c0 4.2-6.4 8.2-6.4 8.2z"/><path d="M7.6 9.6l1.6 1.6 3-3"/></svg>
+                      {%- when 'shield' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 2.4l6 2.2v5.1c0 3.5-2.4 6.6-6 7.9-3.6-1.3-6-4.4-6-7.9V4.6z"/><path d="M7.4 10l1.9 1.9 3.4-3.6"/></svg>
+                      {%- when 'truck' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1.9 5.4h9.3v8.2H1.9zM11.2 8.2h3.4l2.9 2.8v2.6h-6.3z"/><circle cx="5.6" cy="15.1" r="1.6"/><circle cx="14.1" cy="15.1" r="1.6"/></svg>
+                      {%- when 'refresh' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16.6 8.4A6.8 6.8 0 004.6 5.6M3.4 11.6a6.8 6.8 0 0012 2.8"/><path d="M16.8 3.6v4.8H12M3.2 16.4v-4.8H8"/></svg>
+                      {%- when 'wallet' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.6" y="4.8" width="14.8" height="11" rx="2.6"/><path d="M2.6 8.6h14.8"/><circle cx="13.8" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>
+                      {%- when 'clock' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="7.6"/><path d="M10 5.6V10l3 1.9"/></svg>
+                      {%- when 'sparkle' -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 2.6l1.9 4.7 4.7 1.9-4.7 1.9L10 15.8l-1.9-4.8L3.4 9.2l4.7-1.9z"/><path d="M15.8 13.6l.8 1.8 1.8.8-1.8.8-.8 1.8-.8-1.8-1.8-.8 1.8-.8z"/></svg>
+                      {%- else -%}
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="7.6"/><path d="M6.7 10.2l2.2 2.2 4.4-4.6"/></svg>
+                    {%- endcase -%}
+                  </span>
+                  {%- if block.settings.title != blank -%}
+                    <h3 class="guarantee__item-title">{{ block.settings.title }}</h3>
+                  {%- endif -%}
+                  {%- if block.settings.text != blank -%}
+                    <p class="guarantee__item-text">{{ block.settings.text }}</p>
+                  {%- endif -%}
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+
+          {%- if s.show_button and s.button_label != blank -%}
+            <div class="guarantee__actions">
+              <a
+                class="guarantee__btn"
+                href="{{ cta_href | default: '#' }}"
+                {% if s.link_type == 'anchor' %}data-guarantee-anchor{% endif %}
+              >
+                <span>{{ s.button_label }}</span>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.8 8h10.4M9 3.8L13.2 8 9 12.2"/></svg>
+              </a>
+
+              {%- if s.note_text != blank -%}
+                <span class="guarantee__note">
+                  {%- case s.note_icon -%}
+                    {%- when 'truck' -%}
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M1.9 5.4h9.3v8.2H1.9zM11.2 8.2h3.4l2.9 2.8v2.6h-6.3z"/><circle cx="5.6" cy="15.1" r="1.6"/><circle cx="14.1" cy="15.1" r="1.6"/></svg>
+                    {%- when 'clock' -%}
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="7.6"/><path d="M10 5.6V10l3 1.9"/></svg>
+                    {%- when 'shield' -%}
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 2.4l6 2.2v5.1c0 3.5-2.4 6.6-6 7.9-3.6-1.3-6-4.4-6-7.9V4.6z"/><path d="M7.4 10l1.9 1.9 3.4-3.6"/></svg>
+                    {%- when 'check' -%}
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="7.6"/><path d="M6.7 10.2l2.2 2.2 4.4-4.6"/></svg>
+                  {%- endcase -%}
+                  <span>{{ s.note_text }}</span>
+                </span>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Garantie",
+  "tag": "section",
+  "class": "guarantee-section",
+  "max_blocks": 4,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Contenu"
+    },
+    { "type": "text", "id": "eyebrow", "label": "Surtitre", "default": "Essai sans risque" },
+    { "type": "checkbox", "id": "show_dash", "label": "Tiret orange avant le surtitre", "default": true },
+    { "type": "text", "id": "title", "label": "Titre", "default": "100 jours pour tomber amoureux." },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Paragraphe",
+      "default": "<p>Un seul verre suffit, selon nous — mais prends cent jours pour en être sûr. Si le résultat ne te convainc pas, nous te remboursons intégralement.</p>"
+    },
+
+    {
+      "type": "header",
+      "content": "Médaillon"
+    },
+    { "type": "checkbox", "id": "show_medallion", "label": "Afficher le médaillon", "default": true },
+    { "type": "text", "id": "medallion_number", "label": "Chiffre", "default": "100" },
+    { "type": "text", "id": "medallion_unit", "label": "Unité", "default": "Jours" },
+    { "type": "text", "id": "medallion_caption", "label": "Mention", "default": "Convaincu ou remboursé" },
+    { "type": "range", "id": "medallion_size", "label": "Taille", "min": 110, "max": 220, "step": 2, "unit": "px", "default": 150 },
+
+    {
+      "type": "header",
+      "content": "Bouton"
+    },
+    { "type": "checkbox", "id": "show_button", "label": "Afficher le bouton", "default": true },
+    { "type": "text", "id": "button_label", "label": "Texte du bouton", "default": "Démarre tes 100 jours" },
+    {
+      "type": "select",
+      "id": "link_type",
+      "label": "Comportement du bouton",
+      "options": [
+        { "value": "anchor", "label": "Ancre sur la même page" },
+        { "value": "url", "label": "Lien vers une page" }
+      ],
+      "default": "anchor"
+    },
+    {
+      "type": "text",
+      "id": "anchor_id",
+      "label": "Ancre cible",
+      "info": "Identifiant de l'élément à atteindre, précédé de #. La section produit sur-mesure expose #main-product.",
+      "default": "#main-product"
+    },
+    { "type": "url", "id": "button_url", "label": "Lien", "info": "Utilisé quand le comportement est « Lien vers une page »." },
+    {
+      "type": "range",
+      "id": "scroll_offset",
+      "label": "Décalage de défilement",
+      "info": "À augmenter si ton en-tête est fixe et recouvre la cible.",
+      "min": 0,
+      "max": 200,
+      "step": 5,
+      "unit": "px",
+      "default": 90
+    },
+
+    {
+      "type": "header",
+      "content": "Mention à côté du bouton"
+    },
+    { "type": "text", "id": "note_text", "label": "Texte", "default": "Livraison offerte · annulable à tout moment" },
+    {
+      "type": "select",
+      "id": "note_icon",
+      "label": "Icône",
+      "options": [
+        { "value": "truck", "label": "Livraison" },
+        { "value": "clock", "label": "Horloge" },
+        { "value": "shield", "label": "Bouclier" },
+        { "value": "check", "label": "Coche" },
+        { "value": "none", "label": "Aucune" }
+      ],
+      "default": "truck"
+    },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond de section", "default": "#EAEFF8" },
+    { "type": "color", "id": "color_card", "label": "Fond de la carte", "default": "#FBF7F4" },
+    { "type": "color", "id": "color_navy", "label": "Titres", "default": "#16295C" },
+    { "type": "color", "id": "color_orange", "label": "Orange", "default": "#F26A21" },
+    { "type": "color", "id": "color_orange_soft", "label": "Orange clair (fond des icônes)", "default": "#FDF0E8" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#8A8F9A" },
+    { "type": "checkbox", "id": "show_glow", "label": "Halo orange dans la carte", "default": true },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    { "type": "range", "id": "card_max_width", "label": "Largeur de la carte", "min": 860, "max": 1300, "step": 20, "unit": "px", "default": 1060 },
+    { "type": "range", "id": "card_radius", "label": "Arrondi de la carte", "min": 0, "max": 44, "step": 2, "unit": "px", "default": 28 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 80 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 80 }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Argument",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icône",
+          "options": [
+            { "value": "calendar", "label": "Calendrier" },
+            { "value": "message", "label": "Message" },
+            { "value": "heart", "label": "Cœur" },
+            { "value": "shield", "label": "Bouclier" },
+            { "value": "truck", "label": "Livraison" },
+            { "value": "refresh", "label": "Échange" },
+            { "value": "wallet", "label": "Portefeuille" },
+            { "value": "clock", "label": "Horloge" },
+            { "value": "sparkle", "label": "Étincelle" },
+            { "value": "check", "label": "Coche" }
+          ],
+          "default": "calendar"
+        },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Titre de l'argument" },
+        { "type": "text", "id": "text", "label": "Description", "default": "Explique ici l'argument en une phrase courte." }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Garantie",
+      "blocks": [
+        { "type": "item", "settings": { "icon": "calendar" } },
+        { "type": "item", "settings": { "icon": "message" } },
+        { "type": "item", "settings": { "icon": "heart" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
