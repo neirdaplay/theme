@@ -645,326 +645,40 @@
   margin-top: 1px;
 }
 
-/* ---- 2e. Plan selector ---- */
+/* ---- 2e. Price ---- */
 
-.pdp-plans {
-  margin-top: 24px;
-}
-
-.pdp-plans__group {
-  display: grid;
-  gap: 12px;
-}
-
-.pdp-plan {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--white);
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
-}
-
-/* Selected card: 2px orange + shadow. The border width is constant so the
-   card never shifts by 1px when selection changes. */
-.pdp-plan {
-  border-width: 2px;
-  border-color: transparent;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.pdp-plan[data-selected="true"] {
-  border-color: var(--orange);
-  box-shadow: var(--shadow);
-}
-
-.pdp-plan__head {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px;
-}
-
-/* Transparent overlay carrying role="radio". It makes the whole head a click
-   and keyboard target while leaving the tooltip button above it clickable. */
-.pdp-plan__hit {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius);
-  background: none;
-  appearance: none;
-}
-
-.pdp-plan__radio {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--muted);
-  border-radius: 50%;
-  transition: border-color 0.16s ease;
-}
-
-.pdp-plan__radio::after {
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--navy);
-  transform: scale(0);
-  transition: transform 0.16s ease;
-}
-
-.pdp-plan[data-selected="true"] .pdp-plan__radio {
-  border-color: var(--navy);
-}
-
-.pdp-plan[data-selected="true"] .pdp-plan__radio::after {
-  transform: scale(1);
-}
-
-.pdp-plan__labels {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.pdp-plan__name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--navy);
-}
-
-.pdp-plan__sub {
-  margin-top: 3px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.pdp-plan__price {
-  flex: 0 0 auto;
-  text-align: right;
-  font-size: 19px;
-  font-weight: 700;
-  color: var(--navy);
-}
-
-.pdp-plan__price-was {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  text-decoration: line-through;
-}
-
-/* Navy "X% cheaper" badge, top-right of the subscription card. */
-.pdp-plan__badge {
-  position: absolute;
-  top: 0;
-  right: 14px;
-  transform: translateY(-50%);
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
-  background: var(--navy);
-  color: var(--white);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* Tooltip trigger next to the plan name. */
-.pdp-tip {
-  position: relative;
-  z-index: 2;
-  display: inline-grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: var(--muted);
-}
-
-.pdp-tip svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* display:none rather than visibility:hidden — a hidden-but-laid-out bubble
-   still contributes to document scroll width and breaks the 375px budget. */
-.pdp-tip__bubble {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 3;
-  width: max-content;
-  max-width: min(220px, calc(100vw - 40px));
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--navy);
-  color: var(--white);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.45;
-  letter-spacing: 0;
-  text-align: left;
-  text-transform: none;
-  transform: translateX(-50%);
-}
-
-.pdp-tip[aria-expanded="true"] .pdp-tip__bubble,
-.pdp-tip:hover .pdp-tip__bubble {
-  display: block;
-  animation: pdp-fade-in 0.14s ease both;
-}
-
-@keyframes pdp-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* The engagement banner's info button sits flush right, so its bubble is
-   anchored to the right edge instead of being centred on the trigger. */
-.pdp-engage__info .pdp-tip__bubble {
-  left: auto;
-  right: 0;
-  transform: none;
-}
-
-/* ---- 2f. Plan body: what's in the order + frequency ---- */
-
-.pdp-plan__body {
-  padding: 0 18px 18px;
-}
-
-.pdp-includes {
-  padding: 14px;
-  border-radius: 12px;
-  background: var(--blue-tint);
-}
-
-.pdp-includes__title {
-  margin: 0 0 10px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.pdp-includes__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.pdp-include {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.pdp-include + .pdp-include {
-  padding-left: 10px;
-  border-left: 1px solid var(--line);
-}
-
-.pdp-include__img {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  object-fit: contain;
-  background: var(--white);
-}
-
-.pdp-include__label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--ink);
-}
-
-.pdp-include__badge {
-  display: inline-block;
-  margin-top: 4px;
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  background: var(--navy);
-  color: var(--white);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.pdp-include__badge--orange {
-  background: var(--orange);
-}
-
-/* Frequency header row */
-.pdp-freq__head {
+.pdp-price {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 16px;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 22px;
 }
 
-.pdp-freq__label {
-  font-size: 10px;
+.pdp-price__now {
+  font-family: var(--font-head);
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+}
+
+.pdp-price__was {
+  font-size: 15px;
   color: var(--muted);
 }
 
-.pdp-freq__help {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--orange);
-  font-size: 10px;
+.pdp-price__save {
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--orange-soft);
+  color: #b8480d;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
-.pdp-freq__help svg {
-  width: 11px;
-  height: 11px;
-  transition: transform 0.2s ease;
-}
+/* ---- 2f. Collapse (shared by the FAQ) ---- */
 
-.pdp-freq__help[aria-expanded="true"] svg {
-  transform: rotate(180deg);
-}
-
-/* Collapsible help panel */
 .pdp-collapse {
   overflow: hidden;
   height: 0;
@@ -978,66 +692,427 @@
   color: var(--muted);
 }
 
-/* Segmented frequency buttons */
-.pdp-freq__options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 10px;
+/* ---- 2f-bis. Review popover ---- */
+
+/* Anchor for the popover that hangs under the rating link. */
+.pdp-info__rating {
+  position: relative;
 }
 
-.pdp-freq__btn {
+.pdp-info__rating-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pdp-info__rating-link svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s ease;
+}
+
+.pdp-info__rating-link[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.pdp-stars--brand .pdp-stars__row--full {
+  color: var(--orange);
+}
+
+.pdp-revpop {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 0;
+  z-index: 40;
+  width: min(410px, calc(100vw - 40px));
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: 0 18px 50px rgba(22, 41, 92, 0.2);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* display is set below, so the UA [hidden] rule needs restating. */
+.pdp-revpop[hidden] {
+  display: none;
+}
+
+.pdp-revpop.is-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* Tail pointing back up at the link. */
+.pdp-revpop::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 26px;
+  width: 14px;
+  height: 14px;
+  background: var(--white);
+  transform: rotate(45deg);
+  border-radius: 3px 0 0 0;
+}
+
+.pdp-revpop__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: var(--grey-soft);
+  color: var(--navy);
+}
+
+.pdp-revpop__close svg {
+  width: 12px;
+  height: 12px;
+}
+
+.pdp-revpop__head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px 12px;
+  padding-right: 40px;
+}
+
+.pdp-revpop__score {
+  grid-row: span 2;
+  font-family: var(--font-head);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--navy);
+}
+
+.pdp-revpop__basis {
+  grid-column: 2;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.pdp-revpop__basis strong {
+  color: var(--ink);
+}
+
+/* ---- Histogram ---- */
+
+.pdp-hist {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.pdp-hist__row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 9px;
+}
+
+.pdp-hist__label {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pdp-hist__track {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--grey-soft);
+  overflow: hidden;
+}
+
+.pdp-hist__bar {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--orange);
+  /* Keeps a one- or two-review bucket visible instead of vanishing. */
+  min-width: 4px;
+}
+
+.pdp-hist__count {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ---- Review carousel ---- */
+
+.pdp-revpop__slider {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.pdp-review[hidden] {
+  display: none;
+}
+
+.pdp-review__head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 11px 12px;
-  border: 2px solid var(--line);
-  border-radius: 12px;
+  gap: 10px;
+}
+
+.pdp-review__avatar {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--grey-soft);
+}
+
+.pdp-review__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.pdp-review__verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--green-soft);
+  color: #157347;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pdp-review__verified svg {
+  width: 11px;
+  height: 11px;
+}
+
+.pdp-review__text {
+  margin-top: 11px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.pdp-revpop__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pdp-revpop__arrow {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
   background: var(--white);
-  text-align: left;
-  transition: border-color 0.16s ease, background-color 0.16s ease;
+  color: var(--navy);
+  transition: border-color 0.16s ease;
 }
 
-.pdp-freq__btn[aria-checked="true"] {
-  border-color: var(--orange);
-  background: var(--orange-soft);
+.pdp-revpop__arrow:hover {
+  border-color: var(--navy);
 }
 
-.pdp-freq__btn-text {
-  flex: 1 1 auto;
-  min-width: 0;
+.pdp-revpop__arrow svg {
+  width: 14px;
+  height: 14px;
 }
 
-.pdp-freq__name {
-  display: block;
+.pdp-revpop__dots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.pdp-revpop__dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background-color 0.16s ease;
+}
+
+.pdp-revpop__dot[aria-current="true"] {
+  background: var(--navy);
+}
+
+/* ---- Impact dialog ---- */
+
+.pdp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.pdp-modal[hidden] {
+  display: none;
+}
+
+.pdp-modal.is-open {
+  opacity: 1;
+}
+
+.pdp-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(228, 235, 246, 0.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  cursor: default;
+}
+
+.pdp-modal__dialog {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: 0 24px 60px rgba(22, 41, 92, 0.24);
+  transform: translateY(10px) scale(0.97);
+  transition: transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pdp-modal.is-open .pdp-modal__dialog {
+  transform: none;
+}
+
+.pdp-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--navy);
+  box-shadow: 0 2px 10px rgba(15, 25, 45, 0.2);
+}
+
+.pdp-modal__close svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Full-bleed at the top of the card; the wrapper radius does the clipping. */
+.pdp-modal__image {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.pdp-modal__body {
+  padding: 22px;
+}
+
+.pdp-modal__intro {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.pdp-modal__step {
+  margin-top: 18px;
+}
+
+.pdp-modal__step-title {
+  font-size: 15px;
+  color: var(--navy);
+}
+
+.pdp-modal__step-text {
+  margin-top: 7px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.pdp-modal__partners {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.pdp-modal__partners-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pdp-modal__partners-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pdp-modal__link {
+  color: var(--orange);
   font-size: 13px;
   font-weight: 700;
-  line-height: 1.25;
-  color: var(--navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.pdp-freq__save {
-  display: inline-block;
-  margin-top: 4px;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: var(--blue-tint);
-  font-size: 10px;
+.pdp-modal__partner-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pdp-modal__partner {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
   font-weight: 600;
   color: var(--navy);
-}
-
-.pdp-freq__btn[aria-checked="true"] .pdp-freq__save {
-  background: rgba(242, 106, 33, 0.16);
-  color: #b8480d;
-}
-
-.pdp-freq__icon {
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  color: var(--navy);
-  opacity: 0.55;
 }
 
 /* ---- 2g. Add to cart + reassurance ---- */
@@ -1178,8 +1253,19 @@
     justify-content: flex-start;
   }
 
-  .pdp-freq__options {
-    grid-template-columns: minmax(0, 1fr);
+  .pdp-revpop {
+    width: calc(100vw - 40px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+  }
+
+  .pdp-revpop.is-open {
+    transform: translateX(-50%);
+  }
+
+  .pdp-revpop::before {
+    left: 50%;
+    margin-left: -7px;
   }
 }
 

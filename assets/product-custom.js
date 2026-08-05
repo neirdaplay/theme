@@ -51,8 +51,7 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * Collapse — animated height, used by the FAQ, the frequency help
-   * panel and the contaminant list.
+   * Collapse — animated height, used by the FAQ
    * ------------------------------------------------------------------ */
 
   function openCollapse(panel) {
@@ -105,41 +104,6 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * Roving-tabindex radio group (WAI-ARIA radiogroup keyboard pattern)
-   * ------------------------------------------------------------------ */
-
-  function bindRadioKeys(group, radioSelector, onSelect) {
-    group.addEventListener('keydown', function (event) {
-      var radios = $$(radioSelector, group);
-      var index = radios.indexOf(document.activeElement);
-      if (index === -1) return;
-
-      var next = null;
-      switch (event.key) {
-        case 'ArrowRight':
-        case 'ArrowDown':
-          next = radios[(index + 1) % radios.length];
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          next = radios[(index - 1 + radios.length) % radios.length];
-          break;
-        case ' ':
-        case 'Enter':
-          event.preventDefault();
-          onSelect(radios[index]);
-          return;
-        default:
-          return;
-      }
-
-      event.preventDefault();
-      next.focus();
-      onSelect(next);
-    });
-  }
-
-  /* ------------------------------------------------------------------ *
    * Section controller
    * ------------------------------------------------------------------ */
 
@@ -148,16 +112,10 @@
     this.config = this.readConfig();
     if (!this.config) return;
 
-    this.state = {
-      mode: 'onetime',
-      variantId: this.config.variantId,
-      sellingPlanId: null
-    };
-
     this.initCollapses();
-    this.initTooltips();
     this.initGallery();
-    this.initPlans();
+    this.initReviewPopover();
+    this.initImpactDialog();
     this.initAddToCart();
   }
 
@@ -179,36 +137,6 @@
       trigger.addEventListener('click', function () {
         toggleCollapse(trigger);
       });
-    });
-  };
-
-  /* ---- Tooltips ---- */
-
-  PdpSection.prototype.initTooltips = function () {
-    var open = null;
-
-    function close() {
-      if (open) {
-        open.setAttribute('aria-expanded', 'false');
-        open = null;
-      }
-    }
-
-    $$('[data-pdp-tooltip]', this.root).forEach(function (trigger) {
-      trigger.addEventListener('click', function (event) {
-        event.stopPropagation();
-        var wasOpen = trigger.getAttribute('aria-expanded') === 'true';
-        close();
-        if (!wasOpen) {
-          trigger.setAttribute('aria-expanded', 'true');
-          open = trigger;
-        }
-      });
-    });
-
-    document.addEventListener('click', close);
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') close();
     });
   };
 
@@ -254,119 +182,193 @@
     });
   };
 
-  /* ---- Plan selector ---- */
+  /* ------------------------------------------------------------------ *
+   * Review popover — summary, histogram and a one-at-a-time carousel
+   * ------------------------------------------------------------------ */
 
-  PdpSection.prototype.initPlans = function () {
-    var self = this;
-    var group = $('[data-pdp-plan-group]', this.root);
-    if (!group) return;
+  PdpSection.prototype.initReviewPopover = function () {
+    var root = this.root;
+    var toggle = $('[data-pdp-reviews-toggle]', root);
+    var pop = $('[data-pdp-revpop]', root);
+    if (!toggle || !pop) return;
 
-    var radios = $$('[data-pdp-plan-radio]', group);
-    var freqGroup = $('[data-pdp-freq-group]', this.root);
-    var freqButtons = freqGroup ? $$('[data-pdp-freq]', freqGroup) : [];
-
-    // Seed the selling plan from whichever frequency starts checked.
-    var checkedFreq = freqButtons.filter(function (btn) {
-      return btn.getAttribute('aria-checked') === 'true';
-    })[0];
-    if (checkedFreq) {
-      self.state.sellingPlanId = checkedFreq.getAttribute('data-selling-plan-id');
+    function open() {
+      pop.hidden = false;
+      toggle.setAttribute('aria-expanded', 'true');
+      window.requestAnimationFrame(function () {
+        pop.classList.add('is-open');
+      });
     }
 
-    function selectMode(mode) {
-      self.state.mode = mode;
+    function close(returnFocus) {
+      if (pop.hidden) return;
+      pop.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
 
-      $$('[data-pdp-plan-card]', group).forEach(function (card) {
-        card.setAttribute(
-          'data-selected',
-          card.getAttribute('data-pdp-plan-card') === mode ? 'true' : 'false'
-        );
-      });
-
-      radios.forEach(function (radio) {
-        var active = radio.getAttribute('data-pdp-plan-radio') === mode;
-        radio.setAttribute('aria-checked', active ? 'true' : 'false');
-        radio.tabIndex = active ? 0 : -1;
-      });
-
-      self.syncStickySummary();
-    }
-
-    radios.forEach(function (radio) {
-      radio.addEventListener('click', function () {
-        selectMode(radio.getAttribute('data-pdp-plan-radio'));
-      });
-    });
-
-    bindRadioKeys(group, '[data-pdp-plan-radio]', function (radio) {
-      selectMode(radio.getAttribute('data-pdp-plan-radio'));
-    });
-
-    /* Frequency sub-group */
-    if (freqGroup) {
-      var selectFreq = function (button) {
-        freqButtons.forEach(function (btn) {
-          var active = btn === button;
-          btn.setAttribute('aria-checked', active ? 'true' : 'false');
-          btn.tabIndex = active ? 0 : -1;
-        });
-
-        self.state.sellingPlanId = button.getAttribute('data-selling-plan-id');
-        self.updateSubscriptionPrice();
-
-        // Picking a frequency implies the subscription card.
-        selectMode('subscription');
+      var done = false;
+      var finish = function () {
+        if (done) return;
+        done = true;
+        pop.hidden = true;
+        if (returnFocus) toggle.focus();
       };
-
-      freqButtons.forEach(function (button) {
-        button.addEventListener('click', function () {
-          selectFreq(button);
-        });
+      pop.addEventListener('transitionend', function once(event) {
+        if (event.target !== pop) return;
+        pop.removeEventListener('transitionend', once);
+        finish();
       });
-
-      bindRadioKeys(freqGroup, '[data-pdp-freq]', selectFreq);
+      window.setTimeout(finish, 300);
     }
 
-    // Apply the server-rendered default so state and DOM agree from the start.
-    var preselected = radios.filter(function (radio) {
-      return radio.getAttribute('aria-checked') === 'true';
-    })[0];
-    selectMode(preselected ? preselected.getAttribute('data-pdp-plan-radio') : 'onetime');
-    this.updateSubscriptionPrice();
-  };
+    toggle.addEventListener('click', function (event) {
+      event.stopPropagation();
+      if (pop.hidden) open();
+      else close(false);
+    });
 
-  /**
-   * Swap the subscription price for the selected plan. Prices come pre-formatted
-   * from Liquid's `money` filter, so no currency logic is reimplemented here.
-   */
-  PdpSection.prototype.updateSubscriptionPrice = function () {
-    var plan = this.config.plans[this.state.sellingPlanId];
-    if (!plan) return;
+    $$('[data-pdp-reviews-close]', pop).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        close(true);
+      });
+    });
 
-    var amount = $('[data-pdp-sub-amount]', this.root);
-    if (amount) amount.textContent = plan.priceFormatted;
+    /* A click anywhere else, or Escape, dismisses it. */
+    document.addEventListener('click', function (event) {
+      if (pop.hidden) return;
+      if (pop.contains(event.target) || toggle.contains(event.target)) return;
+      close(false);
+    });
 
-    var compare = $('[data-pdp-sub-compare]', this.root);
-    if (compare) {
-      var showCompare = plan.price < this.config.oneTime.price;
-      compare.hidden = !showCompare;
-      if (showCompare) compare.textContent = plan.compareAtFormatted;
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') close(true);
+    });
+
+    /* ---- Carousel ---- */
+
+    var reviews = $$('[data-pdp-review]', pop);
+    if (reviews.length < 2) return;
+
+    var dots = $$('[data-pdp-review-dot]', pop);
+    var index = 0;
+
+    function show(next) {
+      index = (next + reviews.length) % reviews.length;
+      reviews.forEach(function (review, i) {
+        review.hidden = i !== index;
+      });
+      dots.forEach(function (dot, i) {
+        if (i === index) dot.setAttribute('aria-current', 'true');
+        else dot.removeAttribute('aria-current');
+      });
     }
 
-    this.syncStickySummary();
+    var prev = $('[data-pdp-review-prev]', pop);
+    var next = $('[data-pdp-review-next]', pop);
+    if (prev) {
+      prev.addEventListener('click', function () {
+        show(index - 1);
+      });
+    }
+    if (next) {
+      next.addEventListener('click', function () {
+        show(index + 1);
+      });
+    }
+
+    dots.forEach(function (dot, i) {
+      dot.addEventListener('click', function () {
+        show(i);
+      });
+    });
   };
 
-  /** Overridden once the sticky bar ships; harmless no-op until then. */
-  PdpSection.prototype.syncStickySummary = function () {};
+  /* ------------------------------------------------------------------ *
+   * Impact dialog
+   * ------------------------------------------------------------------ */
 
-  /* ---- Add to cart ---- */
+  PdpSection.prototype.initImpactDialog = function () {
+    var root = this.root;
+    var trigger = $('[data-pdp-open-impact]', root);
+    var modal = $('[data-pdp-impact]', root);
+    if (!trigger || !modal) return;
 
-  PdpSection.prototype.currentSelection = function () {
-    return {
-      variantId: this.config.variantId,
-      sellingPlanId: this.state.mode === 'subscription' ? this.state.sellingPlanId : null
-    };
+    var dialog = $('[data-pdp-impact-dialog]', modal);
+    var closeBtn = $('.pdp-modal__close', modal);
+    var FOCUSABLE =
+      'button:not([tabindex="-1"]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    function lockScroll(locked) {
+      document.documentElement.style.overflow = locked ? 'hidden' : '';
+      document.body.style.overflow = locked ? 'hidden' : '';
+    }
+
+    function open() {
+      modal.hidden = false;
+      lockScroll(true);
+      window.requestAnimationFrame(function () {
+        modal.classList.add('is-open');
+      });
+      if (closeBtn) closeBtn.focus();
+    }
+
+    function close() {
+      modal.classList.remove('is-open');
+      lockScroll(false);
+
+      var done = false;
+      var finish = function () {
+        if (done) return;
+        done = true;
+        modal.hidden = true;
+        trigger.focus();
+      };
+      modal.addEventListener('transitionend', function once(event) {
+        if (event.target !== modal) return;
+        modal.removeEventListener('transitionend', once);
+        finish();
+      });
+      window.setTimeout(finish, 320);
+    }
+
+    trigger.addEventListener('click', open);
+
+    $$('[data-pdp-impact-close]', modal).forEach(function (el) {
+      el.addEventListener('click', close);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (modal.hidden) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+        return;
+      }
+
+      /* Keep Tab inside the dialog while it owns the screen. */
+      if (event.key === 'Tab' && dialog) {
+        var items = $$(FOCUSABLE, dialog).filter(function (el) {
+          return el.offsetParent !== null;
+        });
+        if (!items.length) return;
+
+        var first = items[0];
+        var last = items[items.length - 1];
+
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
   };
+
+  /* ------------------------------------------------------------------ *
+   * Add to cart
+   * ------------------------------------------------------------------ */
 
   PdpSection.prototype.showError = function (message) {
     var box = $('[data-pdp-error]', this.root);
@@ -395,8 +397,7 @@
     if (button.classList.contains('is-loading')) return;
     if (button.getAttribute('aria-disabled') === 'true') return;
 
-    var selection = this.currentSelection();
-    if (!selection.variantId) {
+    if (!this.config.variantId) {
       this.showError(this.config.strings.soldOut);
       return;
     }
@@ -404,7 +405,7 @@
     this.clearError();
     button.classList.add('is-loading');
 
-    addToCart(selection.variantId, selection.sellingPlanId, this.config.cartAddUrl)
+    addToCart(this.config.variantId, null, this.config.cartAddUrl)
       .then(function (payload) {
         document.dispatchEvent(
           new CustomEvent('pdp:cart-added', { bubbles: true, detail: payload })

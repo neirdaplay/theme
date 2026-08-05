@@ -11,35 +11,24 @@
 {%- liquid
   assign s = section.settings
   assign pdp_variant = product.selected_or_first_available_variant
-  assign pdp_allocations = pdp_variant.selling_plan_allocations
-  assign pdp_has_plans = false
-  if pdp_allocations.size > 0
-    assign pdp_has_plans = true
-  endif
-
-  comment
-    Best subscription discount vs. the one-time price, used for the plan badge.
-  endcomment
-  assign pdp_best_discount = 0
-  if pdp_variant.price > 0
-    for alloc in pdp_allocations
-      assign alloc_disc = pdp_variant.price | minus: alloc.price | times: 100.0 | divided_by: pdp_variant.price | round
-      if alloc_disc > pdp_best_discount
-        assign pdp_best_discount = alloc_disc
-      endif
-    endfor
-  endif
-
-  comment
-    Which card starts selected. Falls back to one-time when no plan exists.
-  endcomment
-  assign pdp_default_mode = s.default_plan
-  unless pdp_has_plans
-    assign pdp_default_mode = 'onetime'
-  endunless
 
   assign pdp_rating = s.rating_value | default: 0.0
   assign pdp_rating_pct = pdp_rating | divided_by: 5.0 | times: 100
+
+  comment
+    Percentage off, shown only when a compare-at price is actually set.
+  endcomment
+  assign pdp_discount = 0
+  if pdp_variant.compare_at_price > pdp_variant.price
+    assign pdp_discount = pdp_variant.compare_at_price | minus: pdp_variant.price | times: 100.0 | divided_by: pdp_variant.compare_at_price | round
+  endif
+
+  comment
+    Review histogram. Bars are a share of the total, so the five buckets and
+    the headline count stay consistent with each other.
+  endcomment
+  assign pdp_hist_total = s.stars_5 | plus: s.stars_4 | plus: s.stars_3 | plus: s.stars_2 | plus: s.stars_1
+  assign pdp_reviews = section.blocks | where: 'type', 'review'
 
   comment
     root_url is "/" on a single-locale shop and "/fr" on a localised one, so
@@ -55,7 +44,7 @@
 {%- capture icon_chevron -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
 {%- capture icon_info -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="8"/><path d="M10 9v5" stroke-linecap="round"/><circle cx="10" cy="6.2" r="1" fill="currentColor" stroke="none"/></svg>{%- endcapture -%}
 {%- capture icon_heart -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 17s-6.5-4.1-6.5-8.3A3.7 3.7 0 0110 6.3a3.7 3.7 0 016.5 2.4C16.5 12.9 10 17 10 17z"/></svg>{%- endcapture -%}
-{%- capture icon_calendar -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><rect x="2.8" y="4.2" width="14.4" height="13" rx="2.4"/><path d="M2.8 8.4h14.4M6.6 2.6v3.2M13.4 2.6v3.2" stroke-linecap="round"/></svg>{%- endcapture -%}
+{%- capture icon_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/></svg>{%- endcapture -%}
 
 <div
   class="pdp-custom"
@@ -81,25 +70,6 @@
       "oneTime": {
         "price": {{ pdp_variant.price | json }},
         "priceFormatted": {{ pdp_variant.price | money | json }}
-      },
-      "plans": {
-        {%- for alloc in pdp_allocations -%}
-          {%- liquid
-            assign a_disc = 0
-            if pdp_variant.price > 0
-              assign a_disc = pdp_variant.price | minus: alloc.price | times: 100.0 | divided_by: pdp_variant.price | round
-            endif
-          -%}
-          {%- unless forloop.first %},{% endunless -%}
-          {%- comment -%} Quoted: a JSON key must be a string, not a bare id. {%- endcomment -%}
-          "{{ alloc.selling_plan.id }}": {
-            "price": {{ alloc.price | json }},
-            "priceFormatted": {{ alloc.price | money | json }},
-            "compareAtFormatted": {{ pdp_variant.price | money | json }},
-            "discount": {{ a_disc | json }},
-            "name": {{ alloc.selling_plan.name | json }}
-          }
-        {%- endfor -%}
       },
       "strings": {
         "soldOut": {{ s.sold_out_label | json }},
@@ -221,16 +191,15 @@
             <div class="pdp-engage">
               <span class="pdp-engage__icon" aria-hidden="true">{{ icon_heart }}</span>
               <p class="pdp-engage__text">{{ s.engage_text }}</p>
-              {%- if s.engage_info != blank -%}
+              {%- if s.impact_enabled -%}
                 <button
                   type="button"
-                  class="pdp-engage__info pdp-tip"
-                  data-pdp-tooltip
-                  aria-expanded="false"
+                  class="pdp-engage__info"
+                  data-pdp-open-impact
+                  aria-haspopup="dialog"
                   aria-label="{{ s.info_button_label }}"
                 >
                   {{ icon_info }}
-                  <span class="pdp-tip__bubble" role="tooltip">{{ s.engage_info }}</span>
                 </button>
               {%- endif -%}
             </div>
@@ -247,9 +216,108 @@
                 <span class="pdp-stars__row pdp-stars__row--empty" aria-hidden="true">{{ icon_stars_row }}</span>
                 <span class="pdp-stars__row pdp-stars__row--full" aria-hidden="true">{{ icon_stars_row }}</span>
               </span>
-              <a class="pdp-info__rating-link" href="#pdp-reviews-{{ section.id }}">
-                {{ s.rating_value }} · {{ s.rating_count }} {{ s.rating_count_label }}
-              </a>
+              <button
+                type="button"
+                class="pdp-info__rating-link"
+                data-pdp-reviews-toggle
+                aria-expanded="false"
+                aria-controls="pdp-revpop-{{ section.id }}"
+              >
+                <span>{{ s.rating_value }} · {{ s.rating_count }} {{ s.rating_count_label }}</span>
+                {{ icon_chevron }}
+              </button>
+
+              {%- comment -%} Review summary, anchored under the link. {%- endcomment -%}
+              <div class="pdp-revpop" id="pdp-revpop-{{ section.id }}" data-pdp-revpop hidden>
+                <button
+                  type="button"
+                  class="pdp-revpop__close"
+                  data-pdp-reviews-close
+                  aria-label="{{ s.close_label }}"
+                >
+                  {{ icon_close }}
+                </button>
+
+                <div class="pdp-revpop__head">
+                  <span class="pdp-revpop__score">{{ s.rating_value }}</span>
+                  <span class="pdp-stars pdp-stars--brand" style="--pdp-star-pct: {{ pdp_rating_pct }}%; --pdp-star-size: 17px;" role="img" aria-label="{{ s.rating_aria_label }}">
+                    <span class="pdp-stars__row pdp-stars__row--empty" aria-hidden="true">{{ icon_stars_row }}</span>
+                    <span class="pdp-stars__row pdp-stars__row--full" aria-hidden="true">{{ icon_stars_row }}</span>
+                  </span>
+                  <p class="pdp-revpop__basis">
+                    {{ s.reviews_basis_prefix }} <strong>{{ s.rating_count }}</strong> {{ s.rating_count_label }}
+                  </p>
+                </div>
+
+                {%- if pdp_hist_total > 0 -%}
+                  <ul class="pdp-hist">
+                    {%- for i in (1..5) -%}
+                      {%- liquid
+                        assign star = 6 | minus: i
+                        case star
+                          when 5
+                            assign bucket = s.stars_5
+                          when 4
+                            assign bucket = s.stars_4
+                          when 3
+                            assign bucket = s.stars_3
+                          when 2
+                            assign bucket = s.stars_2
+                          else
+                            assign bucket = s.stars_1
+                        endcase
+                        assign bucket_pct = bucket | times: 100.0 | divided_by: pdp_hist_total
+                      -%}
+                      <li class="pdp-hist__row">
+                        <span class="pdp-hist__label">{{ star }} &#9733;</span>
+                        <span class="pdp-hist__track">
+                          <span class="pdp-hist__bar" style="width: {{ bucket_pct }}%;"></span>
+                        </span>
+                        <span class="pdp-hist__count">({{ bucket }})</span>
+                      </li>
+                    {%- endfor -%}
+                  </ul>
+                {%- endif -%}
+
+                {%- if pdp_reviews.size > 0 -%}
+                  <div class="pdp-revpop__slider" data-pdp-review-slider>
+                    {%- for block in pdp_reviews -%}
+                      <article class="pdp-review" data-pdp-review="{{ forloop.index0 }}" {% unless forloop.first %}hidden{% endunless %} {{ block.shopify_attributes }}>
+                        <div class="pdp-review__head">
+                          {%- if block.settings.image != blank -%}
+                            {{
+                              block.settings.image
+                              | image_url: width: 120
+                              | image_tag: width: 60, height: 60, class: 'pdp-review__avatar', loading: 'lazy', alt: ''
+                            }}
+                          {%- endif -%}
+                          <span class="pdp-review__name">{{ block.settings.name }}</span>
+                          {%- if block.settings.verified -%}
+                            <span class="pdp-review__verified">{{ icon_check }} {{ s.verified_label }}</span>
+                          {%- endif -%}
+                        </div>
+                        <p class="pdp-review__text">{{ block.settings.text }}</p>
+                      </article>
+                    {%- endfor -%}
+                  </div>
+
+                  {%- if pdp_reviews.size > 1 -%}
+                    <div class="pdp-revpop__nav">
+                      <button type="button" class="pdp-revpop__arrow" data-pdp-review-prev aria-label="{{ s.prev_label }}">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3L5 8l5 5"/></svg>
+                      </button>
+                      <span class="pdp-revpop__dots" data-pdp-review-dots>
+                        {%- for block in pdp_reviews -%}
+                          <button type="button" class="pdp-revpop__dot" data-pdp-review-dot="{{ forloop.index0 }}" aria-label="{{ s.review_label }} {{ forloop.index }}" {% if forloop.first %}aria-current="true"{% endif %}></button>
+                        {%- endfor -%}
+                      </span>
+                      <button type="button" class="pdp-revpop__arrow pdp-revpop__arrow--next" data-pdp-review-next aria-label="{{ s.next_label }}">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3l5 5-5 5"/></svg>
+                      </button>
+                    </div>
+                  {%- endif -%}
+                {%- endif -%}
+              </div>
             </div>
           {%- endif -%}
 
@@ -265,229 +333,20 @@
             </ul>
           {%- endif -%}
 
-          {%- comment -%} ---------- Plan selector ---------- {%- endcomment -%}
-          <div class="pdp-plans">
-            <p class="pdp-eyebrow" id="pdp-plans-label-{{ section.id }}">{{ s.plans_eyebrow }}</p>
-
-            <div
-              class="pdp-plans__group"
-              role="radiogroup"
-              aria-labelledby="pdp-plans-label-{{ section.id }}"
-              data-pdp-plan-group
-            >
-              {%- if pdp_has_plans -%}
-                {%- comment -%} --- Card 1: subscription --- {%- endcomment -%}
-                {%- assign sub_selected = false -%}
-                {%- if pdp_default_mode == 'subscription' -%}
-                  {%- assign sub_selected = true -%}
+          {%- comment -%} ---------- Price ---------- {%- endcomment -%}
+          {%- if s.show_price -%}
+            <div class="pdp-price">
+              <span class="pdp-price__now">{{ pdp_variant.price | money }}</span>
+              {%- if pdp_discount > 0 -%}
+                <s class="pdp-price__was">{{ pdp_variant.compare_at_price | money }}</s>
+                {%- if s.save_label != blank -%}
+                  <span class="pdp-price__save">
+                    {{- s.save_label | replace: '{percent}', pdp_discount -}}
+                  </span>
                 {%- endif -%}
-                {%- assign first_alloc = pdp_allocations.first -%}
-
-                <div
-                  class="pdp-plan"
-                  data-pdp-plan-card="subscription"
-                  data-selected="{{ sub_selected }}"
-                >
-                  {%- if pdp_best_discount > 0 and s.plan_badge_text != blank -%}
-                    <span class="pdp-plan__badge">
-                      {{- s.plan_badge_text | replace: '{discount}', pdp_best_discount -}}
-                    </span>
-                  {%- endif -%}
-
-                  <div class="pdp-plan__head">
-                    <button
-                      type="button"
-                      class="pdp-plan__hit"
-                      role="radio"
-                      aria-checked="{{ sub_selected }}"
-                      tabindex="{% if sub_selected %}0{% else %}-1{% endif %}"
-                      aria-labelledby="pdp-sub-name-{{ section.id }} pdp-sub-price-{{ section.id }}"
-                      data-pdp-plan-radio="subscription"
-                    ></button>
-
-                    <span class="pdp-plan__radio" aria-hidden="true"></span>
-
-                    <div class="pdp-plan__labels">
-                      <span class="pdp-plan__name" id="pdp-sub-name-{{ section.id }}">
-                        {{ s.plan_sub_title }}
-                        {%- if s.plan_sub_tooltip != blank -%}
-                          <button
-                            type="button"
-                            class="pdp-tip"
-                            data-pdp-tooltip
-                            aria-expanded="false"
-                            aria-label="{{ s.info_button_label }}"
-                          >
-                            {{ icon_info }}
-                            <span class="pdp-tip__bubble" role="tooltip">{{ s.plan_sub_tooltip }}</span>
-                          </button>
-                        {%- endif -%}
-                      </span>
-                      <span class="pdp-plan__sub">{{ s.plan_sub_caption }}</span>
-                    </div>
-
-                    <div class="pdp-plan__price" id="pdp-sub-price-{{ section.id }}" data-pdp-sub-price>
-                      {%- if s.show_compare_price and first_alloc.price < pdp_variant.price -%}
-                        <span class="pdp-plan__price-was" data-pdp-sub-compare>{{ pdp_variant.price | money }}</span>
-                      {%- endif -%}
-                      <span data-pdp-sub-amount>{{ first_alloc.price | money }}</span>
-                    </div>
-                  </div>
-
-                  <div class="pdp-plan__body">
-                    {%- comment -%} What's in the order {%- endcomment -%}
-                    {%- if s.includes_1_label != blank or s.includes_2_label != blank -%}
-                      <div class="pdp-includes">
-                        <p class="pdp-includes__title">{{ s.includes_title }}</p>
-                        <div class="pdp-includes__grid">
-                          {%- for i in (1..2) -%}
-                            {%- liquid
-                              case i
-                                when 1
-                                  assign inc_label = s.includes_1_label
-                                  assign inc_badge = s.includes_1_badge
-                                  assign inc_image = s.includes_1_image
-                                  assign inc_accent = s.includes_1_badge_accent
-                                when 2
-                                  assign inc_label = s.includes_2_label
-                                  assign inc_badge = s.includes_2_badge
-                                  assign inc_image = s.includes_2_image
-                                  assign inc_accent = s.includes_2_badge_accent
-                              endcase
-                            -%}
-                            {%- if inc_label != blank -%}
-                              <div class="pdp-include">
-                                {%- if inc_image != blank -%}
-                                  {{
-                                    inc_image
-                                    | image_url: width: 136
-                                    | image_tag:
-                                      width: 68,
-                                      height: 68,
-                                      class: 'pdp-include__img',
-                                      loading: 'lazy',
-                                      alt: ''
-                                  }}
-                                {%- elsif product.featured_image != blank -%}
-                                  {{
-                                    product.featured_image
-                                    | image_url: width: 136
-                                    | image_tag:
-                                      width: 68,
-                                      height: 68,
-                                      class: 'pdp-include__img',
-                                      loading: 'lazy',
-                                      alt: ''
-                                  }}
-                                {%- endif -%}
-                                <div>
-                                  <span class="pdp-include__label">{{ inc_label }}</span>
-                                  {%- if inc_badge != blank -%}
-                                    <span class="pdp-include__badge{% if inc_accent %} pdp-include__badge--orange{% endif %}">
-                                      {{- inc_badge -}}
-                                    </span>
-                                  {%- endif -%}
-                                </div>
-                              </div>
-                            {%- endif -%}
-                          {%- endfor -%}
-                        </div>
-                      </div>
-                    {%- endif -%}
-
-                    {%- comment -%} Frequency picker {%- endcomment -%}
-                    <div class="pdp-freq__head">
-                      <span class="pdp-freq__label" id="pdp-freq-label-{{ section.id }}">{{ s.freq_label }}</span>
-                      {%- if s.freq_help_body != blank -%}
-                        <button
-                          type="button"
-                          class="pdp-freq__help"
-                          aria-expanded="false"
-                          aria-controls="pdp-freq-help-{{ section.id }}"
-                          data-pdp-collapse-trigger
-                        >
-                          {{ s.freq_help_label }}
-                          {{ icon_chevron }}
-                        </button>
-                      {%- endif -%}
-                    </div>
-
-                    {%- if s.freq_help_body != blank -%}
-                      <div class="pdp-collapse" id="pdp-freq-help-{{ section.id }}" data-pdp-collapse hidden>
-                        <div class="pdp-collapse__inner">{{ s.freq_help_body }}</div>
-                      </div>
-                    {%- endif -%}
-
-                    <div
-                      class="pdp-freq__options"
-                      role="radiogroup"
-                      aria-labelledby="pdp-freq-label-{{ section.id }}"
-                      data-pdp-freq-group
-                    >
-                      {%- for alloc in pdp_allocations -%}
-                        {%- liquid
-                          assign a_disc = 0
-                          if pdp_variant.price > 0
-                            assign a_disc = pdp_variant.price | minus: alloc.price | times: 100.0 | divided_by: pdp_variant.price | round
-                          endif
-                        -%}
-                        <button
-                          type="button"
-                          class="pdp-freq__btn"
-                          role="radio"
-                          aria-checked="{% if forloop.first %}true{% else %}false{% endif %}"
-                          tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"
-                          data-selling-plan-id="{{ alloc.selling_plan.id }}"
-                          data-pdp-freq
-                        >
-                          <span class="pdp-freq__btn-text">
-                            <span class="pdp-freq__name">{{ alloc.selling_plan.name }}</span>
-                            {%- if a_disc > 0 and s.freq_save_text != blank -%}
-                              <span class="pdp-freq__save">
-                                {{- s.freq_save_text | replace: '{discount}', a_disc -}}
-                              </span>
-                            {%- endif -%}
-                          </span>
-                          <span class="pdp-freq__icon" aria-hidden="true">{{ icon_calendar }}</span>
-                        </button>
-                      {%- endfor -%}
-                    </div>
-                  </div>
-                </div>
               {%- endif -%}
-
-              {%- comment -%} --- Card 2: one-time purchase --- {%- endcomment -%}
-              {%- assign one_selected = false -%}
-              {%- if pdp_default_mode == 'onetime' -%}
-                {%- assign one_selected = true -%}
-              {%- endif -%}
-
-              <div class="pdp-plan" data-pdp-plan-card="onetime" data-selected="{{ one_selected }}">
-                <div class="pdp-plan__head">
-                  <button
-                    type="button"
-                    class="pdp-plan__hit"
-                    role="radio"
-                    aria-checked="{{ one_selected }}"
-                    tabindex="{% if one_selected %}0{% else %}-1{% endif %}"
-                    aria-labelledby="pdp-one-name-{{ section.id }} pdp-one-price-{{ section.id }}"
-                    data-pdp-plan-radio="onetime"
-                    data-variant-id="{{ pdp_variant.id }}"
-                  ></button>
-
-                  <span class="pdp-plan__radio" aria-hidden="true"></span>
-
-                  <div class="pdp-plan__labels">
-                    <span class="pdp-plan__name" id="pdp-one-name-{{ section.id }}">{{ s.plan_one_title }}</span>
-                  </div>
-
-                  <div class="pdp-plan__price" id="pdp-one-price-{{ section.id }}">
-                    {{ pdp_variant.price | money }}
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
+          {%- endif -%}
 
           {%- comment -%} ---------- Add to cart ---------- {%- endcomment -%}
           <div class="pdp-atc">
@@ -571,6 +430,85 @@
       </div>
     </div>
   </div>
+
+  {%- comment -%} ---------- Impact dialog ---------- {%- endcomment -%}
+  {%- if s.impact_enabled -%}
+    <div class="pdp-modal" data-pdp-impact hidden>
+      <button
+        type="button"
+        class="pdp-modal__backdrop"
+        data-pdp-impact-close
+        tabindex="-1"
+        aria-hidden="true"
+      ></button>
+
+      <div class="pdp-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="pdp-impact-title-{{ section.id }}" data-pdp-impact-dialog>
+        <button type="button" class="pdp-modal__close" data-pdp-impact-close aria-label="{{ s.close_label }}">
+          {{ icon_close }}
+        </button>
+
+        {%- if s.impact_image != blank -%}
+          {%- liquid
+            assign impact_h = 720
+            if s.impact_image.aspect_ratio > 0
+              assign impact_h = 720 | divided_by: s.impact_image.aspect_ratio | round
+            endif
+          -%}
+          {{
+            s.impact_image
+            | image_url: width: 720
+            | image_tag:
+              width: 720,
+              height: impact_h,
+              class: 'pdp-modal__image',
+              loading: 'lazy',
+              alt: s.impact_image.alt
+          }}
+        {%- endif -%}
+
+        <div class="pdp-modal__body">
+          {%- if s.impact_intro != blank -%}
+            <div class="pdp-modal__intro" id="pdp-impact-title-{{ section.id }}">{{ s.impact_intro }}</div>
+          {%- endif -%}
+
+          {%- if s.impact_step_title != blank or s.impact_step_text != blank -%}
+            <div class="pdp-modal__step">
+              {%- if s.impact_step_title != blank -%}
+                <h3 class="pdp-modal__step-title">{{ s.impact_step_title }}</h3>
+              {%- endif -%}
+              {%- if s.impact_step_text != blank -%}
+                <div class="pdp-modal__step-text">{{ s.impact_step_text }}</div>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+
+          {%- assign partners = s.impact_partners | strip | newline_to_br | split: '<br />' -%}
+          {%- if s.impact_partners_label != blank or partners.size > 0 -%}
+            <div class="pdp-modal__partners">
+              <div class="pdp-modal__partners-head">
+                {%- if s.impact_partners_label != blank -%}
+                  <span class="pdp-modal__partners-label">{{ s.impact_partners_label }}</span>
+                {%- endif -%}
+                {%- if s.impact_link_label != blank and s.impact_link_url != blank -%}
+                  <a class="pdp-modal__link" href="{{ s.impact_link_url }}">{{ s.impact_link_label }}</a>
+                {%- endif -%}
+              </div>
+              {%- if partners.size > 0 -%}
+                <ul class="pdp-modal__partner-list">
+                  {%- for partner in partners -%}
+                    {%- assign partner_name = partner | strip_html | strip -%}
+                    {%- if partner_name != blank -%}
+                      <li class="pdp-modal__partner">{{ partner_name }}</li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
 </div>
 
 {% schema %}
@@ -583,12 +521,36 @@
       "type": "header",
       "content": "Couleurs"
     },
-    { "type": "color", "id": "color_navy", "label": "Navy", "default": "#16295C" },
-    { "type": "color", "id": "color_navy_deep", "label": "Navy foncé", "default": "#0F1E45" },
-    { "type": "color", "id": "color_orange", "label": "Orange", "default": "#F26A21" },
-    { "type": "color", "id": "color_orange_soft", "label": "Orange clair", "default": "#FDF0E8" },
-    { "type": "color", "id": "color_cream", "label": "Crème", "default": "#F7F3EA" },
-
+    {
+      "type": "color",
+      "id": "color_navy",
+      "label": "Navy",
+      "default": "#16295C"
+    },
+    {
+      "type": "color",
+      "id": "color_navy_deep",
+      "label": "Navy foncé",
+      "default": "#0F1E45"
+    },
+    {
+      "type": "color",
+      "id": "color_orange",
+      "label": "Orange",
+      "default": "#F26A21"
+    },
+    {
+      "type": "color",
+      "id": "color_orange_soft",
+      "label": "Orange clair",
+      "default": "#FDF0E8"
+    },
+    {
+      "type": "color",
+      "id": "color_cream",
+      "label": "Crème",
+      "default": "#F7F3EA"
+    },
     {
       "type": "header",
       "content": "Panier"
@@ -598,22 +560,55 @@
       "id": "after_add_action",
       "label": "Après l'ajout au panier",
       "options": [
-        { "value": "checkout", "label": "Aller au paiement" },
-        { "value": "cart", "label": "Aller au panier" },
-        { "value": "drawer", "label": "Ouvrir le tiroir panier" }
+        {
+          "value": "checkout",
+          "label": "Aller au paiement"
+        },
+        {
+          "value": "cart",
+          "label": "Aller au panier"
+        },
+        {
+          "value": "drawer",
+          "label": "Ouvrir le tiroir panier"
+        }
       ],
       "default": "checkout"
     },
-    { "type": "text", "id": "cta_label", "label": "Texte du bouton principal", "default": "Essayer sans risque pendant 100 jours" },
-    { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
-    { "type": "text", "id": "cart_error_label", "label": "Message d'erreur générique", "default": "Ajout impossible pour le moment. Réessaie dans un instant." },
-    { "type": "text", "id": "info_button_label", "label": "Libellé des boutons d'info (accessibilité)", "default": "Plus d'informations" },
-
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Texte du bouton principal",
+      "default": "Essayer sans risque pendant 100 jours"
+    },
+    {
+      "type": "text",
+      "id": "sold_out_label",
+      "label": "Texte « épuisé »",
+      "default": "Épuisé"
+    },
+    {
+      "type": "text",
+      "id": "cart_error_label",
+      "label": "Message d'erreur générique",
+      "default": "Ajout impossible pour le moment. Réessaie dans un instant."
+    },
+    {
+      "type": "text",
+      "id": "info_button_label",
+      "label": "Libellé des boutons d'info (accessibilité)",
+      "default": "Plus d'informations"
+    },
     {
       "type": "header",
       "content": "1. Barre d'annonce"
     },
-    { "type": "checkbox", "id": "announce_enabled", "label": "Afficher la barre", "default": true },
+    {
+      "type": "checkbox",
+      "id": "announce_enabled",
+      "label": "Afficher la barre",
+      "default": true
+    },
     {
       "type": "text",
       "id": "announce_items",
@@ -621,73 +616,76 @@
       "info": "Chaque segment est séparé automatiquement par une barre verticale.",
       "default": "Garantie de compatibilité | Livraison offerte"
     },
-
     {
       "type": "header",
       "content": "2. Hero — galerie"
     },
-    { "type": "checkbox", "id": "review_badge_enabled", "label": "Afficher le badge d'avis sur l'image", "default": true },
-    { "type": "text", "id": "review_badge_word", "label": "Mot-clé du badge", "default": "Excellent" },
-    { "type": "image_picker", "id": "review_badge_logo", "label": "Logo de la plateforme d'avis" },
-    { "type": "text", "id": "thumbs_aria_label", "label": "Libellé de la galerie (accessibilité)", "default": "Images du produit" },
-    { "type": "text", "id": "thumbs_item_label", "label": "Libellé d'une miniature (accessibilité)", "default": "Image" },
-    { "type": "richtext", "id": "engage_text", "label": "Bandeau engagement", "default": "<p>Ta commande ne change pas seulement ton eau, elle change une vie. <strong>Nous reversons 10 L par commande.</strong></p>" },
-    { "type": "text", "id": "engage_info", "label": "Info-bulle du bandeau engagement", "default": "Le don est effectué à chaque commande expédiée." },
-
+    {
+      "type": "checkbox",
+      "id": "review_badge_enabled",
+      "label": "Afficher le badge d'avis sur l'image",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "review_badge_word",
+      "label": "Mot-clé du badge",
+      "default": "Excellent"
+    },
+    {
+      "type": "image_picker",
+      "id": "review_badge_logo",
+      "label": "Logo de la plateforme d'avis"
+    },
+    {
+      "type": "text",
+      "id": "thumbs_aria_label",
+      "label": "Libellé de la galerie (accessibilité)",
+      "default": "Images du produit"
+    },
+    {
+      "type": "text",
+      "id": "thumbs_item_label",
+      "label": "Libellé d'une miniature (accessibilité)",
+      "default": "Image"
+    },
+    {
+      "type": "richtext",
+      "id": "engage_text",
+      "label": "Bandeau engagement",
+      "default": "<p>Ta commande ne change pas seulement ton eau, elle change une vie. <strong>Nous reversons 10 L par commande.</strong></p>"
+    },
     {
       "type": "header",
       "content": "2. Hero — avis"
     },
-    { "type": "range", "id": "rating_value", "label": "Note affichée", "min": 0, "max": 5, "step": 0.1, "default": 4.8 },
-    { "type": "text", "id": "rating_count", "label": "Nombre d'avis", "default": "1284" },
-    { "type": "text", "id": "rating_count_label", "label": "Mot après le nombre", "default": "avis" },
-    { "type": "text", "id": "rating_aria_label", "label": "Description de la note (accessibilité)", "default": "Note de 4,8 sur 5" },
-
     {
-      "type": "header",
-      "content": "2. Hero — sélecteur de formule"
+      "type": "range",
+      "id": "rating_value",
+      "label": "Note affichée",
+      "min": 0,
+      "max": 5,
+      "step": 0.1,
+      "default": 4.8
     },
-    { "type": "text", "id": "plans_eyebrow", "label": "Surtitre", "default": "Choisis ta formule" },
     {
-      "type": "select",
-      "id": "default_plan",
-      "label": "Formule présélectionnée",
-      "options": [
-        { "value": "subscription", "label": "Abonnement" },
-        { "value": "onetime", "label": "Achat unique" }
-      ],
-      "default": "subscription"
+      "type": "text",
+      "id": "rating_count",
+      "label": "Nombre d'avis",
+      "default": "1284"
     },
-    { "type": "text", "id": "plan_badge_text", "label": "Badge de la carte abonnement", "info": "Utilise {discount} pour insérer le pourcentage calculé.", "default": "{discount}% moins cher" },
-    { "type": "text", "id": "plan_sub_title", "label": "Nom de l'abonnement", "default": "Formule recharge" },
-    { "type": "text", "id": "plan_sub_caption", "label": "Sous-titre de l'abonnement", "default": "Livré automatiquement · annulable à tout moment" },
-    { "type": "text", "id": "plan_sub_tooltip", "label": "Info-bulle de l'abonnement", "default": "Tu peux modifier la fréquence, mettre en pause ou annuler depuis ton compte." },
-    { "type": "text", "id": "plan_one_title", "label": "Nom de l'achat unique", "default": "Achat unique" },
-    { "type": "checkbox", "id": "show_compare_price", "label": "Afficher le prix barré sur l'abonnement", "default": true },
-
     {
-      "type": "header",
-      "content": "2. Hero — ce que tu reçois"
+      "type": "text",
+      "id": "rating_count_label",
+      "label": "Mot après le nombre",
+      "default": "avis"
     },
-    { "type": "text", "id": "includes_title", "label": "Titre de l'encart", "default": "Ce que tu reçois" },
-    { "type": "image_picker", "id": "includes_1_image", "label": "Article 1 — image" },
-    { "type": "text", "id": "includes_1_label", "label": "Article 1 — libellé", "default": "Le produit principal" },
-    { "type": "text", "id": "includes_1_badge", "label": "Article 1 — badge", "default": "-50 %" },
-    { "type": "checkbox", "id": "includes_1_badge_accent", "label": "Article 1 — badge orange", "default": false },
-    { "type": "image_picker", "id": "includes_2_image", "label": "Article 2 — image" },
-    { "type": "text", "id": "includes_2_label", "label": "Article 2 — libellé", "default": "2 recharges" },
-    { "type": "text", "id": "includes_2_badge", "label": "Article 2 — badge", "default": "Offert" },
-    { "type": "checkbox", "id": "includes_2_badge_accent", "label": "Article 2 — badge orange", "default": true },
-
     {
-      "type": "header",
-      "content": "2. Hero — fréquence"
+      "type": "text",
+      "id": "rating_aria_label",
+      "label": "Description de la note (accessibilité)",
+      "default": "Note de 4,8 sur 5"
     },
-    { "type": "text", "id": "freq_label", "label": "Libellé de la fréquence", "default": "Fréquence" },
-    { "type": "text", "id": "freq_help_label", "label": "Lien d'aide", "default": "Comment choisir ?" },
-    { "type": "richtext", "id": "freq_help_body", "label": "Contenu du panneau d'aide", "default": "<p>Choisis la fréquence qui correspond à ta consommation. Tu pourras la modifier à tout moment depuis ton compte.</p>" },
-    { "type": "text", "id": "freq_save_text", "label": "Sous-libellé d'économie", "info": "Utilise {discount} pour insérer le pourcentage calculé.", "default": "Économise {discount} %" },
-
     {
       "type": "header",
       "content": "2. Hero — réassurances"
@@ -697,70 +695,339 @@
       "id": "reassure_1_icon",
       "label": "Réassurance 1 — icône",
       "options": [
-        { "value": "shield", "label": "Bouclier" },
-        { "value": "truck", "label": "Livraison" },
-        { "value": "medal", "label": "Médaille" },
-        { "value": "leaf", "label": "Feuille" },
-        { "value": "clock", "label": "Horloge" },
-        { "value": "heart", "label": "Cœur" },
-        { "value": "check", "label": "Coche" }
+        {
+          "value": "shield",
+          "label": "Bouclier"
+        },
+        {
+          "value": "truck",
+          "label": "Livraison"
+        },
+        {
+          "value": "medal",
+          "label": "Médaille"
+        },
+        {
+          "value": "leaf",
+          "label": "Feuille"
+        },
+        {
+          "value": "clock",
+          "label": "Horloge"
+        },
+        {
+          "value": "heart",
+          "label": "Cœur"
+        },
+        {
+          "value": "check",
+          "label": "Coche"
+        }
       ],
       "default": "shield"
     },
-    { "type": "text", "id": "reassure_1_text", "label": "Réassurance 1 — texte", "default": "Garantie 2 ans" },
+    {
+      "type": "text",
+      "id": "reassure_1_text",
+      "label": "Réassurance 1 — texte",
+      "default": "Garantie 2 ans"
+    },
     {
       "type": "select",
       "id": "reassure_2_icon",
       "label": "Réassurance 2 — icône",
       "options": [
-        { "value": "shield", "label": "Bouclier" },
-        { "value": "truck", "label": "Livraison" },
-        { "value": "medal", "label": "Médaille" },
-        { "value": "leaf", "label": "Feuille" },
-        { "value": "clock", "label": "Horloge" },
-        { "value": "heart", "label": "Cœur" },
-        { "value": "check", "label": "Coche" }
+        {
+          "value": "shield",
+          "label": "Bouclier"
+        },
+        {
+          "value": "truck",
+          "label": "Livraison"
+        },
+        {
+          "value": "medal",
+          "label": "Médaille"
+        },
+        {
+          "value": "leaf",
+          "label": "Feuille"
+        },
+        {
+          "value": "clock",
+          "label": "Horloge"
+        },
+        {
+          "value": "heart",
+          "label": "Cœur"
+        },
+        {
+          "value": "check",
+          "label": "Coche"
+        }
       ],
       "default": "truck"
     },
-    { "type": "text", "id": "reassure_2_text", "label": "Réassurance 2 — texte", "default": "Livraison offerte" },
+    {
+      "type": "text",
+      "id": "reassure_2_text",
+      "label": "Réassurance 2 — texte",
+      "default": "Livraison offerte"
+    },
     {
       "type": "select",
       "id": "reassure_3_icon",
       "label": "Réassurance 3 — icône",
       "options": [
-        { "value": "shield", "label": "Bouclier" },
-        { "value": "truck", "label": "Livraison" },
-        { "value": "medal", "label": "Médaille" },
-        { "value": "leaf", "label": "Feuille" },
-        { "value": "clock", "label": "Horloge" },
-        { "value": "heart", "label": "Cœur" },
-        { "value": "check", "label": "Coche" }
+        {
+          "value": "shield",
+          "label": "Bouclier"
+        },
+        {
+          "value": "truck",
+          "label": "Livraison"
+        },
+        {
+          "value": "medal",
+          "label": "Médaille"
+        },
+        {
+          "value": "leaf",
+          "label": "Feuille"
+        },
+        {
+          "value": "clock",
+          "label": "Horloge"
+        },
+        {
+          "value": "heart",
+          "label": "Cœur"
+        },
+        {
+          "value": "check",
+          "label": "Coche"
+        }
       ],
       "default": "medal"
     },
-    { "type": "text", "id": "reassure_3_text", "label": "Réassurance 3 — texte", "default": "Garantie de compatibilité" },
-
+    {
+      "type": "text",
+      "id": "reassure_3_text",
+      "label": "Réassurance 3 — texte",
+      "default": "Garantie de compatibilité"
+    },
     {
       "type": "header",
       "content": "2. Hero — questions fréquentes"
     },
-    { "type": "text", "id": "faq_eyebrow", "label": "Surtitre", "default": "Questions fréquentes" }
+    {
+      "type": "header",
+      "content": "2. Hero — prix"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price",
+      "label": "Afficher le prix",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "save_label",
+      "label": "Étiquette de remise",
+      "info": "Utilise {percent} pour le pourcentage calculé depuis le prix barré.",
+      "default": "-{percent} %"
+    },
+    {
+      "type": "header",
+      "content": "2. Hero — fiche des avis"
+    },
+    {
+      "type": "text",
+      "id": "reviews_basis_prefix",
+      "label": "Texte avant le nombre",
+      "default": "Basé sur"
+    },
+    {
+      "type": "number",
+      "id": "stars_5",
+      "label": "Nombre d'avis 5 étoiles",
+      "default": 0
+    },
+    {
+      "type": "number",
+      "id": "stars_4",
+      "label": "Nombre d'avis 4 étoiles",
+      "default": 0
+    },
+    {
+      "type": "number",
+      "id": "stars_3",
+      "label": "Nombre d'avis 3 étoiles",
+      "default": 0
+    },
+    {
+      "type": "number",
+      "id": "stars_2",
+      "label": "Nombre d'avis 2 étoiles",
+      "default": 0
+    },
+    {
+      "type": "number",
+      "id": "stars_1",
+      "label": "Nombre d'avis 1 étoile",
+      "default": 0
+    },
+    {
+      "type": "text",
+      "id": "verified_label",
+      "label": "Badge « vérifié »",
+      "default": "Vérifié"
+    },
+    {
+      "type": "text",
+      "id": "review_label",
+      "label": "Mot « avis » (accessibilité)",
+      "default": "Avis"
+    },
+    {
+      "type": "text",
+      "id": "prev_label",
+      "label": "Flèche précédente",
+      "default": "Avis précédent"
+    },
+    {
+      "type": "text",
+      "id": "next_label",
+      "label": "Flèche suivante",
+      "default": "Avis suivant"
+    },
+    {
+      "type": "text",
+      "id": "close_label",
+      "label": "Bouton fermer",
+      "default": "Fermer"
+    },
+    {
+      "type": "header",
+      "content": "2. Hero — fiche engagement"
+    },
+    {
+      "type": "checkbox",
+      "id": "impact_enabled",
+      "label": "Activer le bouton d'information",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "impact_image",
+      "label": "Image"
+    },
+    {
+      "type": "richtext",
+      "id": "impact_intro",
+      "label": "Introduction",
+      "default": "<p>Le partage est inscrit dans notre modèle. Rendre l'eau propre accessible fait partie de qui nous sommes.</p>"
+    },
+    {
+      "type": "text",
+      "id": "impact_step_title",
+      "label": "Titre du bloc",
+      "default": "Tu passes commande"
+    },
+    {
+      "type": "richtext",
+      "id": "impact_step_text",
+      "label": "Texte du bloc",
+      "default": "<p>Chaque commande finance automatiquement 10 litres d'eau potable — quel que soit le produit. Le coût est pour nous.</p>"
+    },
+    {
+      "type": "text",
+      "id": "impact_partners_label",
+      "label": "Intitulé des partenaires",
+      "default": "Nos partenaires"
+    },
+    {
+      "type": "textarea",
+      "id": "impact_partners",
+      "label": "Partenaires",
+      "info": "Un par ligne."
+    },
+    {
+      "type": "text",
+      "id": "impact_link_label",
+      "label": "Texte du lien",
+      "default": "En savoir plus"
+    },
+    {
+      "type": "url",
+      "id": "impact_link_url",
+      "label": "Lien"
+    },
+    {
+      "type": "text",
+      "id": "faq_eyebrow",
+      "label": "Surtitre",
+      "default": "Questions fréquentes"
+    }
   ],
   "blocks": [
     {
       "type": "bullet",
       "name": "Argument clé",
       "settings": [
-        { "type": "text", "id": "text", "label": "Texte", "default": "Décris ici un bénéfice produit court et concret." }
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Texte",
+          "default": "Décris ici un bénéfice produit court et concret."
+        }
       ]
     },
     {
       "type": "faq",
       "name": "Question fréquente",
       "settings": [
-        { "type": "text", "id": "question", "label": "Question", "default": "Pose ici une question fréquente." },
-        { "type": "richtext", "id": "answer", "label": "Réponse", "default": "<p>Rédige ici la réponse correspondante.</p>" }
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "Pose ici une question fréquente."
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Réponse",
+          "default": "<p>Rédige ici la réponse correspondante.</p>"
+        }
+      ]
+    },
+    {
+      "type": "review",
+      "name": "Avis",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Photo"
+        },
+        {
+          "type": "text",
+          "id": "name",
+          "label": "Nom",
+          "default": "Prénom N."
+        },
+        {
+          "type": "checkbox",
+          "id": "verified",
+          "label": "Achat vérifié",
+          "default": true
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Avis",
+          "default": "Rédige ici le témoignage du client."
+        }
       ]
     }
   ],
@@ -768,13 +1035,36 @@
     {
       "name": "Produit sur-mesure",
       "blocks": [
-        { "type": "bullet" },
-        { "type": "bullet" },
-        { "type": "bullet" },
-        { "type": "faq" },
-        { "type": "faq" },
-        { "type": "faq" },
-        { "type": "faq" }
+        {
+          "type": "bullet"
+        },
+        {
+          "type": "bullet"
+        },
+        {
+          "type": "bullet"
+        },
+        {
+          "type": "faq"
+        },
+        {
+          "type": "faq"
+        },
+        {
+          "type": "faq"
+        },
+        {
+          "type": "faq"
+        },
+        {
+          "type": "review"
+        },
+        {
+          "type": "review"
+        },
+        {
+          "type": "review"
+        }
       ]
     }
   ]
