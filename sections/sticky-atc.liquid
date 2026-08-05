@@ -374,6 +374,8 @@
     data-satc-root
     data-action="{{ s.cta_action }}"
     data-threshold="{{ s.fallback_threshold }}"
+    data-scroll-duration="{{ s.scroll_duration }}"
+    data-scroll-offset="{{ s.scroll_offset }}"
     data-debug="{{ s.debug }}"
     style="
       --sa-navy: {{ s.color_title }};
@@ -446,13 +448,17 @@
         type="button"
         class="satc__btn"
         data-satc-add
-        {% unless variant.available %}aria-disabled="true"{% endunless %}
+        {% if variant.available == false and s.cta_action != 'scroll' %}aria-disabled="true"{% endif %}
       >
         {%- if s.show_button_icon -%}
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.4 6.2h13.2l-1 9.2a2 2 0 01-2 1.8H6.4a2 2 0 01-2-1.8z"/><path d="M7.2 6.2V4.9a2.8 2.8 0 015.6 0v1.3"/></svg>
         {%- endif -%}
         <span data-satc-label>
-          {%- if variant.available -%}{{ s.button_label }}{%- else -%}{{ s.sold_out_label }}{%- endif -%}
+          {%- if variant.available or s.cta_action == 'scroll' -%}
+            {{- s.button_label -}}
+          {%- else -%}
+            {{- s.sold_out_label -}}
+          {%- endif -%}
         </span>
       </button>
     </div>
@@ -549,6 +555,145 @@
       }
 
       /* ------------------------------------------------------------ *
+       * Scroll back to the product (action "scroll")
+       *
+       * Same machinery as the guarantee section: the window is not always
+       * what scrolls, and themes running a smooth-scroll library move an
+       * inner element instead — those libraries are routinely disabled on
+       * touch, which is how a button can work on mobile and not on desktop.
+       * ------------------------------------------------------------ */
+
+      var SCROLL_DURATION = parseInt(root.getAttribute('data-scroll-duration'), 10);
+      if (isNaN(SCROLL_DURATION)) SCROLL_DURATION = 800;
+      var SCROLL_OFFSET = parseInt(root.getAttribute('data-scroll-offset'), 10);
+      if (isNaN(SCROLL_OFFSET)) SCROLL_OFFSET = 90;
+
+      function reducedMotion() {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }
+
+      function findScroller(el) {
+        var node = el.parentElement;
+        while (node && node !== document.body && node !== document.documentElement) {
+          var overflowY = window.getComputedStyle(node).overflowY;
+          if (
+            (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+            node.scrollHeight > node.clientHeight + 1
+          ) {
+            return node;
+          }
+          node = node.parentElement;
+        }
+        return null; // the window scrolls
+      }
+
+      function currentY(sc) {
+        return sc ? sc.scrollTop : window.pageYOffset;
+      }
+
+      function maxY(sc) {
+        return sc
+          ? sc.scrollHeight - sc.clientHeight
+          : Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      }
+
+      function setY(sc, y) {
+        if (sc) sc.scrollTop = y;
+        else window.scrollTo(0, y);
+      }
+
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function scrollToProduct() {
+        /* Resolved at click time, not at init: a theme may render its form
+           late, and the visitor may have changed variants since. */
+        var found = findTrigger();
+        var el = found ? found.el : null;
+        log('remontée vers', found ? found.how : 'le haut de page');
+
+        var scroller = el ? findScroller(el) : null;
+        var startY = currentY(scroller);
+        var endY = 0;
+
+        if (el) {
+          endY = scroller
+            ? el.getBoundingClientRect().top -
+              scroller.getBoundingClientRect().top +
+              scroller.scrollTop -
+              SCROLL_OFFSET
+            : el.getBoundingClientRect().top + window.pageYOffset - SCROLL_OFFSET;
+        }
+        endY = Math.min(Math.max(endY, 0), maxY(scroller));
+
+        var delta = endY - startY;
+        if (Math.abs(delta) < 2) return;
+
+        if (reducedMotion()) {
+          setY(scroller, endY);
+          return;
+        }
+
+        var startTime = null;
+        var cancelled = false;
+        var handedOver = false;
+
+        /* Only a real gesture hands control back: a 0-delta wheel event from a
+           trackpad resting under the cursor must not abort anything. */
+        function abortOnWheel(event) {
+          if (event.deltaY) cancelled = true;
+        }
+        function abortOnTouch() {
+          cancelled = true;
+        }
+        window.addEventListener('wheel', abortOnWheel, { passive: true });
+        window.addEventListener('touchstart', abortOnTouch, { passive: true });
+
+        function cleanup() {
+          window.removeEventListener('wheel', abortOnWheel);
+          window.removeEventListener('touchstart', abortOnTouch);
+        }
+
+        function step(now) {
+          if (cancelled || handedOver) {
+            cleanup();
+            return;
+          }
+          if (startTime === null) startTime = now;
+          var elapsed = now - startTime;
+          var progress = Math.min(elapsed / SCROLL_DURATION, 1);
+
+          setY(scroller, startY + delta * easeInOutCubic(progress));
+
+          /* Watchdog: by 180ms an ease-in-out has covered measurable ground.
+             Dead still means our writes are being ignored by something else. */
+          if (elapsed > 180 && Math.abs(currentY(scroller) - startY) < 1) {
+            handedOver = true;
+            cleanup();
+            log('la fenêtre ne bouge pas, bascule sur scrollIntoView');
+            if (el) {
+              try {
+                el.style.scrollMarginTop = SCROLL_OFFSET + 'px';
+                el.scrollIntoView({
+                  behavior: reducedMotion() ? 'auto' : 'smooth',
+                  block: 'start'
+                });
+              } catch (error) {
+                el.scrollIntoView(true);
+              }
+            }
+            return;
+          }
+
+          if (progress < 1) window.requestAnimationFrame(step);
+          else cleanup();
+        }
+
+        window.requestAnimationFrame(step);
+      }
+
+      /* ------------------------------------------------------------ *
        * Add to cart
        * ------------------------------------------------------------ */
 
@@ -615,6 +760,13 @@
           if (button.classList.contains('is-loading')) return;
           if (button.getAttribute('aria-disabled') === 'true') return;
 
+          /* This destination never touches the cart: it takes the visitor back
+             to the product form so they can choose before buying. */
+          if (ACTION === 'scroll') {
+            scrollToProduct();
+            return;
+          }
+
           clearError();
           button.classList.add('is-loading');
 
@@ -671,9 +823,32 @@
       "options": [
         { "value": "cart", "label": "Ajouter au panier (rester sur la page)" },
         { "value": "cart_page", "label": "Ajouter et aller au panier" },
-        { "value": "checkout", "label": "Passer au paiement directement" }
+        { "value": "checkout", "label": "Passer au paiement directement" },
+        { "value": "scroll", "label": "Zone produit (détection automatique)" }
       ],
       "default": "cart"
+    },
+    {
+      "type": "range",
+      "id": "scroll_duration",
+      "label": "Durée du défilement",
+      "info": "Mode « Zone produit » uniquement.",
+      "min": 200,
+      "max": 2000,
+      "step": 50,
+      "unit": "ms",
+      "default": 800
+    },
+    {
+      "type": "range",
+      "id": "scroll_offset",
+      "label": "Décalage de défilement",
+      "info": "Mode « Zone produit » uniquement. À augmenter si ton en-tête fixe recouvre la cible.",
+      "min": 0,
+      "max": 200,
+      "step": 5,
+      "unit": "px",
+      "default": 90
     },
     { "type": "text", "id": "button_added_label", "label": "Confirmation après ajout", "default": "Ajouté ✓" },
     { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
