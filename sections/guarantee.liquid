@@ -335,6 +335,22 @@
   color: #9aa8c0;
 }
 
+/* Theme-editor diagnostic, never shown on the live storefront. */
+.guarantee__diag {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdecec;
+  color: #a12020;
+  font-size: 12.5px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.guarantee__diag[hidden] {
+  display: none;
+}
+
 /* --------------------------------------------------------------------------
    Responsive
    -------------------------------------------------------------------------- */
@@ -398,7 +414,11 @@
     it rather than rendering a broken relative link.
   endcomment
   assign cta_href = s.button_url
-  if s.link_type == 'top'
+  if s.link_type == 'product' or s.link_type == 'top'
+    comment
+      The product sits at the top of the page, so "#" is a sane no-JS fallback
+      for both: the browser jumps up on its own if the script never runs.
+    endcomment
     assign cta_href = '#'
   elsif s.link_type == 'anchor'
     assign anchor_value = s.anchor_id | strip
@@ -418,6 +438,8 @@
   id="guarantee-{{ section.id }}"
   data-guarantee-root
   data-scroll-offset="{{ s.scroll_offset }}"
+  data-scroll-duration="{{ s.scroll_duration }}"
+  data-design-mode="{{ request.design_mode }}"
   style="
     --gt-bg: {{ s.color_bg }};
     --gt-card: {{ s.color_card }};
@@ -530,6 +552,14 @@
                 </span>
               {%- endif -%}
             </div>
+
+            {%- if request.design_mode -%}
+              {%- comment -%}
+                Editor-only: says why a click went nowhere, so the merchant is
+                not left guessing. Never rendered on the live storefront.
+              {%- endcomment -%}
+              <p class="guarantee__diag" data-guarantee-diag hidden></p>
+            {%- endif -%}
           {%- endif -%}
         </div>
       </div>
@@ -549,10 +579,16 @@
     if (!root || root.dataset.guaranteeReady === 'true') return;
     root.dataset.guaranteeReady = 'true';
 
-    /* Tried in order when the configured anchor is not on the page, which is
-       the normal case on a theme that has its own product section. Ordered
-       from this theme's own markers to ones nearly every product page has. */
-    var FALLBACKS = [
+    var DESIGN = root.getAttribute('data-design-mode') === 'true';
+    var DURATION = parseInt(root.getAttribute('data-scroll-duration'), 10);
+    if (isNaN(DURATION)) DURATION = 800;
+    var OFFSET = parseInt(root.getAttribute('data-scroll-offset'), 10);
+    if (isNaN(OFFSET)) OFFSET = 0;
+
+    /* Markers that identify the product area across common themes, tried in
+       order: this theme's own section first, then Dawn and its derivatives,
+       then the add-to-cart form which virtually every product page has. */
+    var PRODUCT_SELECTORS = [
       '#main-product',
       '[data-pdp-root]',
       'product-info',
@@ -560,13 +596,16 @@
       '[id^="ProductInfo-"]',
       '.product__info-wrapper',
       '.product__info-container',
+      'product-form',
       'form[action*="/cart/add"]',
+      '[id^="shopify-section"][id*="product"]',
       'main .product',
       '.shopify-section--main-product'
     ];
 
-    var offset = parseInt(root.getAttribute('data-scroll-offset'), 10);
-    if (isNaN(offset)) offset = 0;
+    function reduced() {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
 
     function query(selector) {
       try {
@@ -576,62 +615,130 @@
       }
     }
 
-    function resolve(hash) {
-      if (hash && hash.length > 1) {
-        var exact = query(hash);
-        if (exact && !root.contains(exact)) return { el: exact, exact: true };
+    /* Hand-rolled easing rather than behavior:"smooth". The native one has no
+       controllable duration or curve, and Safari has been inconsistent about
+       it; this gives the same deliberate ease-in-out everywhere. */
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function animateScrollTo(targetY) {
+      var startY = window.pageYOffset;
+      var maxY = Math.max(
+        0,
+        document.documentElement.scrollHeight - window.innerHeight
+      );
+      var endY = Math.min(Math.max(targetY, 0), maxY);
+      var delta = endY - startY;
+
+      if (Math.abs(delta) < 2) return;
+      if (reduced()) {
+        window.scrollTo(0, endY);
+        return;
       }
-      for (var i = 0; i < FALLBACKS.length; i++) {
-        var el = query(FALLBACKS[i]);
-        if (el && !root.contains(el)) return { el: el, exact: false };
+
+      var startTime = null;
+      var cancelled = false;
+
+      /* Any real scroll gesture hands control straight back to the visitor. */
+      function abort() {
+        cancelled = true;
+      }
+      window.addEventListener('wheel', abort, { passive: true });
+      window.addEventListener('touchstart', abort, { passive: true });
+
+      function cleanup() {
+        window.removeEventListener('wheel', abort);
+        window.removeEventListener('touchstart', abort);
+      }
+
+      function step(now) {
+        if (cancelled) {
+          cleanup();
+          return;
+        }
+        if (startTime === null) startTime = now;
+        var progress = Math.min((now - startTime) / DURATION, 1);
+        window.scrollTo(0, startY + delta * easeInOutCubic(progress));
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        } else {
+          cleanup();
+        }
+      }
+
+      window.requestAnimationFrame(step);
+    }
+
+    function findProductArea() {
+      for (var i = 0; i < PRODUCT_SELECTORS.length; i++) {
+        var el = query(PRODUCT_SELECTORS[i]);
+        /* Never scroll to something inside this very section. */
+        if (el && !root.contains(el)) return { el: el, how: PRODUCT_SELECTORS[i] };
       }
       return null;
     }
 
-    function smoothScrollTo(top) {
-      window.scrollTo({
-        top: top < 0 ? 0 : top,
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-          ? 'auto'
-          : 'smooth'
-      });
+    function reportFailure(hash) {
+      var message =
+        'Aucune cible trouvee' +
+        (hash ? ' pour "' + hash + '"' : '') +
+        '. Cette page ne contient aucune zone produit reconnue. Selecteurs ' +
+        'essayes : ' + PRODUCT_SELECTORS.join(', ');
+      console.warn('[garantie] ' + message);
+
+      var box = root.querySelector('[data-guarantee-diag]');
+      if (box) {
+        box.textContent = message;
+        box.hidden = false;
+      }
     }
 
     root.addEventListener('click', function (event) {
-      var link = event.target.closest && event.target.closest('[data-guarantee-scroll]');
+      var link =
+        event.target.closest && event.target.closest('[data-guarantee-scroll]');
       if (!link || !root.contains(link)) return;
 
-      /* Top mode needs no target lookup — the product sits at the top of the
-         page, so this is the reliable route on any theme. */
-      if (link.getAttribute('data-guarantee-scroll') === 'top') {
-        event.preventDefault();
-        smoothScrollTo(0);
+      var mode = link.getAttribute('data-guarantee-scroll');
+      event.preventDefault();
+
+      if (mode === 'top') {
+        animateScrollTo(0);
         return;
       }
 
       var hash = link.getAttribute('href') || '';
-      var found = resolve(hash);
-      event.preventDefault();
+      var found = null;
+
+      if (mode === 'anchor' && hash.charAt(0) === '#' && hash.length > 1) {
+        var exact = query(hash);
+        if (exact && !root.contains(exact)) found = { el: exact, how: hash };
+      }
+      /* Both the product mode and an anchor that resolves to nothing end up
+         here, so a missing id degrades into "scroll to the product". */
+      if (!found) found = findProductArea();
 
       if (!found) {
-        console.warn(
-          '[guarantee] Aucune cible trouvee pour "' + hash + '". Verifie que cet ' +
-            'identifiant existe sur la page, ou change l\'ancre dans les reglages ' +
-            'de la section. Selecteurs de repli essayes : ' + FALLBACKS.join(', ')
-        );
+        reportFailure(mode === 'anchor' ? hash : '');
         return;
       }
 
-      smoothScrollTo(found.el.getBoundingClientRect().top + window.pageYOffset - offset);
+      animateScrollTo(
+        found.el.getBoundingClientRect().top + window.pageYOffset - OFFSET
+      );
 
       /* Keyboard and screen-reader users must follow the scroll too. */
-      if (!found.el.hasAttribute('tabindex')) found.el.setAttribute('tabindex', '-1');
+      if (!found.el.hasAttribute('tabindex')) {
+        found.el.setAttribute('tabindex', '-1');
+      }
       found.el.focus({ preventScroll: true });
 
       /* Only advertise the anchor in the URL when it is the one actually used. */
-      if (found.exact && window.history && window.history.replaceState) {
+      if (found.how === hash && window.history && window.history.replaceState) {
         window.history.replaceState(null, '', hash);
       }
+
+      if (DESIGN) console.info('[garantie] cible atteinte via : ' + found.how);
     });
   })();
 </script>
@@ -677,18 +784,30 @@
       "type": "select",
       "id": "link_type",
       "label": "Comportement du bouton",
+      "info": "« Zone produit » trouve la fiche produit toute seule, sans avoir à poser d'identifiant.",
       "options": [
+        { "value": "product", "label": "Zone produit (détection automatique)" },
         { "value": "top", "label": "Remonter en haut de page" },
-        { "value": "anchor", "label": "Ancre sur la même page" },
+        { "value": "anchor", "label": "Ancre précise" },
         { "value": "url", "label": "Lien vers une page" }
       ],
-      "default": "top"
+      "default": "product"
+    },
+    {
+      "type": "range",
+      "id": "scroll_duration",
+      "label": "Durée du défilement",
+      "min": 200,
+      "max": 2000,
+      "step": 50,
+      "unit": "ms",
+      "default": 800
     },
     {
       "type": "text",
       "id": "anchor_id",
       "label": "Ancre cible",
-      "info": "Utilisé uniquement en mode « Ancre ». Identifiant à atteindre, ex. #main-product. S'il n'existe pas, le bouton vise automatiquement la zone produit du thème.",
+      "info": "Utilisé uniquement en mode « Ancre précise ». Ex. #main-product. S'il n'existe pas sur la page, le bouton retombe sur la détection automatique.",
       "default": "#main-product"
     },
     { "type": "url", "id": "button_url", "label": "Lien", "info": "Utilisé uniquement en mode « Lien vers une page »." },
@@ -696,7 +815,7 @@
       "type": "range",
       "id": "scroll_offset",
       "label": "Décalage de défilement",
-      "info": "Utilisé uniquement en mode « Ancre ». À augmenter si ton en-tête fixe recouvre la cible.",
+      "info": "Espace laissé au-dessus de la cible. À augmenter si ton en-tête fixe la recouvre.",
       "min": 0,
       "max": 200,
       "step": 5,
