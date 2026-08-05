@@ -1,0 +1,542 @@
+{% comment %}
+  text-image.liquid
+  A dark copy panel beside an image, joined into one rounded block. The image
+  can carry two corner badges and a frosted stats strip.
+
+  Self-contained: the styles are inlined, so this file is the only thing that
+  needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Text + image — scoped under .tximg so the rest of the theme is untouched.
+   ========================================================================== */
+
+.tximg {
+  /* Palette */
+  --tx-panel: #16295c;
+  --tx-title: #ffffff;
+  --tx-body: rgba(255, 255, 255, 0.72);
+  --tx-accent: #f26a21;
+
+  /* Shape */
+  --tx-max: 1060px;
+  --tx-gutter: 24px;
+  --tx-radius: 20px;
+  --tx-min-h: 320px;
+  --tx-cols: 1fr 1fr;
+  --tx-stat-label: 10.5px;
+
+  --tx-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  font-family: var(--tx-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tximg *,
+.tximg *::before,
+.tximg *::after {
+  box-sizing: border-box;
+}
+
+:where(.tximg) :where(p) {
+  margin: 0;
+}
+
+:where(.tximg) :where(h2) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+:where(.tximg) :where(img) {
+  display: block;
+  max-width: 100%;
+}
+
+.tximg__container {
+  max-width: calc(var(--tx-max) + var(--tx-gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--tx-gutter);
+}
+
+/* The two halves read as a single rounded block: the radius and the clipping
+   live on the wrapper, so the seam down the middle stays straight. */
+.tximg__grid {
+  display: grid;
+  grid-template-columns: var(--tx-cols);
+  align-items: stretch;
+  min-height: var(--tx-min-h);
+  border-radius: var(--tx-radius);
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(22, 41, 92, 0.12);
+}
+
+/* Copy stays first in the markup for reading order; only the visual order
+   flips when the image is placed on the left. */
+.tximg--image-left .tximg__panel {
+  order: 2;
+}
+
+.tximg--image-left .tximg__media {
+  order: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Copy panel
+   -------------------------------------------------------------------------- */
+
+.tximg__panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: clamp(28px, 4vw, 54px);
+  background: var(--tx-panel);
+}
+
+.tximg__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--tx-title);
+}
+
+.tximg__eyebrow::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 22px;
+  height: 2px;
+  background: var(--tx-accent);
+}
+
+.tximg--no-dash .tximg__eyebrow::before {
+  display: none;
+}
+
+.tximg__title {
+  margin-top: 16px;
+  max-width: 380px;
+  font-size: clamp(1.375rem, 0.95rem + 1.5vw, 1.9rem);
+  color: var(--tx-title);
+}
+
+.tximg__text {
+  margin-top: 16px;
+  max-width: 360px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--tx-body);
+}
+
+/* --------------------------------------------------------------------------
+   Image
+   -------------------------------------------------------------------------- */
+
+.tximg__media {
+  position: relative;
+  min-width: 0;
+  background: #dfe4ec;
+}
+
+.tximg__media img,
+.tximg__placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tximg__placeholder {
+  display: grid;
+  place-items: center;
+  color: #a9b6cb;
+}
+
+.tximg__placeholder svg {
+  width: 26%;
+  height: auto;
+}
+
+/* ---- Corner badges ---- */
+
+.tximg__badge {
+  position: absolute;
+  top: 14px;
+  z-index: 2;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tximg__badge--start {
+  left: 14px;
+  background: var(--tx-badge-a-bg, #ffffff);
+  color: var(--tx-badge-a-fg, #16295c);
+  box-shadow: 0 2px 8px rgba(15, 25, 45, 0.18);
+}
+
+.tximg__badge--end {
+  right: 14px;
+  background: var(--tx-badge-b-bg, #f26a21);
+  color: var(--tx-badge-b-fg, #ffffff);
+  box-shadow: 0 2px 8px rgba(15, 25, 45, 0.18);
+}
+
+/* ---- Stats strip ---- */
+
+.tximg__stats {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  max-width: calc(100% - 28px);
+  border-radius: 11px;
+  background: var(--tx-stats-bg, rgba(18, 24, 38, 0.62));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.tximg__stat {
+  min-width: 0;
+  padding: 9px 14px;
+}
+
+.tximg__stat + .tximg__stat {
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tximg__stat-value {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* Sized from a setting: the reference runs these at about 7px, which is not
+   readable on a photograph. */
+.tximg__stat-label {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--tx-stat-label);
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 899px) {
+  .tximg__grid {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  /* Stacked, the image has no row height to fill, so it needs a ratio. */
+  .tximg__media {
+    aspect-ratio: 16 / 10;
+  }
+
+  .tximg--image-left .tximg__panel,
+  .tximg--image-left .tximg__media {
+    order: 0;
+  }
+
+  .tximg__title,
+  .tximg__text {
+    max-width: none;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .tximg {
+    --tx-gutter: 20px;
+  }
+
+  .tximg__stats {
+    left: 10px;
+    bottom: 10px;
+    max-width: calc(100% - 20px);
+  }
+
+  .tximg__stat {
+    padding: 8px 11px;
+  }
+
+  .tximg__stat-value {
+    font-size: 12.5px;
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign stats = section.blocks | where: 'type', 'stat'
+
+  comment
+    Column split. "Small" matches the reference at 50/50; the other two give
+    the image more room without ever letting the copy collapse.
+  endcomment
+  case s.image_size
+    when 'medium'
+      assign img_fr = '1.35fr'
+    when 'large'
+      assign img_fr = '1.75fr'
+    else
+      assign img_fr = '1fr'
+  endcase
+
+  if s.image_position == 'left'
+    assign cols = img_fr | append: ' 1fr'
+  else
+    assign cols = '1fr ' | append: img_fr
+  endif
+
+  comment
+    Shopify colour settings expose their channels, which is the only way to
+    build a translucent fill from a picker.
+  endcomment
+  assign stats_alpha = s.stats_opacity | divided_by: 100.0
+
+  assign root_classes = 'tximg'
+  unless s.show_dash
+    assign root_classes = root_classes | append: ' tximg--no-dash'
+  endunless
+  if s.image_position == 'left'
+    assign root_classes = root_classes | append: ' tximg--image-left'
+  endif
+-%}
+
+<div
+  class="{{ root_classes }}"
+  id="tximg-{{ section.id }}"
+  style="
+    --tx-panel: {{ s.color_panel }};
+    --tx-title: {{ s.color_title }};
+    --tx-body: {{ s.color_text }};
+    --tx-accent: {{ s.color_accent }};
+    --tx-badge-a-bg: {{ s.color_badge_a_bg }};
+    --tx-badge-a-fg: {{ s.color_badge_a_text }};
+    --tx-badge-b-bg: {{ s.color_badge_b_bg }};
+    --tx-badge-b-fg: {{ s.color_badge_b_text }};
+    --tx-stats-bg: rgba({{ s.color_stats.red }}, {{ s.color_stats.green }}, {{ s.color_stats.blue }}, {{ stats_alpha }});
+    --tx-stat-label: {{ s.stats_label_size }}px;
+    --tx-max: {{ s.container_width }}px;
+    --tx-radius: {{ s.corner_radius }}px;
+    --tx-min-h: {{ s.min_height }}px;
+    --tx-cols: {{ cols }};
+    background: {{ s.color_bg }};
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+  "
+>
+  <div class="tximg__container">
+    <div class="tximg__grid">
+      {%- comment -%} ---------- Copy ---------- {%- endcomment -%}
+      <div class="tximg__panel">
+        {%- if s.eyebrow != blank -%}
+          <p class="tximg__eyebrow">{{ s.eyebrow }}</p>
+        {%- endif -%}
+
+        {%- if s.title != blank -%}
+          <h2 class="tximg__title">
+            {%- if s.show_quotes -%}
+              &ldquo;{{ s.title | escape }}&rdquo;
+            {%- else -%}
+              {{- s.title | escape -}}
+            {%- endif -%}
+          </h2>
+        {%- endif -%}
+
+        {%- if s.text != blank -%}
+          <div class="tximg__text">{{ s.text }}</div>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ---------- Image ---------- {%- endcomment -%}
+      <div class="tximg__media">
+        {%- if s.image != blank -%}
+          {%- liquid
+            assign img_h = 900
+            if s.image.aspect_ratio > 0
+              assign img_h = 900 | divided_by: s.image.aspect_ratio | round
+            endif
+          -%}
+          {{
+            s.image
+            | image_url: width: 900
+            | image_tag:
+              width: 900,
+              height: img_h,
+              widths: '400,600,750,900',
+              sizes: '(min-width: 900px) 50vw, 100vw',
+              loading: 'lazy',
+              alt: s.image.alt
+          }}
+        {%- else -%}
+          <div class="tximg__placeholder">
+            {{ 'image' | placeholder_svg_tag }}
+          </div>
+        {%- endif -%}
+
+        {%- if s.badge_a != blank -%}
+          <span class="tximg__badge tximg__badge--start">{{ s.badge_a }}</span>
+        {%- endif -%}
+
+        {%- if s.badge_b != blank -%}
+          <span class="tximg__badge tximg__badge--end">{{ s.badge_b }}</span>
+        {%- endif -%}
+
+        {%- if s.show_stats and stats.size > 0 -%}
+          <div class="tximg__stats">
+            {%- for block in stats -%}
+              <div class="tximg__stat" {{ block.shopify_attributes }}>
+                {%- if block.settings.value != blank -%}
+                  <span class="tximg__stat-value">{{ block.settings.value }}</span>
+                {%- endif -%}
+                {%- if block.settings.label != blank -%}
+                  <span class="tximg__stat-label">{{ block.settings.label }}</span>
+                {%- endif -%}
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Texte et image",
+  "tag": "section",
+  "class": "text-image-section",
+  "max_blocks": 4,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Texte"
+    },
+    { "type": "text", "id": "eyebrow", "label": "Surtitre", "default": "La technologie" },
+    { "type": "checkbox", "id": "show_dash", "label": "Tiret orange avant le surtitre", "default": true },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Le filtre qui retient ce que tu ne vois pas." },
+    { "type": "checkbox", "id": "show_quotes", "label": "Encadrer le titre de guillemets", "default": true },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Paragraphe",
+      "default": "<p>Une filtration multi-étages conçue pour réduire jusqu'à 150 contaminants présents dans l'eau du robinet. Testée en laboratoire indépendant.</p>"
+    },
+
+    {
+      "type": "header",
+      "content": "Image"
+    },
+    { "type": "image_picker", "id": "image", "label": "Image" },
+    {
+      "type": "select",
+      "id": "image_size",
+      "label": "Format de l'image",
+      "options": [
+        { "value": "small", "label": "Petit (moitié du bloc)" },
+        { "value": "medium", "label": "Moyen" },
+        { "value": "large", "label": "Grand" }
+      ],
+      "default": "small"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Position de l'image",
+      "options": [
+        { "value": "right", "label": "À droite" },
+        { "value": "left", "label": "À gauche" }
+      ],
+      "default": "right"
+    },
+    { "type": "range", "id": "min_height", "label": "Hauteur minimale du bloc", "min": 200, "max": 600, "step": 10, "unit": "px", "default": 320 },
+
+    {
+      "type": "header",
+      "content": "Étiquettes sur l'image"
+    },
+    { "type": "text", "id": "badge_a", "label": "Étiquette en haut à gauche", "info": "Laisse vide pour la masquer.", "default": "Neuf" },
+    { "type": "text", "id": "badge_b", "label": "Étiquette en haut à droite", "info": "Laisse vide pour la masquer.", "default": "Après 3 mois" },
+
+    {
+      "type": "header",
+      "content": "Pastille de statistiques"
+    },
+    { "type": "checkbox", "id": "show_stats", "label": "Afficher la pastille", "default": true },
+    {
+      "type": "range",
+      "id": "stats_label_size",
+      "label": "Taille des libellés gris",
+      "min": 8,
+      "max": 14,
+      "step": 0.5,
+      "unit": "px",
+      "default": 10.5
+    },
+    { "type": "color", "id": "color_stats", "label": "Fond de la pastille", "default": "#121826" },
+    { "type": "range", "id": "stats_opacity", "label": "Opacité de la pastille", "min": 20, "max": 100, "step": 5, "unit": "%", "default": 62 },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond de section", "default": "#EEF1F5" },
+    { "type": "color", "id": "color_panel", "label": "Fond du panneau", "default": "#16295C" },
+    { "type": "color", "id": "color_title", "label": "Titre et surtitre", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_text", "label": "Paragraphe", "default": "#B9C2D4" },
+    { "type": "color", "id": "color_accent", "label": "Tiret orange", "default": "#F26A21" },
+    { "type": "color", "id": "color_badge_a_bg", "label": "Étiquette gauche — fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_badge_a_text", "label": "Étiquette gauche — texte", "default": "#16295C" },
+    { "type": "color", "id": "color_badge_b_bg", "label": "Étiquette droite — fond", "default": "#F26A21" },
+    { "type": "color", "id": "color_badge_b_text", "label": "Étiquette droite — texte", "default": "#FFFFFF" },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 800, "max": 1400, "step": 20, "unit": "px", "default": 1060 },
+    { "type": "range", "id": "corner_radius", "label": "Arrondi du bloc", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 20 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 60 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 60 }
+  ],
+  "blocks": [
+    {
+      "type": "stat",
+      "name": "Statistique",
+      "settings": [
+        { "type": "text", "id": "value", "label": "Valeur", "default": "0,012 €" },
+        { "type": "text", "id": "label", "label": "Libellé", "default": "par litre" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Texte et image",
+      "blocks": [{ "type": "stat" }, { "type": "stat" }, { "type": "stat" }]
+    }
+  ]
+}
+{% endschema %}
