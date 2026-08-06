@@ -501,6 +501,446 @@
   line-height: 1.4;
 }
 
+/* --------------------------------------------------------------------------
+   Bundle / subscription configurator (block "bundle")
+   -------------------------------------------------------------------------- */
+
+.pvpb {
+  margin-top: 20px;
+}
+
+.pvpb__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding-bottom: 12px;
+}
+
+.pvpb__summary-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.pvpb__summary-prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.pvpb__off {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--pv-accent-soft);
+  color: var(--pv-accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pvpb__off[hidden],
+.pvpb__was[hidden],
+.pvpb__then[hidden],
+.pvpb__freq-was[hidden],
+.pvpb__freq-off[hidden],
+.pvpb__panel[hidden],
+.pvpb__gift-badge[hidden] {
+  display: none;
+}
+
+.pvpb__was {
+  color: var(--pv-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pvpb__now {
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* The recurring line always starts on its own row under the price. */
+.pvpb__then {
+  flex: 1 0 100%;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--pv-muted);
+}
+
+.pvpb__then b {
+  color: var(--pv-ink);
+  font-weight: 700;
+}
+
+.pvpb__card {
+  padding: 16px;
+  border: 1px solid var(--pv-line);
+  border-radius: var(--pv-radius);
+  background: var(--pv-white);
+}
+
+/* ---- Steps ---- */
+
+.pvpb__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.pvpb__step + .pvpb__step,
+.pvpb__choices + .pvpb__step {
+  margin-top: 20px;
+}
+
+.pvpb__num {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--pv-dark);
+  color: var(--pv-white);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pvpb__step-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pvpb__step-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.pvpb__step-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--pv-muted);
+}
+
+.pvpb__why {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pv-muted);
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.pvpb__why svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---- Household choices ---- */
+
+.pvpb__choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pvpb__choice {
+  padding: 14px 10px;
+  /* The border is always 2px so selecting one never shifts the row. */
+  border: 2px solid var(--pv-line);
+  border-radius: 10px;
+  background: var(--pv-white);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 0.16s ease;
+}
+
+.pvpb__choice[aria-checked="true"] {
+  border-color: var(--pv-ink);
+}
+
+/* ---- Frequency panel ---- */
+
+.pvpb__panel {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--pv-soft);
+}
+
+.pvpb__panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.pvpb__panel-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.pvpb__panel-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pv-teal);
+}
+
+.pvpb__freqs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pvpb__freq {
+  display: block;
+  padding: 12px 13px;
+  border: 2px solid var(--pv-line);
+  border-radius: 10px;
+  background: var(--pv-white);
+  text-align: left;
+  transition: border-color 0.16s ease;
+}
+
+.pvpb__freq[aria-checked="true"] {
+  border-color: var(--pv-ink);
+}
+
+.pvpb__freq-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.pvpb__freq-label {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.pvpb__freq-badge {
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--pv-ink);
+  color: var(--pv-white);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pvpb__freq-prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.pvpb__freq-was {
+  color: var(--pv-muted);
+  font-size: 12.5px;
+}
+
+.pvpb__freq-now {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pvpb__freq-off {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--pv-accent-soft);
+  color: var(--pv-accent-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pvpb__freq-day {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--pv-muted);
+}
+
+/* ---- Gifts ---- */
+
+.pvpb__gifts-title {
+  margin-top: 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.pvpb__gifts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.pvpb__gift {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--pv-line);
+  border-radius: 8px;
+  background: var(--pv-white);
+}
+
+.pvpb__gift-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 34px;
+  color: var(--pv-ink);
+}
+
+/* Same maxima trick as the offer tile: no percentage against an auto box. */
+.pvpb__gift-visual img {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.pvpb__gift-visual svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pvpb__gift-body {
+  min-width: 0;
+}
+
+.pvpb__gift-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* The badge may wrap between its words, but never inside the struck price. */
+.pvpb__gift-badge {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--pv-accent-soft);
+  color: var(--pv-accent-ink);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.pvpb__gift-was {
+  color: var(--pv-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---- Subscription switch ---- */
+
+.pvpb__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pvpb__toggle-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pvpb__info {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pv-muted);
+}
+
+.pvpb__info svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pvpb__switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 44px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: #c9d2d6;
+  transition: background-color 0.18s ease;
+}
+
+.pvpb__switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--pv-white);
+  transition: transform 0.18s ease;
+}
+
+.pvpb__switch[aria-checked="true"] {
+  background: var(--pv-dark);
+}
+
+.pvpb__switch[aria-checked="true"]::after {
+  transform: translateX(20px);
+}
+
+/* ---- Editor-only parse report ---- */
+
+.pvpb__debug {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #ffb020;
+  color: #3a2600;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pvpb__debug b {
+  display: block;
+  margin-bottom: 4px;
+}
+
 /* ---- Add to cart ---- */
 
 .pvp__atc {
@@ -544,6 +984,10 @@
   font-size: 11.5px;
   line-height: 1.3;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.pvp__buy-was[hidden] {
+  display: none;
 }
 
 .pvp__buy-price {
@@ -983,6 +1427,27 @@
   background: #000;
 }
 
+/* Text variant of the same dialog, for the bundle's two explanations. */
+.pvp__modal-dialog--text {
+  max-width: 420px;
+  background: var(--pv-white);
+}
+
+.pvpb__dialog-body {
+  padding: 26px 22px 22px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--pv-ink);
+}
+
+.pvpb__dialog-body p {
+  margin: 0;
+}
+
+.pvpb__dialog-body p + p {
+  margin-top: 10px;
+}
+
 .pvp__modal-video[hidden] {
   display: none;
 }
@@ -1039,6 +1504,36 @@
   .pvp__videos {
     gap: 12px;
   }
+
+  .pvpb__card {
+    padding: 13px;
+  }
+
+  .pvpb__choices {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .pvpb__choice {
+    padding: 11px 4px;
+    font-size: 12px;
+  }
+
+  .pvpb__freqs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pvpb__gifts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pvpb__summary-prices {
+    justify-content: flex-start;
+  }
+
+  .pvpb__then {
+    text-align: left;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1089,6 +1584,48 @@
   endif
 
   comment
+    The bundle configurator. Its price grid lives in two textareas, one line
+    per household, so a merchant edits a table instead of 40 numbered fields.
+    The default combination is resolved here because the add-to-cart button
+    below has to render its price server-side — waiting for the script would
+    show the bare product price for a frame.
+  endcomment
+  assign bundle_block = section.blocks | where: 'type', 'bundle' | first
+  assign bundle_gifts = section.blocks | where: 'type', 'bundle_gift'
+  assign has_bundle = false
+
+  if bundle_block != blank
+    assign has_bundle = true
+    assign bb = bundle_block.settings
+    assign rows_a = bb.prices_a | strip | newline_to_br | split: '<br />'
+    assign rows_b = bb.prices_b | strip | newline_to_br | split: '<br />'
+
+    assign def_h = bb.default_household | plus: 0 | minus: 1
+    assign def_rows = rows_a
+    if bb.default_freq == 'b'
+      assign def_rows = rows_b
+    endif
+    assign def_parts = def_rows[def_h] | split: '|'
+    assign def_first = def_parts[0] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+    assign def_was = def_parts[1] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+  endif
+
+  comment
+    Add-to-cart figures: the bundle wins over the product's own variant when
+    one is configured.
+  endcomment
+  assign atc_now = variant.price
+  assign atc_was = variant.compare_at_price
+  assign atc_sub = s.buy_sub
+  if has_bundle and def_first > 0
+    assign atc_now = def_first
+    assign atc_was = def_was
+    if bb.atc_sublabel != blank
+      assign atc_sub = bb.atc_sublabel
+    endif
+  endif
+
+  comment
     root_url is "/" on a single-locale shop and "/fr" on a localised one, so
     append then collapse the double slash rather than hardcoding "/checkout".
   endcomment
@@ -1101,6 +1638,15 @@
 {%- capture pv_chevron -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
 {%- capture pv_arrow -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.8 8h10.4M9 3.8L13.2 8 9 12.2"/></svg>{%- endcapture -%}
 {%- capture pv_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/></svg>{%- endcapture -%}
+{%- capture pv_info -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4M8 4.9v.1" stroke-linecap="round"/></svg>{%- endcapture -%}
+{%- capture pv_i_box -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>{%- endcapture -%}
+{%- capture pv_i_percent -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.2"/><path d="M15.5 8.5l-7 7"/><circle cx="9.4" cy="9.4" r="1.4"/><circle cx="14.6" cy="14.6" r="1.4"/></svg>{%- endcapture -%}
+{%- capture pv_i_check -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 12.5l5 5L20.5 5.5"/></svg>{%- endcapture -%}
+{%- capture pv_i_gift -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 11h17v9.5h-17z"/><path d="M2.5 7h19v4h-19zM12 7v13.5"/><path d="M12 7S10.5 3 8.2 3a2.2 2.2 0 000 4M12 7s1.5-4 3.8-4a2.2 2.2 0 010 4"/></svg>{%- endcapture -%}
+{%- capture pv_i_truck -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.5 6.5h11v10h-11zM13.5 10h4l3 3v3.5h-7z"/><circle cx="6.5" cy="18.5" r="1.8"/><circle cx="17" cy="18.5" r="1.8"/></svg>{%- endcapture -%}
+{%- capture pv_i_leaf -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20c0-9 6-14 16-14 0 10-5 15-13 15"/><path d="M4 20c2-5 5-8 9-10"/></svg>{%- endcapture -%}
+{%- capture pv_i_clock -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.2"/><path d="M12 6.6V12l3.6 2.2"/></svg>{%- endcapture -%}
+
 {%- capture pv_play -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M6.4 3.7a1 1 0 011.5-.87l8.2 5.3a1 1 0 010 1.74l-8.2 5.3A1 1 0 016.4 14.3z"/></svg>{%- endcapture -%}
 
 <div
@@ -1120,6 +1666,8 @@
     --pv-seal: {{ s.seal_size }}px;
     --pv-offer-img-set: {{ s.offer_image_size }}px;
     --pv-offer-img-bg-set: {{ s.offer_image_bg }};
+    --pv-accent-soft: rgba({{ s.color_accent.red }}, {{ s.color_accent.green }}, {{ s.color_accent.blue }}, 0.15);
+    --pv-accent-ink: {{ s.color_accent_ink }};
     background: {{ s.color_bg }};
     padding-top: {{ s.padding_top }}px;
     padding-bottom: {{ s.padding_bottom }}px;
@@ -1333,6 +1881,384 @@
           </div>
         {%- endif -%}
 
+        {%- comment -%} ---------- Bundle configurator ---------- {%- endcomment -%}
+        {%- if has_bundle -%}
+          {%- liquid
+            assign def_fi = 0
+            if bb.default_freq == 'b'
+              assign def_fi = 1
+            endif
+            assign months_a = bb.freq_a_months | at_least: 1
+          -%}
+
+          {%- comment -%}
+            Every combination is emitted as its own tiny JSON island: each
+            value goes through the json filter, so no string is ever pasted
+            into hand-written JSON. The default combination's display strings
+            are captured on the way past and used for the first paint.
+          {%- endcomment -%}
+          {%- capture bundle_data -%}
+            {%- for fi in (0..1) -%}
+              {%- liquid
+                assign rows = rows_a
+                assign months = months_a
+                if fi == 1
+                  assign rows = rows_b
+                  assign months = bb.freq_b_months | at_least: 1
+                endif
+                assign days = months | times: 30 | at_least: 1
+              -%}
+              {%- for hi in (0..2) -%}
+                {%- liquid
+                  assign parts = rows[hi] | split: '|'
+
+                  assign c_first = parts[0] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  assign c_was = parts[1] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  assign c_rec = parts[2] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  assign c_off_n = parts[3] | strip | replace: '-', '' | replace: '%', '' | plus: 0
+                  assign c_cardoff_n = parts[4] | strip | replace: '-', '' | replace: '%', '' | plus: 0
+                  assign c_variant = parts[5] | strip | plus: 0
+                  assign c_plan = parts[6] | strip | plus: 0
+
+                  comment
+                    The other frequency's price for the same household, scaled
+                    to this period: that is what the card strikes through.
+                  endcomment
+                  assign parts_a = rows_a[hi] | split: '|'
+                  assign rec_a = parts_a[2] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  assign c_cardwas = rec_a | times: months | divided_by: months_a | round
+
+                  assign c_first_txt = ''
+                  if c_first > 0
+                    assign c_first_txt = c_first | money
+                  endif
+                  assign c_was_txt = ''
+                  if c_was > c_first
+                    assign c_was_txt = c_was | money
+                  endif
+                  assign c_rec_txt = ''
+                  if c_rec > 0
+                    assign c_rec_txt = c_rec | money
+                  endif
+                  assign c_cardwas_txt = ''
+                  if fi > 0 and c_cardwas > c_rec
+                    assign c_cardwas_txt = c_cardwas | money
+                  endif
+                  assign c_perday_txt = ''
+                  if c_rec > 0
+                    comment
+                      floor, not round: 69,90 over 180 days reads 0,38, never
+                      0,39. Spelling it out also keeps the result identical
+                      whichever Liquid engine renders this.
+                    endcomment
+                    assign c_perday = c_rec | divided_by: days | floor | money
+                    assign c_perday_txt = bb.perday_template | replace: '[price]', c_perday
+                  endif
+                -%}
+                {%- capture c_off_txt -%}{%- if c_off_n > 0 -%}-{{ c_off_n }}%{%- endif -%}{%- endcapture -%}
+                {%- capture c_cardoff_txt -%}{%- if c_cardoff_n > 0 -%}-{{ c_cardoff_n }}%{%- endif -%}{%- endcapture -%}
+                {%- capture c_then_txt -%}
+                  {%- if c_rec > 0 -%}
+                    {%- assign freq_word = bb.freq_a_label | downcase -%}
+                    {%- if fi == 1 -%}{%- assign freq_word = bb.freq_b_label | downcase -%}{%- endif -%}
+                    {%- assign then_price = c_rec_txt | prepend: '<b>' | append: '</b>' -%}
+                    {{- bb.then_template | replace: '[price]', then_price | replace: '[freq]', freq_word -}}
+                  {%- endif -%}
+                {%- endcapture -%}
+
+                {%- if hi == def_h -%}
+                  {%- liquid
+                    assign fslot = 'f0'
+                    if fi == 1
+                      assign fslot = 'f1'
+                    endif
+                    if fslot == 'f0'
+                      assign f0_rec = c_rec_txt
+                      assign f0_was = c_cardwas_txt
+                      assign f0_off = c_cardoff_txt
+                      assign f0_day = c_perday_txt
+                    else
+                      assign f1_rec = c_rec_txt
+                      assign f1_was = c_cardwas_txt
+                      assign f1_off = c_cardoff_txt
+                      assign f1_day = c_perday_txt
+                    endif
+                    if fi == def_fi
+                      assign d_first = c_first_txt
+                      assign d_was = c_was_txt
+                      assign d_off = c_off_txt
+                      assign d_then = c_then_txt
+                    endif
+                  -%}
+                {%- endif -%}
+
+                <script type="application/json" data-pvpb-combo="{{ hi }}-{{ fi }}">
+                  {
+                    "first": {{ c_first_txt | json }},
+                    "was": {{ c_was_txt | json }},
+                    "off": {{ c_off_txt | strip | json }},
+                    "then": {{ c_then_txt | strip | json }},
+                    "rec": {{ c_rec_txt | json }},
+                    "cardWas": {{ c_cardwas_txt | json }},
+                    "cardOff": {{ c_cardoff_txt | strip | json }},
+                    "perDay": {{ c_perday_txt | json }},
+                    "variant": {{ c_variant | json }},
+                    "plan": {{ c_plan | json }}
+                  }
+                </script>
+              {%- endfor -%}
+            {%- endfor -%}
+          {%- endcapture -%}
+
+          <div
+            class="pvpb"
+            data-pvpb
+            data-pvpb-default-house="{{ def_h }}"
+            data-pvpb-default-freq="{{ def_fi }}"
+            {{ bundle_block.shopify_attributes }}
+          >
+            <div class="pvpb__summary">
+              {%- if bb.title != blank -%}
+                <span class="pvpb__summary-title">{{ bb.title }}</span>
+              {%- endif -%}
+              <div class="pvpb__summary-prices">
+                <span class="pvpb__off" data-pvpb-off {% if d_off == blank %}hidden{% endif %}>{{ d_off }}</span>
+                <s class="pvpb__was" data-pvpb-was {% if d_was == blank %}hidden{% endif %}>{{ d_was }}</s>
+                <span class="pvpb__now" data-pvpb-now>{{ d_first }}</span>
+                <span class="pvpb__then" data-pvpb-then {% if d_then == blank %}hidden{% endif %}>{{ d_then }}</span>
+              </div>
+            </div>
+
+            <div class="pvpb__card">
+              {%- comment -%} ---- Step 1: household ---- {%- endcomment -%}
+              <div class="pvpb__step">
+                <span class="pvpb__num" aria-hidden="true">1</span>
+                <span class="pvpb__step-body">
+                  <span class="pvpb__step-title" id="pvpb-step1-{{ section.id }}">{{ bb.step1_title }}</span>
+                </span>
+                {%- if bb.why_label != blank and bb.why_text != blank -%}
+                  <button type="button" class="pvpb__why" data-pvpb-open="why" aria-haspopup="dialog">
+                    <span>{{ bb.why_label }}</span>
+                    {{ pv_info }}
+                  </button>
+                {%- endif -%}
+              </div>
+
+              <div class="pvpb__choices" role="radiogroup" aria-labelledby="pvpb-step1-{{ section.id }}">
+                {%- for hi in (0..2) -%}
+                  {%- liquid
+                    case hi
+                      when 0
+                        assign h_label = bb.household_1
+                      when 1
+                        assign h_label = bb.household_2
+                      else
+                        assign h_label = bb.household_3
+                    endcase
+                  -%}
+                  {%- if h_label != blank -%}
+                    <button
+                      type="button"
+                      class="pvpb__choice"
+                      role="radio"
+                      aria-checked="{% if hi == def_h %}true{% else %}false{% endif %}"
+                      tabindex="{% if hi == def_h %}0{% else %}-1{% endif %}"
+                      data-pvpb-house="{{ hi }}"
+                    >
+                      {{- h_label -}}
+                    </button>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+
+              {%- comment -%} ---- Step 2: product and frequency ---- {%- endcomment -%}
+              <div class="pvpb__step">
+                <span class="pvpb__num" aria-hidden="true">2</span>
+                <span class="pvpb__step-body">
+                  <span class="pvpb__step-title">{{ bb.step2_title }}</span>
+                  {%- if bb.step2_subtitle != blank -%}
+                    <span class="pvpb__step-sub">{{ bb.step2_subtitle }}</span>
+                  {%- endif -%}
+                </span>
+              </div>
+
+              <div class="pvpb__panel" data-pvpb-panel>
+                <div class="pvpb__panel-head">
+                  <span class="pvpb__panel-title" id="pvpb-freq-{{ section.id }}">{{ bb.freq_title }}</span>
+                  {%- if bb.freq_note != blank -%}
+                    <span class="pvpb__panel-note">{{ bb.freq_note }}</span>
+                  {%- endif -%}
+                </div>
+
+                <div class="pvpb__freqs" role="radiogroup" aria-labelledby="pvpb-freq-{{ section.id }}">
+                  {%- for fi in (0..1) -%}
+                    {%- liquid
+                      assign f_label = bb.freq_a_label
+                      assign f_badge = ''
+                      assign f_rec = f0_rec
+                      assign f_was = f0_was
+                      assign f_off = f0_off
+                      assign f_day = f0_day
+                      if fi == 1
+                        assign f_label = bb.freq_b_label
+                        assign f_badge = bb.freq_b_badge
+                        assign f_rec = f1_rec
+                        assign f_was = f1_was
+                        assign f_off = f1_off
+                        assign f_day = f1_day
+                      endif
+                    -%}
+                    {%- if f_label != blank -%}
+                      <button
+                        type="button"
+                        class="pvpb__freq"
+                        role="radio"
+                        aria-checked="{% if fi == def_fi %}true{% else %}false{% endif %}"
+                        tabindex="{% if fi == def_fi %}0{% else %}-1{% endif %}"
+                        data-pvpb-freq="{{ fi }}"
+                      >
+                        <span class="pvpb__freq-head">
+                          <span class="pvpb__freq-label">{{ f_label }}</span>
+                          {%- if f_badge != blank -%}
+                            <span class="pvpb__freq-badge">{{ f_badge }}</span>
+                          {%- endif -%}
+                        </span>
+                        <span class="pvpb__freq-prices">
+                          <s class="pvpb__freq-was" data-pvpb-freq-was="{{ fi }}" {% if f_was == blank %}hidden{% endif %}>{{ f_was }}</s>
+                          <span class="pvpb__freq-now" data-pvpb-freq-now="{{ fi }}">{{ f_rec }}</span>
+                          <span class="pvpb__freq-off" data-pvpb-freq-off="{{ fi }}" {% if f_off == blank %}hidden{% endif %}>{{ f_off }}</span>
+                        </span>
+                        <span class="pvpb__freq-day" data-pvpb-freq-day="{{ fi }}">{{ f_day }}</span>
+                      </button>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </div>
+
+                {%- if bundle_gifts.size > 0 -%}
+                  {%- if bb.gifts_title != blank -%}
+                    <p class="pvpb__gifts-title">{{ bb.gifts_title }}</p>
+                  {%- endif -%}
+                  <ul class="pvpb__gifts">
+                    {%- for gift in bundle_gifts -%}
+                      {%- liquid
+                        assign g = gift.settings
+                        case g.icon
+                          when 'box'
+                            assign g_icon = pv_i_box
+                          when 'percent'
+                            assign g_icon = pv_i_percent
+                          when 'check'
+                            assign g_icon = pv_i_check
+                          when 'truck'
+                            assign g_icon = pv_i_truck
+                          when 'leaf'
+                            assign g_icon = pv_i_leaf
+                          when 'clock'
+                            assign g_icon = pv_i_clock
+                          else
+                            assign g_icon = pv_i_gift
+                        endcase
+                        assign g_img_h = 68
+                        if g.image.aspect_ratio > 0
+                          assign g_img_h = 68 | divided_by: g.image.aspect_ratio | round
+                        endif
+                      -%}
+                      <li class="pvpb__gift" {{ gift.shopify_attributes }}>
+                        <span class="pvpb__gift-visual" aria-hidden="true">
+                          {%- if g.image != blank -%}
+                            {{
+                              g.image
+                              | image_url: width: 140
+                              | image_tag: width: 68, height: g_img_h, loading: 'lazy', alt: ''
+                            }}
+                          {%- else -%}
+                            {{ g_icon }}
+                          {%- endif -%}
+                        </span>
+                        <span class="pvpb__gift-body">
+                          <span class="pvpb__gift-title">{{ g.title }}</span>
+                          <span class="pvpb__gift-badge" {% if g.badge == blank and g.badge_was == blank %}hidden{% endif %}>
+                            {{- g.badge -}}
+                            {%- if g.badge_was != blank -%}
+                              &nbsp;<s class="pvpb__gift-was">{{ g.badge_was }}</s>
+                            {%- endif -%}
+                          </span>
+                        </span>
+                      </li>
+                    {%- endfor -%}
+                  </ul>
+                {%- endif -%}
+              </div>
+
+              {%- comment -%} ---- Subscription switch ---- {%- endcomment -%}
+              {%- if bb.show_toggle -%}
+                <div class="pvpb__toggle">
+                  <span class="pvpb__toggle-label" id="pvpb-sub-{{ section.id }}">{{ bb.toggle_label }}</span>
+                  {%- if bb.toggle_text != blank -%}
+                    <button type="button" class="pvpb__info" data-pvpb-open="sub" aria-haspopup="dialog" aria-label="{{ bb.toggle_label }}">
+                      {{ pv_info }}
+                    </button>
+                  {%- endif -%}
+                  <button
+                    type="button"
+                    class="pvpb__switch"
+                    role="switch"
+                    aria-checked="{{ bb.toggle_default }}"
+                    aria-labelledby="pvpb-sub-{{ section.id }}"
+                    data-pvpb-switch
+                  ></button>
+                </div>
+              {%- endif -%}
+
+              {%- if request.design_mode -%}
+                {%- liquid
+                  assign bad_lines = 0
+                  assign no_variant = 0
+                  for fi in (0..1)
+                    assign rws = rows_a
+                    if fi == 1
+                      assign rws = rows_b
+                    endif
+                    for hi in (0..2)
+                      assign p = rws[hi] | split: '|'
+                      assign v0 = p[0] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                      if v0 <= 0
+                        assign bad_lines = bad_lines | plus: 1
+                      endif
+                      assign vid = p[5] | strip | plus: 0
+                      if vid <= 0
+                        assign no_variant = no_variant | plus: 1
+                      endif
+                    endfor
+                  endfor
+                -%}
+                {%- if bad_lines > 0 or no_variant > 0 -%}
+                  <div class="pvpb__debug">
+                    <b>Éditeur — grille tarifaire</b>
+                    {%- if bad_lines > 0 -%}
+                      {{ bad_lines }} combinaison(s) sans prix lisible : vérifie que chaque ligne suit
+                      « 1re commande | barré | récurrent | remise % | remise carte % | ID variante | ID selling plan ».
+                    {%- endif -%}
+                    {%- if no_variant > 0 -%}
+                      {{ no_variant }} combinaison(s) sans ID de variante : le panier recevra le produit
+                      principal, donc à un prix différent de celui affiché ici.
+                    {%- endif -%}
+                  </div>
+                {%- endif -%}
+              {%- endif -%}
+            </div>
+
+            {%- if bb.why_text != blank -%}
+              <template data-pvpb-dialog="why">{{ bb.why_text }}</template>
+            {%- endif -%}
+            {%- if bb.toggle_text != blank -%}
+              <template data-pvpb-dialog="sub">{{ bb.toggle_text }}</template>
+            {%- endif -%}
+
+            {{ bundle_data }}
+          </div>
+        {%- endif -%}
+
         {%- comment -%} ---------- Add to cart ---------- {%- endcomment -%}
         <div class="pvp__atc">
           <button
@@ -1345,15 +2271,19 @@
               <span class="pvp__buy-label" data-pvp-label>
                 {%- if variant.available -%}{{ s.buy_label }}{%- else -%}{{ s.sold_out_label }}{%- endif -%}
               </span>
-              {%- if s.buy_sub != blank -%}
-                <span class="pvp__buy-sub">{{ s.buy_sub }}</span>
+              {%- if atc_sub != blank -%}
+                <span class="pvp__buy-sub">{{ atc_sub }}</span>
               {%- endif -%}
             </span>
             <span class="pvp__buy-price">
-              {%- if variant.compare_at_price > variant.price -%}
-                <s class="pvp__buy-was">{{ variant.compare_at_price | money }}</s>
-              {%- endif -%}
-              <span>{{ variant.price | money }}</span>
+              {%- comment -%}
+                Always present, hidden when empty: the bundle swaps these two
+                as the visitor changes their offer.
+              {%- endcomment -%}
+              <s class="pvp__buy-was" data-pvp-buy-was {% unless atc_was > atc_now %}hidden{% endunless %}>
+                {{- atc_was | money -}}
+              </s>
+              <span data-pvp-buy-now>{{ atc_now | money }}</span>
             </span>
           </button>
           <p class="pvp__error" role="alert" data-pvp-error hidden></p>
@@ -1526,6 +2456,19 @@
           {{ pv_close }}
         </button>
         <video class="pvp__modal-video" data-pvp-modal-video controls playsinline></video>
+      </div>
+    </div>
+  {%- endif -%}
+
+  {%- comment -%} ---------- Bundle explanation dialog ---------- {%- endcomment -%}
+  {%- if has_bundle and bb.why_text != blank or has_bundle and bb.toggle_text != blank -%}
+    <div class="pvp__modal" data-pvpb-modal hidden>
+      <button type="button" class="pvp__modal-backdrop" data-pvpb-modal-close tabindex="-1" aria-hidden="true"></button>
+      <div class="pvp__modal-dialog pvp__modal-dialog--text" role="dialog" aria-modal="true" data-pvpb-modal-dialog>
+        <button type="button" class="pvp__modal-close" data-pvpb-modal-close aria-label="{{ s.close_label }}">
+          {{ pv_close }}
+        </button>
+        <div class="pvpb__dialog-body" data-pvpb-modal-body></div>
       </div>
     </div>
   {%- endif -%}
@@ -1712,6 +2655,187 @@
       });
     }
 
+    /* ---------------- Bundle configurator ---------------- */
+
+    var bundle = $('[data-pvpb]');
+    /* What add-to-cart should post. Null means "use the product's variant". */
+    var bundleLine = null;
+
+    if (bundle) {
+      var combos = {};
+      $$('[data-pvpb-combo]', bundle).forEach(function (node) {
+        try {
+          combos[node.getAttribute('data-pvpb-combo')] = JSON.parse(node.textContent);
+        } catch (error) {
+          console.warn('[pureva] combinaison illisible', node.getAttribute('data-pvpb-combo'), error);
+        }
+      });
+
+      var house = Number(bundle.getAttribute('data-pvpb-default-house')) || 0;
+      var freq = Number(bundle.getAttribute('data-pvpb-default-freq')) || 0;
+      var switchEl = $('[data-pvpb-switch]', bundle);
+      var subscribed = !switchEl || switchEl.getAttribute('aria-checked') === 'true';
+
+      var panel = $('[data-pvpb-panel]', bundle);
+      var buyWas = $('[data-pvp-buy-was]');
+      var buyNow = $('[data-pvp-buy-now]');
+
+      /* Writes text and hides the node when there is nothing to say, so an
+         empty discount never leaves an empty pill behind. */
+      function fill(node, value, asHtml) {
+        if (!node) return;
+        var text = value || '';
+        if (asHtml) node.innerHTML = text;
+        else node.textContent = text;
+        node.hidden = text === '';
+      }
+
+      function render() {
+        var combo = combos[house + '-' + freq] || {};
+
+        // Each frequency card shows the selected household's own prices.
+        [0, 1].forEach(function (fi) {
+          var c = combos[house + '-' + fi] || {};
+          fill($('[data-pvpb-freq-now="' + fi + '"]', bundle), c.rec);
+          fill($('[data-pvpb-freq-was="' + fi + '"]', bundle), c.cardWas);
+          fill($('[data-pvpb-freq-off="' + fi + '"]', bundle), c.cardOff);
+          fill($('[data-pvpb-freq-day="' + fi + '"]', bundle), c.perDay);
+        });
+
+        if (subscribed) {
+          fill($('[data-pvpb-now]', bundle), combo.first);
+          fill($('[data-pvpb-was]', bundle), combo.was);
+          fill($('[data-pvpb-off]', bundle), combo.off);
+          fill($('[data-pvpb-then]', bundle), combo.then, true);
+          bundleLine = combo.variant
+            ? { id: combo.variant, plan: combo.plan || 0 }
+            : null;
+          fill(buyNow, combo.first);
+          fill(buyWas, combo.was);
+        } else {
+          /* No subscription: the one-off price is the undiscounted one, and
+             everything that only exists because of the plan goes away. */
+          var oneOff = combo.was || combo.first;
+          fill($('[data-pvpb-now]', bundle), oneOff);
+          fill($('[data-pvpb-was]', bundle), '');
+          fill($('[data-pvpb-off]', bundle), '');
+          fill($('[data-pvpb-then]', bundle), '');
+          bundleLine = null;
+          fill(buyNow, oneOff);
+          fill(buyWas, '');
+        }
+
+        if (panel) panel.hidden = !subscribed;
+      }
+
+      /* Roving tabindex over a radiogroup, shared by both rows. */
+      function wireGroup(attr, onPick) {
+        var items = $$('[' + attr + ']', bundle);
+        if (!items.length) return;
+
+        function pick(item) {
+          items.forEach(function (other) {
+            var on = other === item;
+            other.setAttribute('aria-checked', on ? 'true' : 'false');
+            other.tabIndex = on ? 0 : -1;
+          });
+          onPick(Number(item.getAttribute(attr)));
+          render();
+        }
+
+        items.forEach(function (item) {
+          item.addEventListener('click', function () {
+            pick(item);
+          });
+        });
+
+        items[0].parentNode.addEventListener('keydown', function (event) {
+          var i = items.indexOf(document.activeElement);
+          if (i === -1) return;
+          var next = null;
+          if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (i + 1) % items.length;
+          else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (i - 1 + items.length) % items.length;
+          else return;
+          event.preventDefault();
+          items[next].focus();
+          pick(items[next]);
+        });
+      }
+
+      wireGroup('data-pvpb-house', function (value) {
+        house = value;
+      });
+      wireGroup('data-pvpb-freq', function (value) {
+        freq = value;
+      });
+
+      if (switchEl) {
+        switchEl.addEventListener('click', function () {
+          subscribed = switchEl.getAttribute('aria-checked') !== 'true';
+          switchEl.setAttribute('aria-checked', subscribed ? 'true' : 'false');
+          render();
+        });
+      }
+
+      /* ---- The two explanation dialogs ---- */
+      var infoModal = $('[data-pvpb-modal]');
+      if (infoModal) {
+        var infoBody = $('[data-pvpb-modal-body]', infoModal);
+        var infoClose = $('.pvp__modal-close', infoModal);
+        var infoTrigger = null;
+
+        var closeInfo = function () {
+          infoModal.classList.remove('is-open');
+          document.documentElement.style.overflow = '';
+          document.body.style.overflow = '';
+          var done = false;
+          var finish = function () {
+            if (done) return;
+            done = true;
+            infoModal.hidden = true;
+            if (infoTrigger) infoTrigger.focus();
+            infoTrigger = null;
+          };
+          infoModal.addEventListener('transitionend', function once(e) {
+            if (e.target !== infoModal) return;
+            infoModal.removeEventListener('transitionend', once);
+            finish();
+          });
+          window.setTimeout(finish, 320);
+        };
+
+        $$('[data-pvpb-open]', bundle).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var tpl = $('[data-pvpb-dialog="' + btn.getAttribute('data-pvpb-open') + '"]', bundle);
+            if (!tpl) return;
+            infoBody.innerHTML = tpl.innerHTML;
+            infoTrigger = btn;
+            infoModal.hidden = false;
+            document.documentElement.style.overflow = 'hidden';
+            document.body.style.overflow = 'hidden';
+            window.requestAnimationFrame(function () {
+              infoModal.classList.add('is-open');
+            });
+            if (infoClose) infoClose.focus();
+          });
+        });
+
+        $$('[data-pvpb-modal-close]', infoModal).forEach(function (el) {
+          el.addEventListener('click', closeInfo);
+        });
+
+        document.addEventListener('keydown', function (event) {
+          if (infoModal.hidden) return;
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            closeInfo();
+          }
+        });
+      }
+
+      render();
+    }
+
     /* ---------------- Add to cart ---------------- */
 
     var button = $('[data-pvp-add]');
@@ -1727,8 +2851,20 @@
     }
 
     function addMain() {
-      /* Post the theme's own product form when there is one, so a variant
-         the visitor picked elsewhere on the page carries over. */
+      /* The configurator wins: it knows which bundle variant matches the
+         offer the visitor actually built. */
+      if (bundleLine) {
+        var line = { id: bundleLine.id, quantity: 1 };
+        if (bundleLine.plan) line.selling_plan = bundleLine.plan;
+        return fetch(config.cartAddUrl, {
+          method: 'POST',
+          headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: [line] })
+        }).then(readResponse);
+      }
+
+      /* Otherwise post the theme's own product form when there is one, so a
+         variant the visitor picked elsewhere on the page carries over. */
       var form = document.querySelector('form[action*="/cart/add"]');
       if (form && !root.contains(form)) {
         return fetch(config.cartAddUrl, {
@@ -1833,7 +2969,7 @@
   "name": "Produit Pureva",
   "tag": "section",
   "class": "pureva-product-section",
-  "max_blocks": 30,
+  "max_blocks": 50,
   "settings": [
     {
       "type": "header",
@@ -1965,6 +3101,7 @@
     { "type": "color", "id": "color_ink", "label": "Texte principal", "default": "#0F1B2A" },
     { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#6B7280" },
     { "type": "color", "id": "color_accent", "label": "Accent (étoiles, étiquette)", "default": "#0FB6A8" },
+    { "type": "color", "id": "color_accent_ink", "label": "Texte sur fond d'accent clair", "default": "#0A6F66" },
     { "type": "color", "id": "color_check", "label": "Coches", "default": "#16A34A" },
     { "type": "color", "id": "color_line", "label": "Filets", "default": "#E6EAEE" },
     { "type": "color", "id": "color_soft", "label": "Fonds clairs", "default": "#F2F6F5" },
@@ -2020,6 +3157,146 @@
       ]
     },
     {
+      "type": "bundle",
+      "name": "Offre sur mesure",
+      "limit": 1,
+      "settings": [
+        { "type": "header", "content": "Résumé" },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Personnalisez votre offre :" },
+        {
+          "type": "text",
+          "id": "then_template",
+          "label": "Ligne de renouvellement",
+          "info": "[price] = prix récurrent, [freq] = fréquence choisie.",
+          "default": "puis [price] [freq]"
+        },
+
+        { "type": "header", "content": "Étape 1 — Foyer" },
+        { "type": "text", "id": "step1_title", "label": "Question", "default": "Combien êtes-vous dans votre foyer ?" },
+        { "type": "text", "id": "why_label", "label": "Lien d'explication", "default": "Pourquoi ?" },
+        {
+          "type": "richtext",
+          "id": "why_text",
+          "label": "Explication",
+          "default": "<p>La taille du foyer détermine le nombre de cartouches nécessaires. Une cartouche filtre environ 300 litres.</p>"
+        },
+        { "type": "text", "id": "household_1", "label": "Choix 1", "default": "1 personne" },
+        { "type": "text", "id": "household_2", "label": "Choix 2", "default": "2-4 personnes" },
+        { "type": "text", "id": "household_3", "label": "Choix 3", "default": "+5 personnes" },
+        {
+          "type": "select",
+          "id": "default_household",
+          "label": "Choix sélectionné par défaut",
+          "options": [
+            { "value": "1", "label": "Choix 1" },
+            { "value": "2", "label": "Choix 2" },
+            { "value": "3", "label": "Choix 3" }
+          ],
+          "default": "1"
+        },
+
+        { "type": "header", "content": "Étape 2 — Produit" },
+        { "type": "text", "id": "step2_title", "label": "Titre", "default": "Filtre Pureva One" },
+        { "type": "text", "id": "step2_subtitle", "label": "Sous-titre", "default": "+ Renouvellement de vos cartouches filtrantes" },
+
+        { "type": "header", "content": "Fréquence" },
+        { "type": "text", "id": "freq_title", "label": "Titre", "default": "Choisissez votre fréquence" },
+        { "type": "text", "id": "freq_note", "label": "Mention à droite", "default": "Flexible, sans engagement" },
+        { "type": "text", "id": "freq_a_label", "label": "Fréquence A — libellé", "default": "Tous les 3 mois" },
+        { "type": "range", "id": "freq_a_months", "label": "Fréquence A — mois", "min": 1, "max": 12, "step": 1, "unit": "m", "default": 3 },
+        { "type": "text", "id": "freq_b_label", "label": "Fréquence B — libellé", "info": "Laisse vide pour ne proposer qu'une seule fréquence.", "default": "Tous les 6 mois" },
+        { "type": "range", "id": "freq_b_months", "label": "Fréquence B — mois", "min": 1, "max": 12, "step": 1, "unit": "m", "default": 6 },
+        { "type": "text", "id": "freq_b_badge", "label": "Fréquence B — badge", "default": "Meilleure offre" },
+        {
+          "type": "select",
+          "id": "default_freq",
+          "label": "Fréquence sélectionnée par défaut",
+          "options": [
+            { "value": "a", "label": "Fréquence A" },
+            { "value": "b", "label": "Fréquence B" }
+          ],
+          "default": "a"
+        },
+        {
+          "type": "text",
+          "id": "perday_template",
+          "label": "Ligne « par jour »",
+          "info": "[price] = prix par jour, calculé automatiquement. Laisse vide pour la masquer.",
+          "default": "soit [price]/jour"
+        },
+
+        { "type": "header", "content": "Grille tarifaire" },
+        {
+          "type": "textarea",
+          "id": "prices_a",
+          "label": "Prix — fréquence A",
+          "info": "Une ligne par choix de foyer, dans le même ordre qu'à l'étape 1. Colonnes séparées par une barre verticale : prix 1re commande | prix barré | prix récurrent | remise % du résumé | remise % de la carte | ID de variante | ID de selling plan. Les deux derniers sont facultatifs mais nécessaires pour que le panier reçoive le bon prix.",
+          "default": "49,90 | 59,90 | 29,90 | 20 | |\n59,90 | 69,90 | 39,90 | 15 | |\n69,90 | 79,90 | 49,90 | 15 | |"
+        },
+        {
+          "type": "textarea",
+          "id": "prices_b",
+          "label": "Prix — fréquence B",
+          "info": "Mêmes colonnes. Le prix barré de la carte est calculé tout seul à partir de la fréquence A.",
+          "default": "89,90 | 109,90 | 49,90 | 25 | 20 | |\n99,90 | 129,90 | 69,90 | 25 | 15 | |\n109,90 | 149,90 | 79,90 | 30 | 20 | |"
+        },
+
+        { "type": "header", "content": "Cadeaux" },
+        { "type": "text", "id": "gifts_title", "label": "Titre", "default": "🎁 Vos cadeaux inclus avec l'abonnement :" },
+
+        { "type": "header", "content": "Abonnement" },
+        { "type": "checkbox", "id": "show_toggle", "label": "Afficher l'interrupteur", "default": true },
+        { "type": "text", "id": "toggle_label", "label": "Libellé", "default": "Abonnement flexible sans engagement" },
+        {
+          "type": "richtext",
+          "id": "toggle_text",
+          "label": "Explication",
+          "default": "<p>Modifiable, décalable ou annulable à tout moment depuis ton compte, sans frais ni préavis.</p>"
+        },
+        {
+          "type": "checkbox",
+          "id": "toggle_default",
+          "label": "Activé par défaut",
+          "info": "Désactivé, l'offre passe en achat unique au prix barré et les cadeaux disparaissent.",
+          "default": true
+        },
+
+        { "type": "header", "content": "Bouton d'ajout" },
+        {
+          "type": "text",
+          "id": "atc_sublabel",
+          "label": "Sous-texte du bouton",
+          "info": "Remplace celui de la section quand ce bloc est présent.",
+          "default": "Filtre Pureva One + cartouches inclus"
+        }
+      ]
+    },
+    {
+      "type": "bundle_gift",
+      "name": "Cadeau de l'offre",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Prioritaire sur l'icône." },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icône",
+          "options": [
+            { "value": "gift", "label": "Cadeau" },
+            { "value": "box", "label": "Colis" },
+            { "value": "percent", "label": "Remise" },
+            { "value": "check", "label": "Coche" },
+            { "value": "truck", "label": "Livraison" },
+            { "value": "leaf", "label": "Feuille" },
+            { "value": "clock", "label": "Horloge" }
+          ],
+          "default": "gift"
+        },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Gourde" },
+        { "type": "text", "id": "badge", "label": "Mention", "default": "Offerte" },
+        { "type": "text", "id": "badge_was", "label": "Prix barré de la mention", "default": "14 €" }
+      ]
+    },
+    {
       "type": "video",
       "name": "Vidéo",
       "settings": [
@@ -2046,6 +3323,11 @@
         { "type": "included" },
         { "type": "included" },
         { "type": "included" },
+        { "type": "bundle" },
+        { "type": "bundle_gift" },
+        { "type": "bundle_gift" },
+        { "type": "bundle_gift" },
+        { "type": "bundle_gift" },
         { "type": "faq" },
         { "type": "faq" },
         { "type": "faq" },
