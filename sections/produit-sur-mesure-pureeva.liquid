@@ -37,7 +37,7 @@
   /* Written by the schema as --*-set, derived here, so the media queries
      below can still override them. An inline value on this same element
      would otherwise beat every one of them. */
-  --pv-offer-img: var(--pv-offer-img-set, 76px);
+  --pv-offer-img: var(--pv-offer-img-set, 54px);
   --pv-offer-img-bg: var(--pv-offer-img-bg-set, #ffffff);
 
   --pv-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
@@ -391,12 +391,13 @@
 
 /* ---- Offer card ---- */
 
+/* A thin gift band, not a panel: every metric here is deliberately tight. */
 .pvp__offer {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: 12px;
   margin-top: 16px;
-  padding: 16px;
+  padding: 11px 13px;
   border-radius: var(--pv-radius);
   background: var(--pv-dark);
   color: var(--pv-white);
@@ -411,8 +412,8 @@
   flex: 0 0 auto;
   width: var(--pv-offer-img);
   height: var(--pv-offer-img);
-  padding: 7px;
-  border-radius: 12px;
+  padding: 5px;
+  border-radius: 9px;
   background: var(--pv-offer-img-bg);
   overflow: hidden;
 }
@@ -436,41 +437,40 @@
 
 .pvp__offer-tag {
   display: inline-block;
-  padding: 3px 8px;
-  border-radius: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
   background: var(--pv-teal);
   color: #04302c;
-  font-size: 9.5px;
+  font-size: 8.5px;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
 .pvp__offer-title {
-  margin-top: 7px;
-  font-size: 14px;
+  margin-top: 4px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--pv-white);
 }
 
 .pvp__offer-text {
-  margin-top: 5px;
-  font-size: 12px;
-  line-height: 1.5;
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.4;
   color: rgba(255, 255, 255, 0.72);
 }
 
-/* The gift itself: name, its usual price struck through, and "Offert". */
+/* The gift itself: name, its usual price struck through, and "Offert". One
+   more line, no separator rule — the band has to stay a band. */
 .pvp__offer-product {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 8px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 12px;
+  gap: 3px 7px;
+  margin-top: 4px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -480,10 +480,10 @@
 }
 
 .pvp__offer-free {
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.14);
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1543,7 +1543,7 @@
   .pvp {
     --pv-gutter: 18px;
     --pv-seal: 68px;
-    --pv-offer-img: calc(var(--pv-offer-img-set, 76px) * 0.82);
+    --pv-offer-img: calc(var(--pv-offer-img-set, 54px) * 0.85);
   }
 
   .pvp__thumb {
@@ -3128,7 +3128,13 @@
       "info": "Décoche pour n'afficher le cadeau que comme argument, sans l'ajouter.",
       "default": true
     },
-    { "type": "checkbox", "id": "offer_show_name", "label": "Afficher le nom du produit offert", "default": true },
+    {
+      "type": "checkbox",
+      "id": "offer_show_name",
+      "label": "Afficher le nom du produit offert",
+      "info": "Ajoute une ligne au bandeau. Décoché, il reste sur trois lignes.",
+      "default": false
+    },
     { "type": "text", "id": "offer_free_label", "label": "Mention « offert »", "default": "Offert" },
     {
       "type": "text",
@@ -3144,7 +3150,7 @@
       "label": "Image (facultatif)",
       "info": "Par défaut, l'image du produit offert est utilisée. Elle est affichée en entier, jamais rognée."
     },
-    { "type": "range", "id": "offer_image_size", "label": "Taille de l'image", "min": 56, "max": 140, "step": 4, "unit": "px", "default": 76 },
+    { "type": "range", "id": "offer_image_size", "label": "Taille de l'image", "min": 36, "max": 120, "step": 2, "unit": "px", "default": 54 },
     { "type": "color", "id": "offer_image_bg", "label": "Fond de l'image", "default": "#FFFFFF" },
     { "type": "text", "id": "offer_tag", "label": "Étiquette", "default": "Cadeau offert" },
     { "type": "text", "id": "offer_title", "label": "Titre", "default": "Un cadeau offert avec tout abonnement" },
