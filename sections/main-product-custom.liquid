@@ -341,7 +341,7 @@
                 <s class="pdp-price__was">{{ pdp_variant.compare_at_price | money }}</s>
                 {%- if s.save_label != blank -%}
                   <span class="pdp-price__save">
-                    {{- s.save_label | replace: '{percent}', pdp_discount -}}
+                    {{- s.save_label | replace: '[percent]', pdp_discount -}}
                   </span>
                 {%- endif -%}
               {%- endif -%}
@@ -834,8 +834,8 @@
       "type": "text",
       "id": "save_label",
       "label": "Étiquette de remise",
-      "info": "Utilise {percent} pour le pourcentage calculé depuis le prix barré.",
-      "default": "-{percent} %"
+      "info": "Utilise [percent] pour le pourcentage calculé depuis le prix barré.",
+      "default": "-[percent] %"
     },
     {
       "type": "header",
