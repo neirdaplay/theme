@@ -445,6 +445,46 @@
   color: rgba(255, 255, 255, 0.72);
 }
 
+/* The gift itself: name, its usual price struck through, and "Offert". */
+.pvp__offer-product {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pvp__offer-was {
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+.pvp__offer-free {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Editor-only warning: never rendered on the storefront. */
+.pvp__offer-warn {
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: #ffb020;
+  color: #3a2600;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 /* ---- Add to cart ---- */
 
 .pvp__atc {
@@ -1013,6 +1053,21 @@
   assign rating_pct = rating_num | divided_by: 5.0 | times: 100
 
   comment
+    The gift. gift_id stays 0 unless there is a real, available variant to add,
+    so an out-of-stock or unset gift can never make the add-to-cart call fail.
+  endcomment
+  assign gift_variant = s.offer_product.selected_or_first_available_variant
+  assign gift_id = 0
+  if s.offer_add_to_cart and gift_variant != blank and gift_variant.available
+    assign gift_id = gift_variant.id
+  endif
+
+  assign offer_img = s.offer_image
+  if offer_img == blank
+    assign offer_img = s.offer_product.featured_image
+  endif
+
+  comment
     root_url is "/" on a single-locale shop and "/fr" on a localised one, so
     append then collapse the double slash rather than hardcoding "/checkout".
   endcomment
@@ -1054,6 +1109,7 @@
       "checkoutUrl": {{ checkout_url | json }},
       "afterAdd": {{ s.after_add_action | json }},
       "variantId": {{ variant.id | json }},
+      "gift": {% if gift_id > 0 %}{ "id": {{ gift_id | json }}, "propName": {{ s.offer_property_label | json }}, "propValue": {{ s.offer_property_value | json }} }{% else %}null{% endif %},
       "strings": {
         "error": {{ s.error_label | json }},
         "soldOut": {{ s.sold_out_label | json }}
@@ -1196,11 +1252,11 @@
           </div>
         {%- endif -%}
 
-        {%- if s.offer_title != blank -%}
+        {%- if s.offer_title != blank or s.offer_product != blank -%}
           <div class="pvp__offer">
             <span class="pvp__offer-icon" aria-hidden="true">
-              {%- if s.offer_image != blank -%}
-                {{ s.offer_image | image_url: width: 120 | image_tag: width: 60, height: 60, loading: 'lazy', alt: '' }}
+              {%- if offer_img != blank -%}
+                {{ offer_img | image_url: width: 120 | image_tag: width: 60, height: 60, loading: 'lazy', alt: '' }}
               {%- else -%}
                 {{ pv_check }}
               {%- endif -%}
@@ -1209,9 +1265,42 @@
               {%- if s.offer_tag != blank -%}
                 <span class="pvp__offer-tag">{{ s.offer_tag }}</span>
               {%- endif -%}
-              <p class="pvp__offer-title">{{ s.offer_title }}</p>
+              {%- if s.offer_title != blank -%}
+                <p class="pvp__offer-title">{{ s.offer_title }}</p>
+              {%- endif -%}
               {%- if s.offer_text != blank -%}
                 <div class="pvp__offer-text">{{ s.offer_text }}</div>
+              {%- endif -%}
+
+              {%- if s.offer_product != blank and s.offer_show_name -%}
+                <p class="pvp__offer-product" data-pvp-gift-line>
+                  <span>{{ s.offer_product.title }}</span>
+                  {%- if gift_variant.compare_at_price > 0 -%}
+                    <s class="pvp__offer-was">{{ gift_variant.compare_at_price | money }}</s>
+                  {%- elsif gift_variant.price > 0 -%}
+                    <s class="pvp__offer-was">{{ gift_variant.price | money }}</s>
+                  {%- endif -%}
+                  {%- if s.offer_free_label != blank -%}
+                    <span class="pvp__offer-free">{{ s.offer_free_label }}</span>
+                  {%- endif -%}
+                </p>
+              {%- endif -%}
+
+              {%- comment -%}
+                Diagnostics for the merchant, in the theme editor only. Nothing
+                below ever reaches a customer.
+              {%- endcomment -%}
+              {%- if request.design_mode and s.offer_product != blank and s.offer_add_to_cart -%}
+                {%- if gift_variant == blank or gift_variant.available == false -%}
+                  <p class="pvp__offer-warn">
+                    Éditeur : « {{ s.offer_product.title }} » est épuisé, il ne sera pas ajouté au panier.
+                  </p>
+                {%- elsif gift_variant.price > 0 -%}
+                  <p class="pvp__offer-warn">
+                    Éditeur : « {{ s.offer_product.title }} » coûte {{ gift_variant.price | money }}.
+                    Mets sa variante à 0 pour qu'il soit réellement offert.
+                  </p>
+                {%- endif -%}
               {%- endif -%}
             </div>
           </div>
@@ -1601,6 +1690,74 @@
     var button = $('[data-pvp-add]');
     var errorBox = $('[data-pvp-error]');
 
+    function readResponse(response) {
+      return response.json().then(function (data) {
+        if (!response.ok) {
+          throw new Error(data.description || data.message || config.strings.error);
+        }
+        return data;
+      });
+    }
+
+    function addMain() {
+      /* Post the theme's own product form when there is one, so a variant
+         the visitor picked elsewhere on the page carries over. */
+      var form = document.querySelector('form[action*="/cart/add"]');
+      if (form && !root.contains(form)) {
+        return fetch(config.cartAddUrl, {
+          method: 'POST',
+          headers: { Accept: 'application/javascript' },
+          body: new FormData(form)
+        }).then(readResponse);
+      }
+      return fetch(config.cartAddUrl, {
+        method: 'POST',
+        headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [{ id: config.variantId, quantity: 1 }] })
+      }).then(readResponse);
+    }
+
+    /**
+     * The gift goes in as its own call, after the main product. Two reasons:
+     * the theme's own form can only carry one line, and a gift that fails
+     * (sold out, deleted) must never cost the customer the product they
+     * actually asked for. The cart is read first so adding twice does not
+     * stack two gifts.
+     */
+    function addGift() {
+      if (!config.gift || !config.gift.id) return Promise.resolve(null);
+
+      return fetch(config.cartUrl + '.js', { headers: { Accept: 'application/json' } })
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (cart) {
+          var already =
+            cart &&
+            cart.items &&
+            cart.items.some(function (line) {
+              return line.variant_id === config.gift.id || line.id === config.gift.id;
+            });
+          if (already) return null;
+
+          var item = { id: config.gift.id, quantity: 1 };
+          if (config.gift.propName) {
+            item.properties = {};
+            item.properties[config.gift.propName] = config.gift.propValue || '';
+          }
+          return fetch(config.cartAddUrl, {
+            method: 'POST',
+            headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: [item] })
+          }).then(readResponse);
+        })
+        .catch(function (error) {
+          /* Swallowed on purpose: the product is already in the cart. */
+          console.warn('[pureva] cadeau non ajouté', error);
+          return null;
+        });
+    }
+
     if (button) {
       button.addEventListener('click', function () {
         if (button.classList.contains('is-loading')) return;
@@ -1609,26 +1766,10 @@
         if (errorBox) errorBox.hidden = true;
         button.classList.add('is-loading');
 
-        /* Post the theme's own product form when there is one, so a variant
-           the visitor picked elsewhere on the page carries over. */
-        var form = document.querySelector('form[action*="/cart/add"]');
-        var options;
-        if (form && !root.contains(form)) {
-          options = { body: new FormData(form), headers: { Accept: 'application/javascript' } };
-        } else {
-          options = {
-            body: JSON.stringify({ items: [{ id: config.variantId, quantity: 1 }] }),
-            headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' }
-          };
-        }
-
-        fetch(config.cartAddUrl, { method: 'POST', headers: options.headers, body: options.body })
-          .then(function (response) {
-            return response.json().then(function (data) {
-              if (!response.ok) {
-                throw new Error(data.description || data.message || config.strings.error);
-              }
-              return data;
+        addMain()
+          .then(function (payload) {
+            return addGift().then(function () {
+              return payload;
             });
           })
           .then(function (payload) {
@@ -1715,7 +1856,35 @@
       "type": "header",
       "content": "Carte d'offre"
     },
-    { "type": "image_picker", "id": "offer_image", "label": "Image" },
+    {
+      "type": "product",
+      "id": "offer_product",
+      "label": "Produit offert",
+      "info": "Ce produit est ajouté au panier en même temps que l'article principal. Mets sa variante à 0 € pour qu'il soit réellement offert. S'il a plusieurs variantes, la première disponible est utilisée."
+    },
+    {
+      "type": "checkbox",
+      "id": "offer_add_to_cart",
+      "label": "Ajouter ce produit au panier",
+      "info": "Décoche pour n'afficher le cadeau que comme argument, sans l'ajouter.",
+      "default": true
+    },
+    { "type": "checkbox", "id": "offer_show_name", "label": "Afficher le nom du produit offert", "default": true },
+    { "type": "text", "id": "offer_free_label", "label": "Mention « offert »", "default": "Offert" },
+    {
+      "type": "text",
+      "id": "offer_property_label",
+      "label": "Libellé dans le panier",
+      "info": "Affiché sous la ligne du cadeau dans le panier. Laisse vide pour ne rien afficher.",
+      "default": "Cadeau"
+    },
+    { "type": "text", "id": "offer_property_value", "label": "Valeur dans le panier", "default": "Offert avec ta commande" },
+    {
+      "type": "image_picker",
+      "id": "offer_image",
+      "label": "Image (facultatif)",
+      "info": "Par défaut, l'image du produit offert est utilisée."
+    },
     { "type": "text", "id": "offer_tag", "label": "Étiquette", "default": "Cadeau offert" },
     { "type": "text", "id": "offer_title", "label": "Titre", "default": "Un cadeau offert avec tout abonnement" },
     { "type": "richtext", "id": "offer_text", "label": "Texte", "default": "<p>Pour chaque abonnement : le cadeau offert, la livraison gratuite et jusqu'à 30 % de réduction.</p>" },
