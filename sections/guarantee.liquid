@@ -100,15 +100,17 @@
   overflow: hidden;
 }
 
-/* Warm halo in the top-right corner, as in the reference. */
+/* Warm halo in the top-right corner, as in the reference. Its colour comes
+   from the schema as an rgb triplet, so the same value can be faded out at
+   the far edge of the gradient. */
 .guarantee__card::before {
   content: "";
   position: absolute;
   inset: 0;
   background: radial-gradient(
     420px 320px at 88% 14%,
-    rgba(242, 106, 33, 0.11),
-    rgba(242, 106, 33, 0) 68%
+    rgba(var(--gt-glow-card-rgb), var(--gt-glow-card-alpha)),
+    rgba(var(--gt-glow-card-rgb), 0) 68%
   );
   pointer-events: none;
 }
@@ -142,9 +144,13 @@
   height: var(--gt-medallion);
   border-radius: 50%;
   background: linear-gradient(145deg, #f58a4b 0%, var(--gt-orange) 46%, #e2570f 100%);
-  box-shadow: 0 14px 36px rgba(242, 106, 33, 0.36);
+  box-shadow: 0 14px 36px rgba(var(--gt-glow-badge-rgb), 0.36);
   color: var(--gt-white);
   text-align: center;
+}
+
+.guarantee--no-glow-badge .guarantee__medallion {
+  box-shadow: none;
 }
 
 /* Dashed inner ring */
@@ -299,14 +305,19 @@
   font-weight: 700;
   line-height: 1.2;
   text-decoration: none;
-  box-shadow: 0 8px 22px rgba(242, 106, 33, 0.34);
+  box-shadow: 0 8px 22px rgba(var(--gt-glow-btn-rgb), 0.34);
   transition: transform 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .guarantee__btn:hover {
   background: #e35c12;
   transform: translateY(-1px);
-  box-shadow: 0 10px 26px rgba(242, 106, 33, 0.42);
+  box-shadow: 0 10px 26px rgba(var(--gt-glow-btn-rgb), 0.42);
+}
+
+.guarantee--no-glow-btn .guarantee__btn,
+.guarantee--no-glow-btn .guarantee__btn:hover {
+  box-shadow: none;
 }
 
 .guarantee__btn:active {
@@ -405,6 +416,12 @@
   unless s.show_glow
     assign root_classes = root_classes | append: ' guarantee--no-glow'
   endunless
+  unless s.show_glow_badge
+    assign root_classes = root_classes | append: ' guarantee--no-glow-badge'
+  endunless
+  unless s.show_glow_btn
+    assign root_classes = root_classes | append: ' guarantee--no-glow-btn'
+  endunless
 
   comment
     The CTA scrolls to the top of the page, scrolls to an anchor, or navigates
@@ -448,6 +465,10 @@
     --gt-orange: {{ s.color_orange }};
     --gt-orange-soft: {{ s.color_orange_soft }};
     --gt-muted: {{ s.color_muted }};
+    --gt-glow-card-rgb: {{ s.color_glow_card.red }}, {{ s.color_glow_card.green }}, {{ s.color_glow_card.blue }};
+    --gt-glow-card-alpha: {{ s.glow_card_intensity | divided_by: 100.0 }};
+    --gt-glow-badge-rgb: {{ s.color_glow_badge.red }}, {{ s.color_glow_badge.green }}, {{ s.color_glow_badge.blue }};
+    --gt-glow-btn-rgb: {{ s.color_glow_btn.red }}, {{ s.color_glow_btn.green }}, {{ s.color_glow_btn.blue }};
     --gt-card-max: {{ s.card_max_width }}px;
     --gt-card-radius: {{ s.card_radius }}px;
     --gt-medallion-set: {{ s.medallion_size }}px;
@@ -969,7 +990,13 @@
     { "type": "color", "id": "color_orange", "label": "Orange", "default": "#F26A21" },
     { "type": "color", "id": "color_orange_soft", "label": "Orange clair (fond des icônes)", "default": "#FDF0E8" },
     { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#8A8F9A" },
-    { "type": "checkbox", "id": "show_glow", "label": "Halo orange dans la carte", "default": true },
+    { "type": "checkbox", "id": "show_glow", "label": "Halo dans la carte", "default": true },
+    { "type": "color", "id": "color_glow_card", "label": "Couleur du halo de la carte", "default": "#F26A21" },
+    { "type": "range", "id": "glow_card_intensity", "label": "Intensité du halo de la carte", "min": 0, "max": 40, "step": 1, "unit": "%", "default": 11 },
+    { "type": "checkbox", "id": "show_glow_badge", "label": "Halo sous le médaillon", "default": true },
+    { "type": "color", "id": "color_glow_badge", "label": "Couleur du halo du médaillon", "default": "#F26A21" },
+    { "type": "checkbox", "id": "show_glow_btn", "label": "Halo sous le bouton", "default": true },
+    { "type": "color", "id": "color_glow_btn", "label": "Couleur du halo du bouton", "default": "#F26A21" },
 
     {
       "type": "header",

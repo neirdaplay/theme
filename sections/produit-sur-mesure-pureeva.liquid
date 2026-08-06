@@ -39,6 +39,9 @@
      would otherwise beat every one of them. */
   --pv-offer-img: var(--pv-offer-img-set, 54px);
   --pv-offer-img-bg: var(--pv-offer-img-bg-set, #ffffff);
+  --pv-thumb: var(--pv-thumb-set, 64px);
+  --pv-stage-ratio: var(--pv-stage-ratio-set, 1 / 1);
+  --pv-stage-fit: var(--pv-stage-fit-set, cover);
 
   --pv-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -148,21 +151,39 @@
   border-radius: var(--pv-radius-lg);
   overflow: hidden;
   background: var(--pv-mint);
+  /* Horizontal swipes belong to the gallery, vertical ones to the page. */
+  touch-action: pan-y;
 }
 
 .pvp__slide {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: var(--pv-stage-ratio);
 }
 
 .pvp__slide[hidden] {
   display: none;
 }
 
+/* cover fills the frame edge to edge; contain shows the whole shot and lets
+   the stage background show through the sides. */
 .pvp__slide img,
 .pvp__placeholder {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: var(--pv-stage-fit);
+}
+
+/* A short cross-fade so a swipe does not read as a glitch. */
+.pvp__stage.is-sliding .pvp__slide:not([hidden]) {
+  animation: pvp-slide-in 0.22s ease;
+}
+
+@keyframes pvp-slide-in {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .pvp__placeholder {
@@ -265,10 +286,10 @@
 .pvp__thumb {
   position: relative;
   flex: 0 0 auto;
-  width: 84px;
+  width: var(--pv-thumb);
   padding: 0;
   border: 2px solid transparent;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--pv-mint);
   overflow: hidden;
   line-height: 0;
@@ -1334,15 +1355,16 @@
 }
 
 .pvp__stars-row--empty {
-  color: var(--pv-line);
+  color: var(--pv-star-empty);
 }
 
+/* Stars have their own colour: they read as a rating, not as branding. */
 .pvp__stars-row--full {
   position: absolute;
   inset: 0;
   width: var(--pv-star-pct, 100%);
   overflow: hidden;
-  color: var(--pv-teal);
+  color: var(--pv-star-color);
 }
 
 /* --------------------------------------------------------------------------
@@ -1544,10 +1566,7 @@
     --pv-gutter: 18px;
     --pv-seal: 68px;
     --pv-offer-img: calc(var(--pv-offer-img-set, 54px) * 0.85);
-  }
-
-  .pvp__thumb {
-    width: 72px;
+    --pv-thumb: calc(var(--pv-thumb-set, 64px) * 0.9);
   }
 
   .pvp__buy {
@@ -1722,6 +1741,8 @@
     --pv-ink: {{ s.color_ink }};
     --pv-muted: {{ s.color_muted }};
     --pv-teal: {{ s.color_accent }};
+    --pv-star-color: {{ s.color_stars }};
+    --pv-star-empty: {{ s.color_stars_empty }};
     --pv-green: {{ s.color_check }};
     --pv-line: {{ s.color_line }};
     --pv-soft: {{ s.color_soft }};
@@ -1730,6 +1751,9 @@
     --pv-seal: {{ s.seal_size }}px;
     --pv-offer-img-set: {{ s.offer_image_size }}px;
     --pv-offer-img-bg-set: {{ s.offer_image_bg }};
+    --pv-thumb-set: {{ s.thumb_size }}px;
+    --pv-stage-ratio-set: {{ s.gallery_ratio }};
+    --pv-stage-fit-set: {{ s.gallery_fit }};
     --pv-accent-soft: rgba({{ s.color_accent.red }}, {{ s.color_accent.green }}, {{ s.color_accent.blue }}, 0.15);
     --pv-accent-ink: {{ s.color_accent_ink }};
     background: {{ s.color_bg }};
@@ -2631,7 +2655,11 @@
     var thumbs = $$('[data-pvp-thumb]');
     if (thumbs.length) {
       var slides = $$('[data-pvp-slide]');
+      var stage = $('.pvp__stage');
+      var current = 0;
+
       var select = function (index) {
+        current = Number(index) || 0;
         slides.forEach(function (slide) {
           slide.hidden = slide.getAttribute('data-pvp-slide') !== String(index);
         });
@@ -2639,8 +2667,61 @@
           var active = thumb.getAttribute('data-pvp-thumb') === String(index);
           thumb.setAttribute('aria-selected', active ? 'true' : 'false');
           thumb.tabIndex = active ? 0 : -1;
+          /* Keep the active thumbnail in view once the strip scrolls. */
+          if (active && thumb.scrollIntoView) {
+            thumb.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
         });
       };
+
+      /* ---- Swipe ----
+         Touch only, and only once the gesture is clearly horizontal, so
+         scrolling the page through the image still works. */
+      if (stage && slides.length > 1) {
+        var startX = 0;
+        var startY = 0;
+        var tracking = false;
+
+        var step = function (delta) {
+          var next = (current + delta + slides.length) % slides.length;
+          select(next);
+          if (!REDUCED) {
+            stage.classList.remove('is-sliding');
+            void stage.offsetWidth; // restart the animation
+            stage.classList.add('is-sliding');
+          }
+        };
+
+        stage.addEventListener(
+          'touchstart',
+          function (event) {
+            if (event.touches.length !== 1) return;
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+            tracking = true;
+          },
+          { passive: true }
+        );
+
+        stage.addEventListener(
+          'touchend',
+          function (event) {
+            if (!tracking) return;
+            tracking = false;
+            var touch = event.changedTouches[0];
+            if (!touch) return;
+            var dx = touch.clientX - startX;
+            var dy = touch.clientY - startY;
+            if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
+            step(dx < 0 ? 1 : -1);
+          },
+          { passive: true }
+        );
+
+        stage.addEventListener('touchcancel', function () {
+          tracking = false;
+        });
+      }
 
       thumbs.forEach(function (thumb) {
         thumb.addEventListener('click', function () {
@@ -3099,6 +3180,31 @@
     { "type": "text", "id": "callout_text", "label": "Étiquette flottante", "default": "Cadeau offert" },
     { "type": "text", "id": "stage_trust_word", "label": "Bandeau image — mot-clé", "default": "Excellent" },
     { "type": "text", "id": "stage_trust_text", "label": "Bandeau image — texte", "default": "+40 000 utilisateurs" },
+    {
+      "type": "select",
+      "id": "gallery_ratio",
+      "label": "Format de l'image principale",
+      "options": [
+        { "value": "1 / 1", "label": "Carré" },
+        { "value": "4 / 5", "label": "Portrait 4:5" },
+        { "value": "3 / 4", "label": "Portrait 3:4" },
+        { "value": "4 / 3", "label": "Paysage 4:3" },
+        { "value": "16 / 9", "label": "Paysage 16:9" }
+      ],
+      "default": "1 / 1"
+    },
+    {
+      "type": "select",
+      "id": "gallery_fit",
+      "label": "Cadrage de l'image principale",
+      "info": "« Remplir » ne laisse aucun blanc sur les bords mais recadre. « Entière » montre toute la photo.",
+      "options": [
+        { "value": "cover", "label": "Remplir le cadre" },
+        { "value": "contain", "label": "Image entière" }
+      ],
+      "default": "cover"
+    },
+    { "type": "range", "id": "thumb_size", "label": "Taille des miniatures", "min": 44, "max": 110, "step": 2, "unit": "px", "default": 64 },
     { "type": "text", "id": "thumbs_aria_label", "label": "Libellé de la galerie (accessibilité)", "default": "Images du produit" },
     { "type": "text", "id": "thumbs_item_label", "label": "Libellé d'une miniature (accessibilité)", "default": "Image" },
 
@@ -3202,8 +3308,10 @@
     { "type": "color", "id": "color_dark", "label": "Couleur foncée (boutons, cartes)", "default": "#0D3B36" },
     { "type": "color", "id": "color_ink", "label": "Texte principal", "default": "#0F1B2A" },
     { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#6B7280" },
-    { "type": "color", "id": "color_accent", "label": "Accent (étoiles, étiquette)", "default": "#0FB6A8" },
+    { "type": "color", "id": "color_accent", "label": "Accent (étiquettes, remises, mentions)", "default": "#0FB6A8" },
     { "type": "color", "id": "color_accent_ink", "label": "Texte sur fond d'accent clair", "default": "#0A6F66" },
+    { "type": "color", "id": "color_stars", "label": "Étoiles pleines", "default": "#0FB6A8" },
+    { "type": "color", "id": "color_stars_empty", "label": "Étoiles vides", "default": "#E6EAEE" },
     { "type": "color", "id": "color_check", "label": "Coches", "default": "#16A34A" },
     { "type": "color", "id": "color_line", "label": "Filets", "default": "#E6EAEE" },
     { "type": "color", "id": "color_soft", "label": "Fonds clairs", "default": "#F2F6F5" },
