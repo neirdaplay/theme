@@ -1,0 +1,1862 @@
+{% comment %}
+  produit-sur-mesure-pureeva.liquid
+  Pureva-style product section: gallery with floating badges, trust row,
+  bullets, offer card, add-to-cart, reassurance columns, box contents,
+  accordions, rating row and a row of circular video buttons.
+
+  The "personnalisez votre offre" block (household size, frequency, gifts) is
+  deliberately absent, as asked.
+
+  Self-contained: styles and behaviour are both inlined, so this file is the
+  only thing that needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Pureva product — scoped under .pvp so the rest of the theme is untouched.
+   ========================================================================== */
+
+.pvp {
+  /* Palette */
+  --pv-dark: #0d3b36;
+  --pv-ink: #0f1b2a;
+  --pv-muted: #6b7280;
+  --pv-teal: #0fb6a8;
+  --pv-green: #16a34a;
+  --pv-line: #e6eaee;
+  --pv-soft: #f2f6f5;
+  --pv-mint: #e8f4f4;
+  --pv-white: #ffffff;
+
+  /* Shape */
+  --pv-max: 1180px;
+  --pv-gutter: 24px;
+  --pv-radius: 14px;
+  --pv-radius-lg: 20px;
+
+  --pv-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  font-family: var(--pv-font);
+  color: var(--pv-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.pvp *,
+.pvp *::before,
+.pvp *::after {
+  box-sizing: border-box;
+}
+
+:where(.pvp) :where(p) {
+  margin: 0;
+}
+
+:where(.pvp) :where(h1, h2, h3) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--pv-ink);
+}
+
+:where(.pvp) :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.pvp) :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.pvp) :where(a) {
+  color: inherit;
+}
+
+:where(.pvp) :where(img, video) {
+  display: block;
+  max-width: 100%;
+}
+
+.pvp :focus-visible {
+  outline: 2px solid var(--pv-teal);
+  outline-offset: 2px;
+}
+
+.pvp__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pvp__container {
+  max-width: calc(var(--pv-max) + var(--pv-gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--pv-gutter);
+}
+
+.pvp__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* The second row is flexible so the taller info column, which spans both,
+     donates its extra height there instead of padding the gallery row. */
+  grid-template-rows: auto 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+/* The info column is far taller than the gallery, so the video row is placed
+   under the gallery to fill that space. Source order stays gallery / info /
+   videos, which is exactly what the single-column layout wants. */
+.pvp__gallery {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.pvp__info {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.pvp__videos-cell {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* --------------------------------------------------------------------------
+   Gallery
+   -------------------------------------------------------------------------- */
+
+.pvp__stage {
+  position: relative;
+  border-radius: var(--pv-radius-lg);
+  overflow: hidden;
+  background: var(--pv-mint);
+}
+
+.pvp__slide {
+  aspect-ratio: 1 / 1;
+}
+
+.pvp__slide[hidden] {
+  display: none;
+}
+
+.pvp__slide img,
+.pvp__placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pvp__placeholder {
+  display: grid;
+  place-items: center;
+  color: #a9bdbd;
+}
+
+.pvp__placeholder svg {
+  width: 30%;
+  height: auto;
+}
+
+/* Circular guarantee seal, top-left of the image. */
+.pvp__seal {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  width: var(--pv-seal, 84px);
+  height: var(--pv-seal, 84px);
+  border-radius: 50%;
+  background: var(--pv-dark);
+  color: var(--pv-white);
+  text-align: center;
+  padding: 6px;
+}
+
+.pvp__seal-top,
+.pvp__seal-bottom {
+  font-size: calc(var(--pv-seal, 84px) * 0.085);
+  font-weight: 600;
+  line-height: 1.2;
+  opacity: 0.85;
+}
+
+.pvp__seal-value {
+  font-size: calc(var(--pv-seal, 84px) * 0.24);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+/* Floating callout pointing at part of the product. */
+.pvp__callout {
+  position: absolute;
+  top: 26%;
+  right: 14px;
+  z-index: 3;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: var(--pv-white);
+  box-shadow: 0 4px 14px rgba(15, 27, 42, 0.14);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Trust strip across the bottom of the image. */
+.pvp__stage-trust {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0));
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pvp__stage-trust .pvp__muted {
+  font-weight: 500;
+}
+
+/* ---- Thumbnails ---- */
+
+.pvp__thumbs {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pvp__thumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.pvp__thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 84px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: var(--pv-mint);
+  overflow: hidden;
+  line-height: 0;
+  transition: border-color 0.16s ease;
+}
+
+.pvp__thumb img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.pvp__thumb[aria-selected="true"] {
+  border-color: var(--pv-dark);
+}
+
+/* --------------------------------------------------------------------------
+   Info column
+   -------------------------------------------------------------------------- */
+
+.pvp__trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pvp__muted {
+  color: var(--pv-muted);
+}
+
+.pvp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 10px;
+}
+
+.pvp__title {
+  font-size: clamp(1.4rem, 1rem + 1.5vw, 1.9rem);
+}
+
+.pvp__subtitle {
+  margin-top: 6px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--pv-muted);
+}
+
+.pvp__perday {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pv-ink);
+  white-space: nowrap;
+}
+
+/* ---- Bullets ---- */
+
+.pvp__bullets {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.pvp__bullets li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.pvp__bullet-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--pv-soft);
+  color: var(--pv-dark);
+}
+
+.pvp__bullet-icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* ---- Badge pills ---- */
+
+.pvp__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pvp__badge {
+  padding: 7px 13px;
+  border-radius: 8px;
+  background: var(--pv-soft);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--pv-ink);
+}
+
+.pvp__badge--dark {
+  background: var(--pv-dark);
+  color: var(--pv-white);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---- Offer card ---- */
+
+.pvp__offer {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: var(--pv-radius);
+  background: var(--pv-dark);
+  color: var(--pv-white);
+}
+
+.pvp__offer-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.pvp__offer-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pvp__offer-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pvp__offer-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--pv-teal);
+  color: #04302c;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.pvp__offer-title {
+  margin-top: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--pv-white);
+}
+
+.pvp__offer-text {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* ---- Add to cart ---- */
+
+.pvp__atc {
+  margin-top: 18px;
+}
+
+.pvp__buy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 62px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: var(--pv-radius);
+  background: var(--pv-dark);
+  color: var(--pv-white);
+  text-align: left;
+  transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.pvp__buy:hover {
+  transform: translateY(-1px);
+}
+
+.pvp__buy-main {
+  min-width: 0;
+}
+
+.pvp__buy-label {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pvp__buy-sub {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.pvp__buy-price {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pvp__buy-was {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.pvp__buy[aria-disabled="true"] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.pvp__buy.is-loading {
+  pointer-events: none;
+  position: relative;
+  color: transparent;
+}
+
+.pvp__buy.is-loading > * {
+  visibility: hidden;
+}
+
+.pvp__buy.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pvp-spin 0.7s linear infinite;
+}
+
+@keyframes pvp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pvp__error {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdecec;
+  color: #a12020;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.pvp__error[hidden] {
+  display: none;
+}
+
+.pvp__note {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--pv-muted);
+  text-align: center;
+}
+
+.pvp__note strong {
+  color: var(--pv-ink);
+}
+
+/* ---- Reassurance columns ---- */
+
+.pvp__reassure {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pv-line);
+}
+
+.pvp__reassure li {
+  text-align: center;
+}
+
+.pvp__reassure-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.pvp__reassure-title svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--pv-green);
+}
+
+.pvp__reassure-text {
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--pv-muted);
+}
+
+/* ---- Accordions ---- */
+
+.pvp__accordions {
+  margin-top: 22px;
+  border-top: 1px solid var(--pv-line);
+}
+
+.pvp__acc {
+  border-bottom: 1px solid var(--pv-line);
+}
+
+.pvp__acc-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 2px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.pvp__acc-trigger svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  color: var(--pv-muted);
+  transition: transform 0.24s ease;
+}
+
+.pvp__acc-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.pvp__collapse {
+  overflow: hidden;
+  height: 0;
+  transition: height 0.28s ease;
+}
+
+.pvp__collapse[hidden] {
+  display: none;
+}
+
+.pvp__collapse-inner {
+  padding: 0 2px 18px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--pv-muted);
+}
+
+/* ---- Box contents grid ---- */
+
+.pvp__included {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.pvp__included li {
+  padding: 12px;
+  border: 1px solid var(--pv-line);
+  border-radius: 12px;
+  background: var(--pv-white);
+  text-align: center;
+}
+
+.pvp__included img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: var(--pv-soft);
+  border-radius: 8px;
+}
+
+.pvp__included-label {
+  display: block;
+  margin-top: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--pv-ink);
+}
+
+.pvp__included-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: 10.5px;
+  color: var(--pv-muted);
+}
+
+.pvp__included-flag svg {
+  width: 10px;
+  height: 10px;
+  color: var(--pv-green);
+}
+
+/* ---- Rating row + FAQ link ---- */
+
+.pvp__rating {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 2px;
+  border-bottom: 1px solid var(--pv-line);
+  font-size: 13px;
+}
+
+.pvp__rating-link {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--pv-line);
+  border-radius: 7px;
+  color: var(--pv-ink);
+}
+
+.pvp__rating-link svg {
+  width: 12px;
+  height: 12px;
+}
+
+.pvp__faqlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pvp__faqlink svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---- Stars ---- */
+
+.pvp__stars {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.pvp__stars-row {
+  display: flex;
+  gap: 2px;
+}
+
+.pvp__stars-row svg {
+  flex: 0 0 auto;
+  width: var(--pv-star, 14px);
+  height: var(--pv-star, 14px);
+}
+
+.pvp__stars-row--empty {
+  color: var(--pv-line);
+}
+
+.pvp__stars-row--full {
+  position: absolute;
+  inset: 0;
+  width: var(--pv-star-pct, 100%);
+  overflow: hidden;
+  color: var(--pv-teal);
+}
+
+/* --------------------------------------------------------------------------
+   Video row
+   -------------------------------------------------------------------------- */
+
+.pvp__videos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 18px;
+  margin-top: 26px;
+}
+
+.pvp__video {
+  width: 96px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: center;
+}
+
+.pvp__video-circle {
+  position: relative;
+  display: block;
+  width: 76px;
+  height: 76px;
+  margin-inline: auto;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--pv-soft);
+  box-shadow: 0 4px 14px rgba(15, 27, 42, 0.12);
+  transition: transform 0.16s ease;
+}
+
+.pvp__video:hover .pvp__video-circle {
+  transform: translateY(-2px);
+}
+
+.pvp__video-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pvp__video-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(15, 27, 42, 0.22);
+}
+
+.pvp__video-play svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pvp__video-label {
+  display: block;
+  margin-top: 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* --------------------------------------------------------------------------
+   Video dialog
+   -------------------------------------------------------------------------- */
+
+.pvp__modal {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.pvp__modal[hidden] {
+  display: none;
+}
+
+.pvp__modal.is-open {
+  opacity: 1;
+}
+
+.pvp__modal-backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(13, 27, 30, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  cursor: default;
+}
+
+.pvp__modal-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  border-radius: var(--pv-radius-lg);
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 24px 60px rgba(15, 27, 42, 0.3);
+  transform: translateY(10px) scale(0.97);
+  transition: transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pvp__modal.is-open .pvp__modal-dialog {
+  transform: none;
+}
+
+.pvp__modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--pv-ink);
+}
+
+.pvp__modal-close svg {
+  width: 13px;
+  height: 13px;
+}
+
+.pvp__modal-video {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: calc(100vh - 60px);
+  object-fit: cover;
+  background: #000;
+}
+
+.pvp__modal-video[hidden] {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 899px) {
+  .pvp__grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    gap: 26px;
+  }
+
+  /* One column: let source order do the work again. */
+  .pvp__gallery,
+  .pvp__info,
+  .pvp__videos-cell {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .pvp__videos {
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .pvp {
+    --pv-gutter: 18px;
+    --pv-seal: 68px;
+  }
+
+  .pvp__thumb {
+    width: 72px;
+  }
+
+  .pvp__buy {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pvp__video {
+    width: 80px;
+  }
+
+  .pvp__video-circle {
+    width: 66px;
+    height: 66px;
+  }
+
+  .pvp__videos {
+    gap: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pvp *,
+  .pvp *::before,
+  .pvp *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign variant = product.selected_or_first_available_variant
+
+  assign bullets = section.blocks | where: 'type', 'bullet'
+  assign badges = section.blocks | where: 'type', 'badge'
+  assign included = section.blocks | where: 'type', 'included'
+  assign reassurances = section.blocks | where: 'type', 'reassurance'
+  assign faqs = section.blocks | where: 'type', 'faq'
+  assign videos = section.blocks | where: 'type', 'video'
+
+  comment
+    The note comes from a select, so it arrives as a string: coerce it before
+    doing any arithmetic or comparison with it.
+  endcomment
+  assign rating_num = s.rating_value | plus: 0.0
+  assign rating_pct = rating_num | divided_by: 5.0 | times: 100
+
+  comment
+    root_url is "/" on a single-locale shop and "/fr" on a localised one, so
+    append then collapse the double slash rather than hardcoding "/checkout".
+  endcomment
+  assign checkout_url = routes.root_url | append: '/checkout' | replace: '//', '/'
+-%}
+
+{%- capture pv_star -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.5l2.6 5.3 5.8.85-4.2 4.1.99 5.8L10 14.8l-5.19 2.75.99-5.8-4.2-4.1 5.8-.85z"/></svg>{%- endcapture -%}
+{%- capture pv_stars_row -%}{{ pv_star }}{{ pv_star }}{{ pv_star }}{{ pv_star }}{{ pv_star }}{%- endcapture -%}
+{%- capture pv_check -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>{%- endcapture -%}
+{%- capture pv_chevron -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
+{%- capture pv_arrow -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.8 8h10.4M9 3.8L13.2 8 9 12.2"/></svg>{%- endcapture -%}
+{%- capture pv_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/></svg>{%- endcapture -%}
+{%- capture pv_play -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M6.4 3.7a1 1 0 011.5-.87l8.2 5.3a1 1 0 010 1.74l-8.2 5.3A1 1 0 016.4 14.3z"/></svg>{%- endcapture -%}
+
+<div
+  class="pvp"
+  id="pvp-{{ section.id }}"
+  data-pvp-root
+  style="
+    --pv-dark: {{ s.color_dark }};
+    --pv-ink: {{ s.color_ink }};
+    --pv-muted: {{ s.color_muted }};
+    --pv-teal: {{ s.color_accent }};
+    --pv-green: {{ s.color_check }};
+    --pv-line: {{ s.color_line }};
+    --pv-soft: {{ s.color_soft }};
+    --pv-mint: {{ s.color_gallery_bg }};
+    --pv-max: {{ s.container_width }}px;
+    --pv-seal: {{ s.seal_size }}px;
+    background: {{ s.color_bg }};
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+  "
+>
+  <script type="application/json" data-pvp-config>
+    {
+      "cartAddUrl": {{ routes.cart_add_url | json }},
+      "cartUrl": {{ routes.cart_url | json }},
+      "checkoutUrl": {{ checkout_url | json }},
+      "afterAdd": {{ s.after_add_action | json }},
+      "variantId": {{ variant.id | json }},
+      "strings": {
+        "error": {{ s.error_label | json }},
+        "soldOut": {{ s.sold_out_label | json }}
+      }
+    }
+  </script>
+
+  <div class="pvp__container">
+    <div class="pvp__grid">
+      {%- comment -%} ================= Gallery ================= {%- endcomment -%}
+      <div class="pvp__gallery">
+        <div class="pvp__stage">
+          {%- if product.media.size > 0 -%}
+            {%- for media in product.media limit: 8 -%}
+              {%- liquid
+                assign img = media.preview_image
+                assign img_h = 1000
+                if img.aspect_ratio > 0
+                  assign img_h = 1000 | divided_by: img.aspect_ratio | round
+                endif
+                assign img_loading = 'lazy'
+                if forloop.first
+                  assign img_loading = 'eager'
+                endif
+              -%}
+              <div class="pvp__slide" data-pvp-slide="{{ forloop.index0 }}" {% unless forloop.first %}hidden{% endunless %}>
+                {{
+                  img
+                  | image_url: width: 1000
+                  | image_tag:
+                    width: 1000,
+                    height: img_h,
+                    widths: '400,600,800,1000',
+                    sizes: '(min-width: 900px) 50vw, 100vw',
+                    loading: img_loading,
+                    alt: img.alt
+                }}
+              </div>
+            {%- endfor -%}
+          {%- else -%}
+            <div class="pvp__slide">
+              <div class="pvp__placeholder">{{ 'product-1' | placeholder_svg_tag }}</div>
+            </div>
+          {%- endif -%}
+
+          {%- if s.seal_value != blank -%}
+            <div class="pvp__seal">
+              {%- if s.seal_top != blank -%}<span class="pvp__seal-top">{{ s.seal_top }}</span>{%- endif -%}
+              <span class="pvp__seal-value">{{ s.seal_value }}</span>
+              {%- if s.seal_bottom != blank -%}<span class="pvp__seal-bottom">{{ s.seal_bottom }}</span>{%- endif -%}
+            </div>
+          {%- endif -%}
+
+          {%- if s.callout_text != blank -%}
+            <span class="pvp__callout">{{ s.callout_text }}</span>
+          {%- endif -%}
+
+          {%- if s.stage_trust_text != blank -%}
+            <div class="pvp__stage-trust">
+              {%- if s.stage_trust_word != blank -%}<span>{{ s.stage_trust_word }}</span>{%- endif -%}
+              {%- if rating_num > 0 -%}
+                <span class="pvp__stars" style="--pv-star-pct: {{ rating_pct }}%;" role="img" aria-label="{{ s.rating_aria_label }}">
+                  <span class="pvp__stars-row pvp__stars-row--empty" aria-hidden="true">{{ pv_stars_row }}</span>
+                  <span class="pvp__stars-row pvp__stars-row--full" aria-hidden="true">{{ pv_stars_row }}</span>
+                </span>
+              {%- endif -%}
+              <span class="pvp__muted">{{ s.stage_trust_text }}</span>
+            </div>
+          {%- endif -%}
+        </div>
+
+        {%- if product.media.size > 1 -%}
+          <div class="pvp__thumbs" role="tablist" aria-label="{{ s.thumbs_aria_label }}">
+            {%- for media in product.media limit: 8 -%}
+              <button
+                type="button"
+                class="pvp__thumb"
+                role="tab"
+                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"
+                data-pvp-thumb="{{ forloop.index0 }}"
+                aria-label="{{ s.thumbs_item_label }} {{ forloop.index }}"
+              >
+                {{
+                  media.preview_image
+                  | image_url: width: 200
+                  | image_tag: width: 100, height: 100, loading: 'lazy', alt: ''
+                }}
+              </button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ================= Info ================= {%- endcomment -%}
+      <div class="pvp__info">
+        {%- if s.trust_text != blank -%}
+          <div class="pvp__trust">
+            {%- if s.trust_word != blank -%}<span>{{ s.trust_word }}</span>{%- endif -%}
+            {%- if rating_num > 0 -%}
+              <span class="pvp__stars" style="--pv-star-pct: {{ rating_pct }}%; --pv-star: 13px;" role="img" aria-label="{{ s.rating_aria_label }}">
+                <span class="pvp__stars-row pvp__stars-row--empty" aria-hidden="true">{{ pv_stars_row }}</span>
+                <span class="pvp__stars-row pvp__stars-row--full" aria-hidden="true">{{ pv_stars_row }}</span>
+              </span>
+            {%- endif -%}
+            <span class="pvp__muted">{{ s.trust_text }}</span>
+          </div>
+        {%- endif -%}
+
+        <div class="pvp__head">
+          <div>
+            <h1 class="pvp__title">{{ product.title | escape }}</h1>
+            {%- if s.subtitle != blank -%}
+              <p class="pvp__subtitle">{{ s.subtitle }}</p>
+            {%- endif -%}
+          </div>
+          {%- if s.per_day != blank -%}
+            <span class="pvp__perday">{{ s.per_day }}</span>
+          {%- endif -%}
+        </div>
+
+        {%- if bullets.size > 0 -%}
+          <ul class="pvp__bullets">
+            {%- for block in bullets -%}
+              <li {{ block.shopify_attributes }}>
+                <span class="pvp__bullet-icon" aria-hidden="true">{{ pv_check }}</span>
+                <span>{{ block.settings.text }}</span>
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- if badges.size > 0 -%}
+          <div class="pvp__badges">
+            {%- for block in badges -%}
+              <span class="pvp__badge{% if block.settings.dark %} pvp__badge--dark{% endif %}" {{ block.shopify_attributes }}>
+                {{- block.settings.text -}}
+              </span>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        {%- if s.offer_title != blank -%}
+          <div class="pvp__offer">
+            <span class="pvp__offer-icon" aria-hidden="true">
+              {%- if s.offer_image != blank -%}
+                {{ s.offer_image | image_url: width: 120 | image_tag: width: 60, height: 60, loading: 'lazy', alt: '' }}
+              {%- else -%}
+                {{ pv_check }}
+              {%- endif -%}
+            </span>
+            <div>
+              {%- if s.offer_tag != blank -%}
+                <span class="pvp__offer-tag">{{ s.offer_tag }}</span>
+              {%- endif -%}
+              <p class="pvp__offer-title">{{ s.offer_title }}</p>
+              {%- if s.offer_text != blank -%}
+                <div class="pvp__offer-text">{{ s.offer_text }}</div>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} ---------- Add to cart ---------- {%- endcomment -%}
+        <div class="pvp__atc">
+          <button
+            type="button"
+            class="pvp__buy"
+            data-pvp-add
+            {% unless variant.available %}aria-disabled="true"{% endunless %}
+          >
+            <span class="pvp__buy-main">
+              <span class="pvp__buy-label" data-pvp-label>
+                {%- if variant.available -%}{{ s.buy_label }}{%- else -%}{{ s.sold_out_label }}{%- endif -%}
+              </span>
+              {%- if s.buy_sub != blank -%}
+                <span class="pvp__buy-sub">{{ s.buy_sub }}</span>
+              {%- endif -%}
+            </span>
+            <span class="pvp__buy-price">
+              {%- if variant.compare_at_price > variant.price -%}
+                <s class="pvp__buy-was">{{ variant.compare_at_price | money }}</s>
+              {%- endif -%}
+              <span>{{ variant.price | money }}</span>
+            </span>
+          </button>
+          <p class="pvp__error" role="alert" data-pvp-error hidden></p>
+
+          {%- if s.note_text != blank -%}
+            <div class="pvp__note">{{ s.note_text }}</div>
+          {%- endif -%}
+        </div>
+
+        {%- if reassurances.size > 0 -%}
+          <ul class="pvp__reassure">
+            {%- for block in reassurances -%}
+              <li {{ block.shopify_attributes }}>
+                <span class="pvp__reassure-title">
+                  {{ pv_check }}
+                  <span>{{ block.settings.title }}</span>
+                </span>
+                {%- if block.settings.text != blank -%}
+                  <span class="pvp__reassure-text">{{ block.settings.text }}</span>
+                {%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- comment -%} ---------- Accordions ---------- {%- endcomment -%}
+        {%- if included.size > 0 or faqs.size > 0 -%}
+          <div class="pvp__accordions">
+            {%- if included.size > 0 and s.included_title != blank -%}
+              <div class="pvp__acc">
+                <h2>
+                  <button
+                    type="button"
+                    class="pvp__acc-trigger"
+                    aria-expanded="{{ s.included_open }}"
+                    aria-controls="pvp-included-{{ section.id }}"
+                    data-pvp-acc
+                  >
+                    <span>{{ s.included_title }}</span>
+                    {{ pv_chevron }}
+                  </button>
+                </h2>
+                <div class="pvp__collapse" id="pvp-included-{{ section.id }}" data-pvp-collapse {% unless s.included_open %}hidden{% endunless %}>
+                  <div class="pvp__collapse-inner">
+                    <ul class="pvp__included">
+                      {%- for block in included -%}
+                        <li {{ block.shopify_attributes }}>
+                          {%- if block.settings.image != blank -%}
+                            {{
+                              block.settings.image
+                              | image_url: width: 200
+                              | image_tag: width: 100, height: 100, loading: 'lazy', alt: ''
+                            }}
+                          {%- endif -%}
+                          <span class="pvp__included-label">{{ block.settings.label }}</span>
+                          {%- if block.settings.flag != blank -%}
+                            <span class="pvp__included-flag">{{ pv_check }} {{ block.settings.flag }}</span>
+                          {%- endif -%}
+                        </li>
+                      {%- endfor -%}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            {%- endif -%}
+
+            {%- for block in faqs -%}
+              <div class="pvp__acc" {{ block.shopify_attributes }}>
+                <h2>
+                  <button
+                    type="button"
+                    class="pvp__acc-trigger"
+                    aria-expanded="false"
+                    aria-controls="pvp-faq-{{ block.id }}"
+                    data-pvp-acc
+                  >
+                    <span>{{ block.settings.question }}</span>
+                    {{ pv_chevron }}
+                  </button>
+                </h2>
+                <div class="pvp__collapse" id="pvp-faq-{{ block.id }}" data-pvp-collapse hidden>
+                  <div class="pvp__collapse-inner">{{ block.settings.answer }}</div>
+                </div>
+              </div>
+            {%- endfor -%}
+
+            {%- if rating_num > 0 -%}
+              <div class="pvp__rating">
+                <span class="pvp__stars" style="--pv-star-pct: {{ rating_pct }}%;" role="img" aria-label="{{ s.rating_aria_label }}">
+                  <span class="pvp__stars-row pvp__stars-row--empty" aria-hidden="true">{{ pv_stars_row }}</span>
+                  <span class="pvp__stars-row pvp__stars-row--full" aria-hidden="true">{{ pv_stars_row }}</span>
+                </span>
+                <span>{{ s.rating_text }}</span>
+                {%- if s.rating_url != blank -%}
+                  <a class="pvp__rating-link" href="{{ s.rating_url }}" aria-label="{{ s.rating_link_label }}">{{ pv_arrow }}</a>
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+          </div>
+        {%- endif -%}
+
+        {%- if s.faq_link_label != blank and s.faq_link_url != blank -%}
+          <a class="pvp__faqlink" href="{{ s.faq_link_url }}">
+            <span>{{ s.faq_link_label }}</span>
+            {{ pv_arrow }}
+          </a>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ================= Videos ================= {%- endcomment -%}
+      {%- if videos.size > 0 -%}
+        <div class="pvp__videos-cell">
+        <ul class="pvp__videos">
+        {%- for block in videos -%}
+          {%- liquid
+            assign b = block.settings
+            assign poster = b.poster
+            if poster == blank
+              assign poster = b.video.preview_image
+            endif
+            assign has_video = false
+            if b.video != blank or b.video_url != blank
+              assign has_video = true
+            endif
+          -%}
+          <li {{ block.shopify_attributes }}>
+            <button
+              type="button"
+              class="pvp__video"
+              {% if has_video %}data-pvp-video="{{ block.id }}" aria-haspopup="dialog"{% endif %}
+            >
+              <span class="pvp__video-circle">
+                {%- if poster != blank -%}
+                  {{ poster | image_url: width: 200 | image_tag: width: 100, height: 100, loading: 'lazy', alt: '' }}
+                {%- endif -%}
+                {%- if has_video -%}
+                  <span class="pvp__video-play" aria-hidden="true">{{ pv_play }}</span>
+                {%- endif -%}
+              </span>
+              <span class="pvp__video-label">{{ b.label }}</span>
+            </button>
+
+            {%- if has_video -%}
+              <template data-pvp-video-src="{{ block.id }}">
+                {%- if b.video != blank -%}
+                  {%- for source in b.video.sources -%}
+                    {%- if source.format == 'mp4' -%}
+                      <source src="{{ source.url }}" type="{{ source.mime_type }}">
+                    {%- endif -%}
+                  {%- endfor -%}
+                {%- elsif b.video_url != blank -%}
+                  <source src="{{ b.video_url }}" type="video/mp4">
+                {%- endif -%}
+              </template>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+        </ul>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- comment -%} ---------- Video dialog ---------- {%- endcomment -%}
+  {%- if videos.size > 0 -%}
+    <div class="pvp__modal" data-pvp-modal hidden>
+      <button type="button" class="pvp__modal-backdrop" data-pvp-modal-close tabindex="-1" aria-hidden="true"></button>
+      <div class="pvp__modal-dialog" role="dialog" aria-modal="true" aria-label="{{ s.video_dialog_label }}" data-pvp-modal-dialog>
+        <button type="button" class="pvp__modal-close" data-pvp-modal-close aria-label="{{ s.close_label }}">
+          {{ pv_close }}
+        </button>
+        <video class="pvp__modal-video" data-pvp-modal-video controls playsinline></video>
+      </div>
+    </div>
+  {%- endif -%}
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('pvp-{{ section.id }}');
+    if (!root || root.dataset.pvpReady === 'true') return;
+    root.dataset.pvpReady = 'true';
+
+    function $(sel, ctx) {
+      return (ctx || root).querySelector(sel);
+    }
+    function $$(sel, ctx) {
+      return Array.prototype.slice.call((ctx || root).querySelectorAll(sel));
+    }
+
+    var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var config;
+    try {
+      config = JSON.parse($('[data-pvp-config]').textContent);
+    } catch (error) {
+      console.warn('[pureva] configuration illisible', error);
+      return;
+    }
+
+    /* ---------------- Accordions ---------------- */
+
+    function openPanel(panel) {
+      panel.hidden = false;
+      if (REDUCED) {
+        panel.style.height = 'auto';
+        return;
+      }
+      var target = panel.scrollHeight;
+      panel.style.height = '0px';
+      void panel.offsetHeight; // force reflow so the transition runs
+      panel.style.height = target + 'px';
+      panel.addEventListener('transitionend', function once(e) {
+        if (e.propertyName !== 'height' || e.target !== panel) return;
+        panel.style.height = 'auto';
+        panel.removeEventListener('transitionend', once);
+      });
+    }
+
+    function closePanel(panel) {
+      if (REDUCED) {
+        panel.style.height = '';
+        panel.hidden = true;
+        return;
+      }
+      panel.style.height = panel.scrollHeight + 'px';
+      void panel.offsetHeight;
+      panel.style.height = '0px';
+      panel.addEventListener('transitionend', function once(e) {
+        if (e.propertyName !== 'height' || e.target !== panel) return;
+        panel.hidden = true;
+        panel.removeEventListener('transitionend', once);
+      });
+    }
+
+    $$('[data-pvp-acc]').forEach(function (trigger) {
+      var panel = document.getElementById(trigger.getAttribute('aria-controls'));
+      if (!panel) return;
+      /* An accordion open on load has no inline height yet. */
+      if (!panel.hidden) panel.style.height = 'auto';
+
+      trigger.addEventListener('click', function () {
+        var open = trigger.getAttribute('aria-expanded') === 'true';
+        trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+        if (open) closePanel(panel);
+        else openPanel(panel);
+      });
+    });
+
+    /* ---------------- Gallery ---------------- */
+
+    var thumbs = $$('[data-pvp-thumb]');
+    if (thumbs.length) {
+      var slides = $$('[data-pvp-slide]');
+      var select = function (index) {
+        slides.forEach(function (slide) {
+          slide.hidden = slide.getAttribute('data-pvp-slide') !== String(index);
+        });
+        thumbs.forEach(function (thumb) {
+          var active = thumb.getAttribute('data-pvp-thumb') === String(index);
+          thumb.setAttribute('aria-selected', active ? 'true' : 'false');
+          thumb.tabIndex = active ? 0 : -1;
+        });
+      };
+
+      thumbs.forEach(function (thumb) {
+        thumb.addEventListener('click', function () {
+          select(thumb.getAttribute('data-pvp-thumb'));
+        });
+      });
+
+      thumbs[0].parentNode.addEventListener('keydown', function (event) {
+        var i = thumbs.indexOf(document.activeElement);
+        if (i === -1) return;
+        var next = null;
+        if (event.key === 'ArrowRight') next = (i + 1) % thumbs.length;
+        else if (event.key === 'ArrowLeft') next = (i - 1 + thumbs.length) % thumbs.length;
+        else return;
+        event.preventDefault();
+        thumbs[next].focus();
+        select(thumbs[next].getAttribute('data-pvp-thumb'));
+      });
+    }
+
+    /* ---------------- Video dialog ---------------- */
+
+    var modal = $('[data-pvp-modal]');
+    if (modal) {
+      var media = $('[data-pvp-modal-video]', modal);
+      var closeBtn = $('.pvp__modal-close', modal);
+      var lastTrigger = null;
+
+      var lockScroll = function (locked) {
+        document.documentElement.style.overflow = locked ? 'hidden' : '';
+        document.body.style.overflow = locked ? 'hidden' : '';
+      };
+
+      var openModal = function (id, trigger) {
+        var tpl = $('[data-pvp-video-src="' + id + '"]');
+        if (!tpl) return;
+        /* Sources are swapped in on demand, so no video is fetched until it
+           is actually asked for. */
+        media.innerHTML = tpl.innerHTML;
+        media.load();
+
+        lastTrigger = trigger;
+        modal.hidden = false;
+        lockScroll(true);
+        window.requestAnimationFrame(function () {
+          modal.classList.add('is-open');
+        });
+        if (closeBtn) closeBtn.focus();
+
+        var attempt = media.play();
+        if (attempt && typeof attempt.catch === 'function') attempt.catch(function () {});
+      };
+
+      var closeModal = function () {
+        media.pause();
+        modal.classList.remove('is-open');
+        lockScroll(false);
+
+        var done = false;
+        var finish = function () {
+          if (done) return;
+          done = true;
+          modal.hidden = true;
+          media.innerHTML = '';
+          if (lastTrigger) lastTrigger.focus();
+          lastTrigger = null;
+        };
+        modal.addEventListener('transitionend', function once(e) {
+          if (e.target !== modal) return;
+          modal.removeEventListener('transitionend', once);
+          finish();
+        });
+        window.setTimeout(finish, 320);
+      };
+
+      $$('[data-pvp-video]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          openModal(btn.getAttribute('data-pvp-video'), btn);
+        });
+      });
+
+      $$('[data-pvp-modal-close]', modal).forEach(function (el) {
+        el.addEventListener('click', closeModal);
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (modal.hidden) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeModal();
+        }
+      });
+    }
+
+    /* ---------------- Add to cart ---------------- */
+
+    var button = $('[data-pvp-add]');
+    var errorBox = $('[data-pvp-error]');
+
+    if (button) {
+      button.addEventListener('click', function () {
+        if (button.classList.contains('is-loading')) return;
+        if (button.getAttribute('aria-disabled') === 'true') return;
+
+        if (errorBox) errorBox.hidden = true;
+        button.classList.add('is-loading');
+
+        /* Post the theme's own product form when there is one, so a variant
+           the visitor picked elsewhere on the page carries over. */
+        var form = document.querySelector('form[action*="/cart/add"]');
+        var options;
+        if (form && !root.contains(form)) {
+          options = { body: new FormData(form), headers: { Accept: 'application/javascript' } };
+        } else {
+          options = {
+            body: JSON.stringify({ items: [{ id: config.variantId, quantity: 1 }] }),
+            headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' }
+          };
+        }
+
+        fetch(config.cartAddUrl, { method: 'POST', headers: options.headers, body: options.body })
+          .then(function (response) {
+            return response.json().then(function (data) {
+              if (!response.ok) {
+                throw new Error(data.description || data.message || config.strings.error);
+              }
+              return data;
+            });
+          })
+          .then(function (payload) {
+            document.dispatchEvent(
+              new CustomEvent('pvp:cart-added', { bubbles: true, detail: payload })
+            );
+
+            if (config.afterAdd === 'checkout') {
+              window.location.href = config.checkoutUrl;
+              return;
+            }
+            if (config.afterAdd === 'cart') {
+              window.location.href = config.cartUrl;
+              return;
+            }
+            var drawer = document.querySelector('cart-drawer, [data-cart-drawer]');
+            if (drawer && typeof drawer.open === 'function') drawer.open();
+            button.classList.remove('is-loading');
+          })
+          .catch(function (error) {
+            button.classList.remove('is-loading');
+            if (errorBox) {
+              errorBox.textContent = error.message || config.strings.error;
+              errorBox.hidden = false;
+            }
+          });
+      });
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Produit Pureva",
+  "tag": "section",
+  "class": "pureva-product-section",
+  "max_blocks": 30,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Panier"
+    },
+    {
+      "type": "select",
+      "id": "after_add_action",
+      "label": "Après l'ajout au panier",
+      "options": [
+        { "value": "stay", "label": "Rester sur la page" },
+        { "value": "cart", "label": "Aller au panier" },
+        { "value": "checkout", "label": "Passer au paiement" }
+      ],
+      "default": "stay"
+    },
+    { "type": "text", "id": "buy_label", "label": "Texte du bouton", "default": "Ajouter au panier" },
+    { "type": "text", "id": "buy_sub", "label": "Sous-texte du bouton", "default": "Filtre + recharges incluses" },
+    { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
+    { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Ajout impossible pour le moment. Réessaie dans un instant." },
+    { "type": "richtext", "id": "note_text", "label": "Mention sous le bouton", "default": "<p><strong>Sans engagement</strong> — modifiable ou annulable à tout moment, sans frais.</p>" },
+
+    {
+      "type": "header",
+      "content": "Galerie"
+    },
+    { "type": "text", "id": "seal_top", "label": "Médaillon — ligne du haut", "default": "Satisfait ou remboursé" },
+    { "type": "text", "id": "seal_value", "label": "Médaillon — valeur", "default": "30" },
+    { "type": "text", "id": "seal_bottom", "label": "Médaillon — ligne du bas", "default": "jours" },
+    { "type": "range", "id": "seal_size", "label": "Taille du médaillon", "min": 60, "max": 120, "step": 2, "unit": "px", "default": 84 },
+    { "type": "text", "id": "callout_text", "label": "Étiquette flottante", "default": "Cadeau offert" },
+    { "type": "text", "id": "stage_trust_word", "label": "Bandeau image — mot-clé", "default": "Excellent" },
+    { "type": "text", "id": "stage_trust_text", "label": "Bandeau image — texte", "default": "+40 000 utilisateurs" },
+    { "type": "text", "id": "thumbs_aria_label", "label": "Libellé de la galerie (accessibilité)", "default": "Images du produit" },
+    { "type": "text", "id": "thumbs_item_label", "label": "Libellé d'une miniature (accessibilité)", "default": "Image" },
+
+    {
+      "type": "header",
+      "content": "En-tête"
+    },
+    { "type": "text", "id": "trust_word", "label": "Ligne de confiance — mot-clé", "default": "Excellent" },
+    { "type": "text", "id": "trust_text", "label": "Ligne de confiance — texte", "default": "Trustpilot" },
+    { "type": "text", "id": "subtitle", "label": "Sous-titre", "default": "Transformez votre robinet en source d'eau pure" },
+    { "type": "text", "id": "per_day", "label": "Prix par jour", "default": "Dès 0,27 €/jour" },
+
+    {
+      "type": "header",
+      "content": "Carte d'offre"
+    },
+    { "type": "image_picker", "id": "offer_image", "label": "Image" },
+    { "type": "text", "id": "offer_tag", "label": "Étiquette", "default": "Cadeau offert" },
+    { "type": "text", "id": "offer_title", "label": "Titre", "default": "Un cadeau offert avec tout abonnement" },
+    { "type": "richtext", "id": "offer_text", "label": "Texte", "default": "<p>Pour chaque abonnement : le cadeau offert, la livraison gratuite et jusqu'à 30 % de réduction.</p>" },
+
+    {
+      "type": "header",
+      "content": "Contenu du coffret"
+    },
+    { "type": "text", "id": "included_title", "label": "Titre de l'accordéon", "default": "Que contient le coffret ?" },
+    { "type": "checkbox", "id": "included_open", "label": "Ouvert par défaut", "default": true },
+
+    {
+      "type": "header",
+      "content": "Avis et liens"
+    },
+    {
+      "type": "select",
+      "id": "rating_value",
+      "label": "Note (remplissage des étoiles)",
+      "info": "Le texte affiché à côté se règle juste en dessous.",
+      "options": [
+        { "value": "0", "label": "Masquer les étoiles" },
+        { "value": "3", "label": "3 / 5" },
+        { "value": "3.5", "label": "3,5 / 5" },
+        { "value": "4", "label": "4 / 5" },
+        { "value": "4.3", "label": "4,3 / 5" },
+        { "value": "4.5", "label": "4,5 / 5" },
+        { "value": "4.6", "label": "4,6 / 5" },
+        { "value": "4.8", "label": "4,8 / 5" },
+        { "value": "5", "label": "5 / 5" }
+      ],
+      "default": "4.6"
+    },
+    { "type": "text", "id": "rating_text", "label": "Texte de la note", "default": "4,62/5 sur 323 avis" },
+    { "type": "text", "id": "rating_aria_label", "label": "Description de la note (accessibilité)", "default": "Note de 4,6 sur 5" },
+    { "type": "url", "id": "rating_url", "label": "Lien vers les avis" },
+    { "type": "text", "id": "rating_link_label", "label": "Libellé du lien avis (accessibilité)", "default": "Voir tous les avis" },
+    { "type": "text", "id": "faq_link_label", "label": "Texte du lien FAQ", "default": "Lire la FAQ" },
+    { "type": "url", "id": "faq_link_url", "label": "Lien FAQ" },
+    { "type": "text", "id": "video_dialog_label", "label": "Nom de la fenêtre vidéo", "default": "Vidéo" },
+    { "type": "text", "id": "close_label", "label": "Bouton fermer", "default": "Fermer" },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond de section", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_dark", "label": "Couleur foncée (boutons, cartes)", "default": "#0D3B36" },
+    { "type": "color", "id": "color_ink", "label": "Texte principal", "default": "#0F1B2A" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#6B7280" },
+    { "type": "color", "id": "color_accent", "label": "Accent (étoiles, étiquette)", "default": "#0FB6A8" },
+    { "type": "color", "id": "color_check", "label": "Coches", "default": "#16A34A" },
+    { "type": "color", "id": "color_line", "label": "Filets", "default": "#E6EAEE" },
+    { "type": "color", "id": "color_soft", "label": "Fonds clairs", "default": "#F2F6F5" },
+    { "type": "color", "id": "color_gallery_bg", "label": "Fond de la galerie", "default": "#E8F4F4" },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 900, "max": 1400, "step": 20, "unit": "px", "default": 1180 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 32 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 }
+  ],
+  "blocks": [
+    {
+      "type": "bullet",
+      "name": "Argument",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Texte", "default": "Décris ici un bénéfice court et concret." }
+      ]
+    },
+    {
+      "type": "badge",
+      "name": "Étiquette",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Texte", "default": "Livraison offerte" },
+        { "type": "checkbox", "id": "dark", "label": "Fond foncé", "default": false }
+      ]
+    },
+    {
+      "type": "reassurance",
+      "name": "Réassurance",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Titre", "default": "Livraison offerte" },
+        { "type": "text", "id": "text", "label": "Précision", "default": "Expédié sous 24 h" }
+      ]
+    },
+    {
+      "type": "included",
+      "name": "Élément du coffret",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "label", "label": "Nom", "default": "Filtre" },
+        { "type": "text", "id": "flag", "label": "Mention", "default": "Inclus" }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "Question",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "Pose ici une question fréquente." },
+        { "type": "richtext", "id": "answer", "label": "Réponse", "default": "<p>Rédige ici la réponse correspondante.</p>" }
+      ]
+    },
+    {
+      "type": "video",
+      "name": "Vidéo",
+      "settings": [
+        { "type": "video", "id": "video", "label": "Vidéo" },
+        { "type": "text", "id": "video_url", "label": "Ou URL d'un fichier MP4", "info": "Utilisé seulement si aucune vidéo n'est sélectionnée." },
+        { "type": "image_picker", "id": "poster", "label": "Vignette" },
+        { "type": "text", "id": "label", "label": "Libellé", "default": "Pourquoi ce produit ?" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Produit Pureva",
+      "blocks": [
+        { "type": "bullet" },
+        { "type": "bullet" },
+        { "type": "bullet" },
+        { "type": "badge" },
+        { "type": "badge" },
+        { "type": "reassurance" },
+        { "type": "reassurance" },
+        { "type": "reassurance" },
+        { "type": "included" },
+        { "type": "included" },
+        { "type": "included" },
+        { "type": "included" },
+        { "type": "faq" },
+        { "type": "faq" },
+        { "type": "faq" },
+        { "type": "video" },
+        { "type": "video" },
+        { "type": "video" },
+        { "type": "video" }
+      ]
+    }
+  ]
+}
+{% endschema %}
