@@ -1291,6 +1291,48 @@
   margin-bottom: 4px;
 }
 
+/* Editor-only ID sheet, same family as the warning box but calmer. */
+.pvpb__ids {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--pv-line);
+  border-radius: 8px;
+  background: var(--pv-soft);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.pvpb__ids b {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.pvpb__ids-title {
+  display: block;
+  margin-top: 8px;
+  font-weight: 700;
+  color: var(--pv-muted);
+}
+
+.pvpb__ids ul {
+  margin: 3px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pvpb__ids code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--pv-white);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+}
+
+.pvpb__ids-note {
+  margin-top: 8px;
+  color: var(--pv-muted);
+}
+
 /* ---- Add to cart ---- */
 
 .pvp__atc {
@@ -1961,6 +2003,34 @@
     assign rows_a = bb.prices_a | strip | newline_to_br | split: '<br />'
     assign rows_b = bb.prices_b | strip | newline_to_br | split: '<br />'
 
+    comment
+      Two knobs the whole grid depends on, resolved here because the cart
+      configuration below is rendered before the grid itself.
+
+      split_device puts the filter on its own one-off cart line next to the
+      subscription line — the montage a plain selling plan cannot express,
+      since a plan bills the same thing every cycle. Point it at a 0 €
+      variant and the device becomes a free gift while the refills keep
+      renewing on their own schedule.
+    endcomment
+    assign price_from_shopify = false
+    if bb.price_source == 'shopify'
+      assign price_from_shopify = true
+    endif
+
+    assign device_id = bb.device_variant | strip | plus: 0
+    assign split_device = false
+    assign device_price = 0
+    assign device_was = 0
+    if bb.split_lines and device_id > 0
+      assign device_obj = product.variants | where: 'id', device_id | first
+      if device_obj != blank
+        assign split_device = true
+        assign device_price = device_obj.price
+        assign device_was = device_obj.compare_at_price | at_least: device_obj.price
+      endif
+    endif
+
     assign def_h = bb.default_household | plus: 0 | minus: 1
     assign def_rows = rows_a
     if bb.default_freq == 'b'
@@ -2052,6 +2122,7 @@
       "afterAdd": {{ s.after_add_action | json }},
       "variantId": {{ variant.id | json }},
       "gift": {% if gift_id > 0 %}{ "id": {{ gift_id | json }}, "propName": {{ s.offer_property_label | json }}, "propValue": {{ s.offer_property_value | json }} }{% else %}null{% endif %},
+      "device": {% if has_bundle and split_device %}{ "id": {{ device_id | json }} }{% else %}null{% endif %},
       "strings": {
         "error": {{ s.error_label | json }},
         "soldOut": {{ s.sold_out_label | json }}
@@ -2416,11 +2487,65 @@
                   assign c_plan = parts[6] | strip | plus: 0
 
                   comment
+                    Shopify mode: the variant's allocation for this selling
+                    plan is the authority. allocation.price is what the first
+                    order is charged; the last price adjustment is what every
+                    renewal costs. The typed columns stay as a fallback when a
+                    variant or plan cannot be resolved.
+                  endcomment
+                  assign has_alloc = false
+                  if price_from_shopify and c_variant > 0 and c_plan > 0
+                    assign c_var_obj = product.variants | where: 'id', c_variant | first
+                    if c_var_obj != blank
+                      for a in c_var_obj.selling_plan_allocations
+                        if a.selling_plan.id == c_plan
+                          assign has_alloc = true
+                          assign c_first = a.price
+                          assign c_rec = a.price
+                          for adj in a.price_adjustments
+                            assign c_rec = adj.price
+                          endfor
+                          assign c_was = a.compare_at_price
+                          if c_was <= c_first
+                            assign c_was = c_var_obj.compare_at_price
+                          endif
+                          break
+                        endif
+                      endfor
+                    endif
+                    comment
+                      Split lines: the device is charged once next to the
+                      first subscription payment, so the headline price is
+                      their sum.
+                    endcomment
+                    if has_alloc and split_device and device_price > 0
+                      assign c_first = c_first | plus: device_price
+                      assign c_was = c_was | plus: device_was
+                    endif
+                  endif
+
+                  comment
                     The other frequency's price for the same household, scaled
                     to this period: that is what the card strikes through.
                   endcomment
                   assign parts_a = rows_a[hi] | split: '|'
                   assign rec_a = parts_a[2] | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  if price_from_shopify
+                    assign a_variant = parts_a[5] | strip | plus: 0
+                    assign a_plan = parts_a[6] | strip | plus: 0
+                    assign a_var_obj = product.variants | where: 'id', a_variant | first
+                    if a_var_obj != blank
+                      for a in a_var_obj.selling_plan_allocations
+                        if a.selling_plan.id == a_plan
+                          assign rec_a = a.price
+                          for adj in a.price_adjustments
+                            assign rec_a = adj.price
+                          endfor
+                          break
+                        endif
+                      endfor
+                    endif
+                  endif
                   assign c_cardwas = rec_a | times: months | divided_by: months_a | round
 
                   assign c_first_txt = ''
@@ -2739,7 +2864,7 @@
                 {%- if bad_lines > 0 or no_variant > 0 -%}
                   <div class="pvpb__debug">
                     <b>Éditeur — grille tarifaire</b>
-                    {%- if bad_lines > 0 -%}
+                    {%- if bad_lines > 0 and price_from_shopify == false -%}
                       {{ bad_lines }} combinaison(s) sans prix lisible : vérifie que chaque ligne suit
                       « 1re commande | barré | récurrent | remise % | remise carte % | ID variante | ID selling plan ».
                     {%- endif -%}
@@ -2747,6 +2872,48 @@
                       {{ no_variant }} combinaison(s) sans ID de variante : le panier recevra le produit
                       principal, donc à un prix différent de celui affiché ici.
                     {%- endif -%}
+                  </div>
+                {%- endif -%}
+
+                {%- comment -%}
+                  The IDs the price grid needs, read straight off the product,
+                  so they never have to be dug out of the product JSON.
+                {%- endcomment -%}
+                {%- if bb.show_ids -%}
+                  <div class="pvpb__ids">
+                    <b>Éditeur — IDs de ce produit</b>
+
+                    <span class="pvpb__ids-title">Variantes (colonne 6)</span>
+                    {%- if product.variants.size > 0 -%}
+                      <ul>
+                        {%- for v in product.variants -%}
+                          <li><code>{{ v.id }}</code> — {{ v.title }} — {{ v.price | money }}</li>
+                        {%- endfor -%}
+                      </ul>
+                    {%- else -%}
+                      <p>Aucune variante sur ce produit.</p>
+                    {%- endif -%}
+
+                    <span class="pvpb__ids-title">Plans d'abonnement (colonne 7)</span>
+                    {%- if product.selling_plan_groups.size > 0 -%}
+                      {%- for group in product.selling_plan_groups -%}
+                        <ul>
+                          {%- for plan in group.selling_plans -%}
+                            <li><code>{{ plan.id }}</code> — {{ plan.name }}</li>
+                          {%- endfor -%}
+                        </ul>
+                      {%- endfor -%}
+                    {%- else -%}
+                      <p>
+                        Aucun plan d'abonnement sur ce produit. Installe une app d'abonnement et
+                        rattache-lui ce produit, sinon seul l'achat unique fonctionnera.
+                      </p>
+                    {%- endif -%}
+
+                    <p class="pvpb__ids-note">
+                      Encadré visible dans l'éditeur uniquement. Décoche « Afficher les IDs » une fois
+                      la grille remplie.
+                    </p>
                   </div>
                 {%- endif -%}
               {%- endif -%}
@@ -3600,10 +3767,20 @@
       if (bundleLine) {
         var line = { id: bundleLine.id, quantity: 1 };
         if (bundleLine.plan) line.selling_plan = bundleLine.plan;
+
+        var items = [];
+        /* The device goes in as its own one-off line, before the
+           subscription: the first order carries both, renewals only the
+           refills. Never on a one-time purchase, which already includes it. */
+        if (config.device && bundleLine.plan) {
+          items.push({ id: config.device.id, quantity: 1 });
+        }
+        items.push(line);
+
         return fetch(config.cartAddUrl, {
           method: 'POST',
           headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: [line] })
+          body: JSON.stringify({ items: items })
         }).then(readResponse);
       }
 
@@ -4062,6 +4239,39 @@
           "label": "Ligne « par jour »",
           "info": "[price] = prix par jour, calculé automatiquement. Laisse vide pour la masquer.",
           "default": "soit [price]/jour"
+        },
+
+        { "type": "header", "content": "Source des prix" },
+        {
+          "type": "select",
+          "id": "price_source",
+          "label": "D'où viennent les prix",
+          "info": "« Depuis Shopify » lit le prix réel de chaque plan d'abonnement : impossible d'afficher un montant différent de celui débité. Les variantes doivent appartenir à ce produit. Les prix saisis dans la grille restent le filet de secours.",
+          "options": [
+            { "value": "manual", "label": "Saisis dans la grille" },
+            { "value": "shopify", "label": "Depuis Shopify (recommandé)" }
+          ],
+          "default": "manual"
+        },
+        {
+          "type": "checkbox",
+          "id": "split_lines",
+          "label": "Filtre en ligne séparée",
+          "info": "Le filtre part en achat unique à côté de l'abonnement aux recharges. C'est le montage qui permet une 1re commande plus chère que les renouvellements avec l'app gratuite de Shopify.",
+          "default": false
+        },
+        {
+          "type": "text",
+          "id": "device_variant",
+          "label": "ID de variante du filtre",
+          "info": "Pointe-le sur une variante à 0 € pour offrir le filtre : l'abonnement aux recharges continue normalement."
+        },
+        {
+          "type": "checkbox",
+          "id": "show_ids",
+          "label": "Afficher les IDs dans l'éditeur",
+          "info": "Liste les variantes et les plans d'abonnement de ce produit avec leurs IDs. Jamais visible en boutique.",
+          "default": true
         },
 
         { "type": "header", "content": "Grille tarifaire" },
