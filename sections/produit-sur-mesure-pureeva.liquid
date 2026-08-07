@@ -118,29 +118,14 @@
 .pvp__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  /* The second row is flexible so the taller info column, which spans both,
-     donates its extra height there instead of padding the gallery row. */
-  grid-template-rows: auto 1fr;
   gap: 40px;
+  /* Both columns start at the top; the gallery needs this to be able to
+     stick inside a grid area that is as tall as the info column. */
   align-items: start;
 }
 
-/* The info column is far taller than the gallery, so the video row is placed
-   under the gallery to fill that space. Source order stays gallery / info /
-   videos, which is exactly what the single-column layout wants. */
-.pvp__gallery {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.pvp__info {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
-
 .pvp__videos-cell {
-  grid-column: 1;
-  grid-row: 2;
+  margin-top: 4px;
 }
 
 /* --------------------------------------------------------------------------
@@ -148,26 +133,16 @@
    -------------------------------------------------------------------------- */
 
 @media screen and (min-width: 900px) {
-  /* Flip which row is flexible: the gallery's own row now absorbs the info
-     column's extra height, which is exactly the travel sticky needs. Its
-     containing block is that grid area, so it releases on its own at the
-     bottom of the section instead of following the page forever. */
-  .pvp--sticky .pvp__grid {
-    grid-template-rows: 1fr auto;
-  }
-
+  /* The gallery's grid area is as tall as the info column, and that area is
+     its containing block — so it sticks through the section and releases on
+     its own at the bottom instead of following the page forever. */
   .pvp--sticky .pvp__gallery {
     position: sticky;
     top: var(--pv-sticky-top);
-    align-self: start;
   }
 
   /* Set by the script when the gallery is taller than the window: sticking
      it there would park its bottom off-screen for the whole scroll. */
-  .pvp--sticky.pvp--sticky-off .pvp__grid {
-    grid-template-rows: auto 1fr;
-  }
-
   .pvp--sticky.pvp--sticky-off .pvp__gallery {
     position: static;
   }
@@ -1835,16 +1810,7 @@
 @media screen and (max-width: 899px) {
   .pvp__grid {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
     gap: var(--pv-stack-gap);
-  }
-
-  /* One column: let source order do the work again. */
-  .pvp__gallery,
-  .pvp__info,
-  .pvp__videos-cell {
-    grid-column: auto;
-    grid-row: auto;
   }
 
   /* Full-bleed only makes sense stacked. "gutter" cancels this section's own
@@ -2929,9 +2895,12 @@
             {{ pv_arrow }}
           </a>
         {%- endif -%}
-      </div>
 
-      {%- comment -%} ================= Videos ================= {%- endcomment -%}
+      {%- comment -%}
+        ================= Videos =================
+        Inside the info column: the gallery column sticks, so anything left
+        under it would sit against the thumbnails for the whole scroll.
+      {%- endcomment -%}
       {%- if videos.size > 0 -%}
         <div class="pvp__videos-cell">
         <ul class="pvp__videos">
@@ -2982,6 +2951,7 @@
         </ul>
         </div>
       {%- endif -%}
+      </div>
     </div>
   </div>
 
