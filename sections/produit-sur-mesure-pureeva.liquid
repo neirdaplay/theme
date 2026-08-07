@@ -144,6 +144,36 @@
 }
 
 /* --------------------------------------------------------------------------
+   Sticky gallery (desktop)
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: 900px) {
+  /* Flip which row is flexible: the gallery's own row now absorbs the info
+     column's extra height, which is exactly the travel sticky needs. Its
+     containing block is that grid area, so it releases on its own at the
+     bottom of the section instead of following the page forever. */
+  .pvp--sticky .pvp__grid {
+    grid-template-rows: 1fr auto;
+  }
+
+  .pvp--sticky .pvp__gallery {
+    position: sticky;
+    top: var(--pv-sticky-top);
+    align-self: start;
+  }
+
+  /* Set by the script when the gallery is taller than the window: sticking
+     it there would park its bottom off-screen for the whole scroll. */
+  .pvp--sticky.pvp--sticky-off .pvp__grid {
+    grid-template-rows: auto 1fr;
+  }
+
+  .pvp--sticky.pvp--sticky-off .pvp__gallery {
+    position: static;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Gallery
    -------------------------------------------------------------------------- */
 
@@ -2018,7 +2048,7 @@
 {%- capture pv_play -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M6.4 3.7a1 1 0 011.5-.87l8.2 5.3a1 1 0 010 1.74l-8.2 5.3A1 1 0 016.4 14.3z"/></svg>{%- endcapture -%}
 
 <div
-  class="pvp"
+  class="pvp{% if s.sticky_gallery %} pvp--sticky{% endif %}"
   id="pvp-{{ section.id }}"
   data-pvp-root
   style="
@@ -2038,6 +2068,7 @@
     --pv-offer-img-bg-set: {{ s.offer_image_bg }};
     --pv-thumb-set: {{ s.thumb_size }}px;
     --pv-stack-gap-set: {{ s.stack_gap }}px;
+    --pv-sticky-top: {{ s.sticky_top }}px;
     --pv-stage-ratio-set: {{ s.gallery_ratio }};
     --pv-stage-fit-set: {{ s.gallery_fit }};
     --pv-accent-soft: rgba({{ s.color_accent.red }}, {{ s.color_accent.green }}, {{ s.color_accent.blue }}, 0.15);
@@ -3212,6 +3243,27 @@
       });
     }
 
+    /* ---------------- Sticky gallery guard ---------------- */
+
+    if (root.classList.contains('pvp--sticky')) {
+      var stickyCol = $('.pvp__gallery');
+      if (stickyCol) {
+        /* A column taller than the window would stick with its bottom
+           permanently off-screen — worse than not sticking at all. */
+        var measureSticky = function () {
+          var top = parseInt(getComputedStyle(root).getPropertyValue('--pv-sticky-top'), 10) || 0;
+          var fits = stickyCol.offsetHeight + top + 24 <= window.innerHeight;
+          root.classList.toggle('pvp--sticky-off', !fits);
+        };
+
+        measureSticky();
+        window.addEventListener('resize', measureSticky);
+        /* Images settle after load and change the column's height. */
+        window.addEventListener('load', measureSticky);
+        if (window.ResizeObserver) new ResizeObserver(measureSticky).observe(stickyCol);
+      }
+    }
+
     /* ---------------- Review popover ---------------- */
 
     var revToggle = $('[data-pvp-reviews-toggle]');
@@ -3772,6 +3824,24 @@
       "default": "gutter"
     },
     { "type": "range", "id": "stack_gap", "label": "Espace galerie / infos sur mobile", "min": 4, "max": 48, "step": 2, "unit": "px", "default": 16 },
+    {
+      "type": "checkbox",
+      "id": "sticky_gallery",
+      "label": "Galerie fixe au défilement",
+      "info": "Sur ordinateur seulement. La galerie suit le défilement puis se détache à la fin de la section. Désactivée d'elle-même si elle est plus haute que la fenêtre.",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "sticky_top",
+      "label": "Distance du haut de l'écran",
+      "info": "À augmenter si ton en-tête reste affiché au défilement.",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "default": 20
+    },
     { "type": "text", "id": "thumbs_aria_label", "label": "Libellé de la galerie (accessibilité)", "default": "Images du produit" },
     { "type": "text", "id": "thumbs_item_label", "label": "Libellé d'une miniature (accessibilité)", "default": "Image" },
 
