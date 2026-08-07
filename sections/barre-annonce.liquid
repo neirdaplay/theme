@@ -1,0 +1,270 @@
+{% comment %}
+  barre-annonce.liquid
+  Thin announcement bar meant to sit above the header.
+
+  Two text parts, either of which can be bold, and an optional destination
+  for the whole bar. No JavaScript: a plain anchor does everything here.
+
+  Self-contained — styles are inlined, so this file is the only thing that
+  needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Announcement bar — scoped under .annbar so the rest of the theme is
+   untouched.
+   ========================================================================== */
+
+.annbar {
+  --ab-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  width: 100%;
+  font-family: var(--ab-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.annbar *,
+.annbar *::before,
+.annbar *::after {
+  box-sizing: border-box;
+}
+
+.annbar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: var(--ab-max);
+  margin-inline: auto;
+  padding: var(--ab-pad-y) var(--ab-pad-x);
+  color: inherit;
+  font-size: var(--ab-size);
+  line-height: 1.35;
+  letter-spacing: var(--ab-track);
+  text-align: center;
+  text-decoration: none;
+}
+
+/* The bar is a link only when a destination is set; keep the underline for
+   the hover state so it still reads as clickable. */
+a.annbar__inner:hover .annbar__label {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.annbar :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -3px;
+}
+
+.annbar__part {
+  font-weight: 500;
+}
+
+/* The two parts stay ordinary inline text — that is what lets the sentence
+   wrap and underline naturally — so the space between them is a margin,
+   not a flex gap. */
+.annbar__part + .annbar__part {
+  margin-left: 0.32em;
+}
+
+.annbar__part--bold {
+  font-weight: 700;
+}
+
+@media screen and (max-width: 767px) {
+  .annbar__inner {
+    padding-inline: 14px;
+    font-size: calc(var(--ab-size) * 0.92);
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+
+  comment
+    Nothing to announce, nothing to render. An empty bar would still take up
+    its padding at the top of every page.
+  endcomment
+  assign has_text = false
+  if s.text_1 != blank or s.text_2 != blank
+    assign has_text = true
+  endif
+
+  comment
+    A merchant may type an anchor with or without its leading #, so normalise
+    it rather than rendering a broken relative link.
+  endcomment
+  assign href = ''
+  if s.link_type == 'url' and s.link_url != blank
+    assign href = s.link_url
+  elsif s.link_type == 'anchor' and s.anchor_id != blank
+    assign anchor_value = s.anchor_id | strip
+    assign anchor_first = anchor_value | slice: 0
+    unless anchor_first == '#'
+      assign anchor_value = '#' | append: anchor_value
+    endunless
+    assign href = anchor_value
+  endif
+
+  assign bold_1 = false
+  assign bold_2 = false
+  if s.bold_choice == 'first' or s.bold_choice == 'both'
+    assign bold_1 = true
+  endif
+  if s.bold_choice == 'second' or s.bold_choice == 'both'
+    assign bold_2 = true
+  endif
+-%}
+
+{%- if has_text -%}
+  {%- capture ab_label -%}
+    <span class="annbar__label">
+      {%- if s.text_1 != blank -%}
+        <span class="annbar__part{% if bold_1 %} annbar__part--bold{% endif %}">{{ s.text_1 }}</span>
+      {%- endif -%}
+      {%- if s.text_2 != blank -%}
+        <span class="annbar__part{% if bold_2 %} annbar__part--bold{% endif %}">{{ s.text_2 }}</span>
+      {%- endif -%}
+    </span>
+  {%- endcapture -%}
+
+  {%- capture ab_style -%}
+    background: {{ s.color_bg }};
+    color: {{ s.color_text }};
+    --ab-max: {{ s.content_width }}px;
+    --ab-size: {{ s.font_size }}px;
+    --ab-track: {{ s.letter_spacing | divided_by: 100.0 }}em;
+    --ab-pad-y: {{ s.padding_y }}px;
+    --ab-pad-x: {{ s.padding_x }}px;
+  {%- endcapture -%}
+
+  <div class="annbar" style="{{ ab_style | strip_newlines }}">
+    {%- if href != blank -%}
+      <a
+        class="annbar__inner"
+        href="{{ href }}"
+        {% if s.new_tab %}target="_blank" rel="noopener"{% endif %}
+        {% if s.aria_label != blank %}aria-label="{{ s.aria_label }}"{% endif %}
+      >
+        {{- ab_label -}}
+      </a>
+    {%- else -%}
+      <div class="annbar__inner">{{ ab_label }}</div>
+    {%- endif -%}
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Barre d'annonce",
+  "tag": "div",
+  "class": "barre-annonce-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Message"
+    },
+    {
+      "type": "text",
+      "id": "text_1",
+      "label": "Première partie",
+      "info": "Les emojis se tapent directement dans le texte.",
+      "default": "SOLDES D'ÉTÉ ☀️"
+    },
+    {
+      "type": "text",
+      "id": "text_2",
+      "label": "Deuxième partie",
+      "default": ": Gourde et livraison offerte !"
+    },
+    {
+      "type": "select",
+      "id": "bold_choice",
+      "label": "Texte en gras",
+      "options": [
+        { "value": "first", "label": "La première partie" },
+        { "value": "second", "label": "La deuxième partie" },
+        { "value": "both", "label": "Les deux" },
+        { "value": "none", "label": "Aucune" }
+      ],
+      "default": "first"
+    },
+
+    {
+      "type": "header",
+      "content": "Destination"
+    },
+    {
+      "type": "select",
+      "id": "link_type",
+      "label": "La barre est cliquable",
+      "options": [
+        { "value": "none", "label": "Non" },
+        { "value": "url", "label": "Vers un lien" },
+        { "value": "anchor", "label": "Vers une ancre de la page" }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "Lien",
+      "info": "Page, collection, produit ou adresse externe."
+    },
+    {
+      "type": "text",
+      "id": "anchor_id",
+      "label": "Ancre",
+      "info": "L'identifiant de la zone visée, avec ou sans le #.",
+      "default": "#main-product"
+    },
+    { "type": "checkbox", "id": "new_tab", "label": "Ouvrir dans un nouvel onglet", "default": false },
+    {
+      "type": "text",
+      "id": "aria_label",
+      "label": "Description du lien (accessibilité)",
+      "info": "Lue par les lecteurs d'écran à la place du texte de la barre. Facultatif."
+    },
+
+    {
+      "type": "header",
+      "content": "Apparence"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond", "default": "#0D3B36" },
+    { "type": "color", "id": "color_text", "label": "Texte", "default": "#FFFFFF" },
+    { "type": "range", "id": "font_size", "label": "Taille du texte", "min": 10, "max": 20, "step": 1, "unit": "px", "default": 13 },
+    {
+      "type": "range",
+      "id": "letter_spacing",
+      "label": "Espacement des lettres",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "unit": "%",
+      "default": 2
+    },
+    { "type": "range", "id": "padding_y", "label": "Hauteur de la barre", "min": 4, "max": 28, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "padding_x", "label": "Marge latérale", "min": 8, "max": 48, "step": 2, "unit": "px", "default": 20 },
+    {
+      "type": "range",
+      "id": "content_width",
+      "label": "Largeur du texte",
+      "info": "Le fond reste sur toute la largeur.",
+      "min": 600,
+      "max": 1600,
+      "step": 20,
+      "unit": "px",
+      "default": 1400
+    }
+  ],
+  "presets": [
+    {
+      "name": "Barre d'annonce"
+    }
+  ]
+}
+{% endschema %}
