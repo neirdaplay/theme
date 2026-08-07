@@ -1,0 +1,966 @@
+{% comment %}
+  testimonials.liquid
+  Customer reviews: a summary card with a rating breakdown, then a masonry
+  wall of review cards that can be sorted and expanded.
+
+  Each card takes either a profile photo or two initials for its avatar, and
+  can carry a photo of its own.
+
+  Self-contained: styles and behaviour are both inlined, so this file is the
+  only thing that needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Testimonials — scoped under .tstm so the rest of the theme is untouched.
+   ========================================================================== */
+
+.tstm {
+  --ts-white: #ffffff;
+  --ts-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Written by the schema as --*-set and derived here, so the media queries
+     below can still override them. */
+  --ts-cols: var(--ts-cols-set, 3);
+
+  font-family: var(--ts-font);
+  color: var(--ts-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tstm *,
+.tstm *::before,
+.tstm *::after {
+  box-sizing: border-box;
+}
+
+:where(.tstm) :where(p) {
+  margin: 0;
+}
+
+:where(.tstm) :where(h2, h3) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+:where(.tstm) :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.tstm) :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.tstm) :where(img) {
+  display: block;
+  max-width: 100%;
+}
+
+.tstm :focus-visible {
+  outline: 2px solid var(--ts-star);
+  outline-offset: 2px;
+}
+
+.tstm__container {
+  max-width: calc(var(--ts-max) + 48px);
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Summary card
+   -------------------------------------------------------------------------- */
+
+.tstm__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 22px 40px;
+  padding: 24px;
+  border: 1px solid var(--ts-line);
+  border-radius: var(--ts-radius);
+  background: var(--ts-card);
+}
+
+.tstm__score-col {
+  flex: 0 0 auto;
+  min-width: 180px;
+}
+
+.tstm__score {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.tstm__score-value {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.tstm__score-suffix {
+  font-size: 13px;
+  color: var(--ts-muted);
+}
+
+.tstm__score-stars {
+  margin-top: 8px;
+}
+
+.tstm__score-note {
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--ts-muted);
+}
+
+/* ---- Breakdown ---- */
+
+.tstm__bars {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.tstm__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tstm__bar + .tstm__bar {
+  margin-top: 7px;
+}
+
+.tstm__bar-label {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: 26px;
+  font-size: 11px;
+  color: var(--ts-muted);
+}
+
+.tstm__bar-label svg {
+  width: 9px;
+  height: 9px;
+}
+
+.tstm__bar-track {
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ts-track);
+  overflow: hidden;
+}
+
+.tstm__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--ts-star);
+}
+
+.tstm__bar-pct {
+  flex: 0 0 auto;
+  width: 34px;
+  font-size: 11px;
+  color: var(--ts-muted);
+  text-align: right;
+}
+
+/* Sits under the breakdown, aligned with the bars rather than the card. */
+.tstm__verified {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ts-green);
+}
+
+.tstm__verified svg {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Stars
+   -------------------------------------------------------------------------- */
+
+.tstm__stars {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+
+.tstm__stars-row {
+  display: flex;
+  gap: 2px;
+}
+
+.tstm__stars-row svg {
+  flex: 0 0 auto;
+  width: var(--ts-star-size, 15px);
+  height: var(--ts-star-size, 15px);
+}
+
+.tstm__stars-row--empty {
+  color: var(--ts-track);
+}
+
+.tstm__stars-row--full {
+  position: absolute;
+  inset: 0;
+  width: var(--ts-star-pct, 100%);
+  overflow: hidden;
+  color: var(--ts-star);
+}
+
+/* --------------------------------------------------------------------------
+   List header
+   -------------------------------------------------------------------------- */
+
+.tstm__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 26px;
+}
+
+.tstm__count {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tstm__sort {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* A real <select>, laid over its own chevron: keyboard and screen readers
+   get the native control, the page keeps the flat look. */
+.tstm__sort select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 8px 30px 8px 12px;
+  border: 1px solid var(--ts-line);
+  border-radius: 8px;
+  background: var(--ts-card);
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.tstm__sort svg {
+  position: absolute;
+  right: 11px;
+  width: 11px;
+  height: 11px;
+  color: var(--ts-muted);
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Review wall
+   -------------------------------------------------------------------------- */
+
+.tstm__list {
+  margin-top: 14px;
+  /* Columns, not grid: cards keep their natural height and stack under one
+     another instead of being padded out to the tallest of their row. */
+  column-count: var(--ts-cols);
+  column-gap: 20px;
+}
+
+.tstm__card {
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--ts-line);
+  border-radius: var(--ts-card-radius);
+  background: var(--ts-card);
+  break-inside: avoid;
+  vertical-align: top;
+}
+
+.tstm__card[hidden] {
+  display: none;
+}
+
+.tstm__card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tstm__avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  color: var(--ts-white);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.tstm__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tstm__name {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.tstm__place {
+  display: block;
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--ts-muted);
+}
+
+.tstm__card-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 11px;
+}
+
+.tstm__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ts-green);
+}
+
+.tstm__badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+.tstm__title {
+  margin-top: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.tstm__text {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ts-muted);
+}
+
+.tstm__photo {
+  margin-top: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--ts-track);
+}
+
+.tstm__photo img {
+  width: 100%;
+  height: auto;
+}
+
+.tstm__card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ts-line);
+  font-size: 11.5px;
+  color: var(--ts-muted);
+}
+
+.tstm__helpful {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tstm__helpful svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Toggle
+   -------------------------------------------------------------------------- */
+
+.tstm__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.tstm__more[hidden] {
+  display: none;
+}
+
+.tstm__more button {
+  padding: 10px 20px;
+  border: 1px solid var(--ts-line);
+  border-radius: 8px;
+  background: var(--ts-card);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.tstm__more button:hover {
+  border-color: var(--ts-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 999px) {
+  .tstm {
+    --ts-cols: min(var(--ts-cols-set, 3), 2);
+  }
+}
+
+@media screen and (max-width: 699px) {
+  .tstm {
+    --ts-cols: 1;
+  }
+
+  .tstm__container {
+    padding-inline: 16px;
+  }
+
+  .tstm__summary {
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px;
+  }
+
+  .tstm__score-col {
+    min-width: 0;
+  }
+
+  .tstm__bars {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign reviews = section.blocks | where: 'type', 'review'
+
+  assign stars_num = s.stars_value | plus: 0.0
+  assign stars_pct = stars_num | divided_by: 5.0 | times: 100
+-%}
+
+{%- capture ts_star -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.5l2.6 5.3 5.8.85-4.2 4.1.99 5.8L10 14.8l-5.19 2.75.99-5.8-4.2-4.1 5.8-.85z"/></svg>{%- endcapture -%}
+{%- capture ts_stars_row -%}{{ ts_star }}{{ ts_star }}{{ ts_star }}{{ ts_star }}{{ ts_star }}{%- endcapture -%}
+{%- capture ts_shield -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 1.9l6.4 2.4v5.1c0 4-2.7 7.2-6.4 8.7-3.7-1.5-6.4-4.7-6.4-8.7V4.3z"/><path d="M7 10l2.1 2.1L13.4 7.8"/></svg>{%- endcapture -%}
+{%- capture ts_thumb -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8.6l3-5.6a2 2 0 012 2v3.2h4.2a1.7 1.7 0 011.7 2l-1 5.2a1.7 1.7 0 01-1.7 1.4H6z"/><path d="M6 8.6v8.2H3.6V8.6z"/></svg>{%- endcapture -%}
+{%- capture ts_chevron -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
+
+<div
+  class="tstm"
+  id="tstm-{{ section.id }}"
+  data-tstm-root
+  data-tstm-initial="{{ s.initial_count }}"
+  style="
+    --ts-ink: {{ s.color_ink }};
+    --ts-muted: {{ s.color_muted }};
+    --ts-card: {{ s.color_card }};
+    --ts-line: {{ s.color_line }};
+    --ts-track: {{ s.color_track }};
+    --ts-star: {{ s.color_star }};
+    --ts-green: {{ s.color_verified }};
+    --ts-max: {{ s.container_width }}px;
+    --ts-radius: {{ s.card_radius }}px;
+    --ts-card-radius: {{ s.card_radius }}px;
+    --ts-cols-set: {{ s.columns }};
+    background: {{ s.color_bg }};
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+  "
+>
+  <div class="tstm__container">
+    {%- comment -%} ================= Summary ================= {%- endcomment -%}
+    {%- if s.show_summary -%}
+      <div class="tstm__summary">
+        <div class="tstm__score-col">
+          <div class="tstm__score">
+            <span class="tstm__score-value">{{ s.score }}</span>
+            {%- if s.score_suffix != blank -%}
+              <span class="tstm__score-suffix">{{ s.score_suffix }}</span>
+            {%- endif -%}
+          </div>
+          {%- if stars_num > 0 -%}
+            <span
+              class="tstm__stars tstm__score-stars"
+              style="--ts-star-pct: {{ stars_pct }}%; --ts-star-size: 16px;"
+              role="img"
+              aria-label="{{ s.stars_aria_label }}"
+            >
+              <span class="tstm__stars-row tstm__stars-row--empty" aria-hidden="true">{{ ts_stars_row }}</span>
+              <span class="tstm__stars-row tstm__stars-row--full" aria-hidden="true">{{ ts_stars_row }}</span>
+            </span>
+          {%- endif -%}
+          {%- if s.summary_note != blank -%}
+            <p class="tstm__score-note">{{ s.summary_note | replace: '[count]', s.reviews_count }}</p>
+          {%- endif -%}
+        </div>
+
+        <div class="tstm__bars">
+          {%- comment -%}
+            Five rows, 5 stars down to 1. The percentages are typed as text so
+            a merchant can write 1.5 without fighting a slider's step.
+          {%- endcomment -%}
+          {%- for level in (1..5) -%}
+            {%- liquid
+              assign star_n = 6 | minus: level
+              case star_n
+                when 5
+                  assign pct_raw = s.bar_5
+                when 4
+                  assign pct_raw = s.bar_4
+                when 3
+                  assign pct_raw = s.bar_3
+                when 2
+                  assign pct_raw = s.bar_2
+                else
+                  assign pct_raw = s.bar_1
+              endcase
+              assign pct = pct_raw | replace: '%', '' | replace: ',', '.' | strip | plus: 0.0
+            -%}
+            <div class="tstm__bar">
+              <span class="tstm__bar-label">{{ star_n }}{{ ts_star }}</span>
+              <span class="tstm__bar-track">
+                <span class="tstm__bar-fill" style="width: {{ pct }}%;"></span>
+              </span>
+              <span class="tstm__bar-pct">{{ pct_raw | strip }}%</span>
+            </div>
+          {%- endfor -%}
+
+          {%- if s.verified_label != blank -%}
+            <p class="tstm__verified">{{ ts_shield }}<span>{{ s.verified_label }}</span></p>
+          {%- endif -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} ================= List header ================= {%- endcomment -%}
+    {%- if reviews.size > 0 -%}
+      <div class="tstm__head">
+        {%- if s.count_label != blank -%}
+          <h2 class="tstm__count">{{ s.count_label | replace: '[count]', s.reviews_count }}</h2>
+        {%- else -%}
+          <span></span>
+        {%- endif -%}
+
+        {%- if s.show_sort -%}
+          <span class="tstm__sort">
+            <select data-tstm-sort aria-label="{{ s.sort_aria_label }}">
+              <option value="recent">{{ s.sort_recent_label }}</option>
+              <option value="rating">{{ s.sort_rating_label }}</option>
+              <option value="helpful">{{ s.sort_helpful_label }}</option>
+            </select>
+            {{ ts_chevron }}
+          </span>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ================= Cards ================= {%- endcomment -%}
+      <div class="tstm__list" data-tstm-list>
+        {%- for block in reviews -%}
+          {%- liquid
+            assign b = block.settings
+            assign rating = b.rating | plus: 0.0
+            assign rating_pct = rating | divided_by: 5.0 | times: 100
+            assign helpful_n = b.helpful | plus: 0
+
+            assign photo_h = 600
+            if b.image.aspect_ratio > 0
+              assign photo_h = 600 | divided_by: b.image.aspect_ratio | round
+            endif
+          -%}
+          <article
+            class="tstm__card"
+            data-tstm-card
+            data-order="{{ forloop.index0 }}"
+            data-rating="{{ rating }}"
+            data-helpful="{{ helpful_n }}"
+            {% if forloop.index > s.initial_count %}hidden{% endif %}
+            {{ block.shopify_attributes }}
+          >
+            <div class="tstm__card-head">
+              {%- comment -%}
+                A photo when there is one, two initials otherwise — the circle
+                is never empty.
+              {%- endcomment -%}
+              <span class="tstm__avatar" style="background: {{ b.avatar_color }};" aria-hidden="true">
+                {%- if b.avatar_image != blank -%}
+                  {{ b.avatar_image | image_url: width: 96 | image_tag: width: 48, height: 48, loading: 'lazy', alt: '' }}
+                {%- else -%}
+                  {{- b.initials | upcase -}}
+                {%- endif -%}
+              </span>
+              <span>
+                <span class="tstm__name">{{ b.name }}</span>
+                {%- if b.location != blank -%}
+                  <span class="tstm__place">{{ b.location }}</span>
+                {%- endif -%}
+              </span>
+            </div>
+
+            <div class="tstm__card-rating">
+              {%- if rating > 0 -%}
+                <span
+                  class="tstm__stars"
+                  style="--ts-star-pct: {{ rating_pct }}%; --ts-star-size: 13px;"
+                  role="img"
+                  aria-label="{{ b.rating }}/5"
+                >
+                  <span class="tstm__stars-row tstm__stars-row--empty" aria-hidden="true">{{ ts_stars_row }}</span>
+                  <span class="tstm__stars-row tstm__stars-row--full" aria-hidden="true">{{ ts_stars_row }}</span>
+                </span>
+              {%- endif -%}
+              {%- if b.verified and s.verified_purchase_label != blank -%}
+                <span class="tstm__badge">{{ ts_shield }}<span>{{ s.verified_purchase_label }}</span></span>
+              {%- endif -%}
+            </div>
+
+            {%- if b.title != blank -%}
+              <h3 class="tstm__title">{{ b.title }}</h3>
+            {%- endif -%}
+            {%- if b.text != blank -%}
+              <p class="tstm__text">{{ b.text }}</p>
+            {%- endif -%}
+
+            {%- if b.image != blank -%}
+              <div class="tstm__photo">
+                {{
+                  b.image
+                  | image_url: width: 600
+                  | image_tag: width: 600, height: photo_h, loading: 'lazy', alt: ''
+                }}
+              </div>
+            {%- endif -%}
+
+            {%- if b.date != blank or helpful_n > 0 -%}
+              <div class="tstm__card-foot">
+                <span>{{ b.date }}</span>
+                {%- if helpful_n > 0 and s.helpful_label != blank -%}
+                  <span class="tstm__helpful">
+                    {{ ts_thumb }}<span>{{ s.helpful_label }} ({{ helpful_n }})</span>
+                  </span>
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+          </article>
+        {%- endfor -%}
+      </div>
+
+      {%- if reviews.size > s.initial_count -%}
+        <div class="tstm__more" data-tstm-more>
+          <button type="button" data-tstm-toggle aria-expanded="false" data-more="{{ s.more_label }}" data-less="{{ s.less_label }}">
+            {{- s.more_label -}}
+          </button>
+        </div>
+      {%- endif -%}
+    {%- endif -%}
+  </div>
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('tstm-{{ section.id }}');
+    if (!root || root.dataset.tstmReady === 'true') return;
+    root.dataset.tstmReady = 'true';
+
+    var list = root.querySelector('[data-tstm-list]');
+    if (!list) return;
+
+    var cards = Array.prototype.slice.call(root.querySelectorAll('[data-tstm-card]'));
+    var toggle = root.querySelector('[data-tstm-toggle]');
+    var sort = root.querySelector('[data-tstm-sort]');
+    var initial = parseInt(root.getAttribute('data-tstm-initial'), 10) || cards.length;
+    var expanded = false;
+
+    /* Hides everything past the cut-off — re-run after a sort, since the
+       first N cards are not the same ones any more. */
+    function applyLimit() {
+      cards.forEach(function (card, index) {
+        card.hidden = !expanded && index >= initial;
+      });
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        toggle.textContent = expanded ? toggle.getAttribute('data-less') : toggle.getAttribute('data-more');
+      }
+    }
+
+    if (toggle) {
+      toggle.addEventListener('click', function () {
+        expanded = !expanded;
+        applyLimit();
+        /* Collapsing from far down the wall would leave the reader below the
+           section; bring the top of the list back into view. */
+        if (!expanded) {
+          var top = list.getBoundingClientRect().top;
+          if (top < 0) list.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+      });
+    }
+
+    if (sort) {
+      sort.addEventListener('change', function () {
+        var mode = sort.value;
+        var num = function (card, attr) {
+          return parseFloat(card.getAttribute(attr)) || 0;
+        };
+
+        cards.sort(function (a, b) {
+          if (mode === 'rating') {
+            var byRating = num(b, 'data-rating') - num(a, 'data-rating');
+            if (byRating !== 0) return byRating;
+          } else if (mode === 'helpful') {
+            var byHelpful = num(b, 'data-helpful') - num(a, 'data-helpful');
+            if (byHelpful !== 0) return byHelpful;
+          }
+          /* "Most recent" is the order the merchant arranged the blocks in,
+             and it also breaks ties for the other two. */
+          return num(a, 'data-order') - num(b, 'data-order');
+        });
+
+        cards.forEach(function (card) {
+          list.appendChild(card);
+        });
+        applyLimit();
+      });
+    }
+
+    applyLimit();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Avis clients",
+  "tag": "section",
+  "class": "testimonials-section",
+  "max_blocks": 50,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Carte de synthèse"
+    },
+    { "type": "checkbox", "id": "show_summary", "label": "Afficher la carte", "default": true },
+    { "type": "text", "id": "score", "label": "Note globale", "default": "4,8" },
+    { "type": "text", "id": "score_suffix", "label": "Suffixe", "default": "sur 5" },
+    {
+      "type": "select",
+      "id": "stars_value",
+      "label": "Remplissage des étoiles",
+      "options": [
+        { "value": "0", "label": "Masquer les étoiles" },
+        { "value": "3", "label": "3 / 5" },
+        { "value": "3.5", "label": "3,5 / 5" },
+        { "value": "4", "label": "4 / 5" },
+        { "value": "4.3", "label": "4,3 / 5" },
+        { "value": "4.5", "label": "4,5 / 5" },
+        { "value": "4.8", "label": "4,8 / 5" },
+        { "value": "5", "label": "5 / 5" }
+      ],
+      "default": "4.8"
+    },
+    { "type": "text", "id": "stars_aria_label", "label": "Description de la note (accessibilité)", "default": "Note de 4,8 sur 5" },
+    { "type": "text", "id": "reviews_count", "label": "Nombre d'avis", "default": "1 284" },
+    {
+      "type": "text",
+      "id": "summary_note",
+      "label": "Mention sous les étoiles",
+      "info": "[count] est remplacé par le nombre d'avis.",
+      "default": "Basé sur [count] avis vérifiés"
+    },
+    {
+      "type": "text",
+      "id": "verified_label",
+      "label": "Ligne de certification",
+      "info": "Laisse vide pour la masquer.",
+      "default": "Vérifié par une plateforme d'avis indépendante"
+    },
+
+    {
+      "type": "header",
+      "content": "Répartition des notes",
+      "info": "En pourcentage. Les décimales s'écrivent avec un point ou une virgule."
+    },
+    { "type": "text", "id": "bar_5", "label": "5 étoiles", "default": "88" },
+    { "type": "text", "id": "bar_4", "label": "4 étoiles", "default": "9" },
+    { "type": "text", "id": "bar_3", "label": "3 étoiles", "default": "1.5" },
+    { "type": "text", "id": "bar_2", "label": "2 étoiles", "default": "0.7" },
+    { "type": "text", "id": "bar_1", "label": "1 étoile", "default": "0.8" },
+
+    {
+      "type": "header",
+      "content": "Liste des avis"
+    },
+    {
+      "type": "text",
+      "id": "count_label",
+      "label": "Titre de la liste",
+      "info": "[count] est remplacé par le nombre d'avis.",
+      "default": "[count] avis"
+    },
+    { "type": "range", "id": "columns", "label": "Colonnes sur ordinateur", "min": 1, "max": 4, "step": 1, "default": 3 },
+    {
+      "type": "range",
+      "id": "initial_count",
+      "label": "Avis visibles avant dépliage",
+      "min": 1,
+      "max": 24,
+      "step": 1,
+      "default": 6
+    },
+    { "type": "text", "id": "more_label", "label": "Bouton « voir plus »", "default": "Voir plus d'avis" },
+    { "type": "text", "id": "less_label", "label": "Bouton « voir moins »", "default": "Voir moins d'avis" },
+    { "type": "text", "id": "verified_purchase_label", "label": "Badge des cartes", "default": "Achat vérifié" },
+    { "type": "text", "id": "helpful_label", "label": "Mention « utile »", "default": "Utile" },
+
+    {
+      "type": "header",
+      "content": "Tri"
+    },
+    { "type": "checkbox", "id": "show_sort", "label": "Afficher le tri", "default": true },
+    { "type": "text", "id": "sort_aria_label", "label": "Libellé du tri (accessibilité)", "default": "Trier les avis" },
+    { "type": "text", "id": "sort_recent_label", "label": "Option 1 — ordre des blocs", "default": "Tri : les plus récents" },
+    { "type": "text", "id": "sort_rating_label", "label": "Option 2 — meilleure note", "default": "Tri : meilleures notes" },
+    { "type": "text", "id": "sort_helpful_label", "label": "Option 3 — plus utiles", "default": "Tri : les plus utiles" },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond de section", "default": "#F4F6F8" },
+    { "type": "color", "id": "color_card", "label": "Fond des cartes", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_ink", "label": "Texte principal", "default": "#111827" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#6B7280" },
+    { "type": "color", "id": "color_line", "label": "Bordures", "default": "#E5E8EC" },
+    { "type": "color", "id": "color_track", "label": "Barres vides", "default": "#EDEFF2" },
+    { "type": "color", "id": "color_star", "label": "Étoiles et barres", "default": "#F5A623" },
+    { "type": "color", "id": "color_verified", "label": "Vert « vérifié »", "default": "#16A34A" },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 800, "max": 1500, "step": 20, "unit": "px", "default": 1140 },
+    { "type": "range", "id": "card_radius", "label": "Arrondi des cartes", "min": 0, "max": 28, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 140, "step": 4, "unit": "px", "default": 56 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 140, "step": 4, "unit": "px", "default": 56 }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Avis",
+      "settings": [
+        {
+          "type": "header",
+          "content": "Pastille"
+        },
+        {
+          "type": "image_picker",
+          "id": "avatar_image",
+          "label": "Photo de profil",
+          "info": "Sans photo, les initiales ci-dessous sont utilisées."
+        },
+        { "type": "text", "id": "initials", "label": "Initiales", "default": "DS" },
+        { "type": "color", "id": "avatar_color", "label": "Couleur de la pastille", "default": "#3B82F6" },
+
+        {
+          "type": "header",
+          "content": "Auteur"
+        },
+        { "type": "text", "id": "name", "label": "Nom", "default": "Deborah S." },
+        { "type": "text", "id": "location", "label": "Ville", "default": "Lyon, FR" },
+        {
+          "type": "select",
+          "id": "rating",
+          "label": "Note",
+          "options": [
+            { "value": "5", "label": "5 étoiles" },
+            { "value": "4", "label": "4 étoiles" },
+            { "value": "3", "label": "3 étoiles" },
+            { "value": "2", "label": "2 étoiles" },
+            { "value": "1", "label": "1 étoile" }
+          ],
+          "default": "5"
+        },
+        { "type": "checkbox", "id": "verified", "label": "Achat vérifié", "default": true },
+
+        {
+          "type": "header",
+          "content": "Avis"
+        },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Installé en moins de 5 minutes" },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Témoignage",
+          "default": "Rédige ici le témoignage du client, tel qu'il l'a écrit."
+        },
+        { "type": "image_picker", "id": "image", "label": "Photo jointe", "info": "Facultative, affichée sous le témoignage." },
+        { "type": "text", "id": "date", "label": "Date", "default": "14 mai 2026" },
+        { "type": "number", "id": "helpful", "label": "Nombre de « utile »", "default": 0 }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Avis clients",
+      "blocks": [
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" }
+      ]
+    }
+  ]
+}
+{% endschema %}
