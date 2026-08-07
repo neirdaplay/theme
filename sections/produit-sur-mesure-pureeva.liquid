@@ -195,6 +195,61 @@
   height: auto;
 }
 
+/* ---- Navigation arrows ---- */
+
+.pvp__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #7c848f;
+  box-shadow: 0 2px 10px rgba(15, 27, 42, 0.16);
+  transform: translateY(-50%);
+  transition: opacity 0.18s ease, background-color 0.16s ease;
+}
+
+/* display:grid above would otherwise defeat the [hidden] attribute. */
+.pvp__nav[hidden] {
+  display: none;
+}
+
+.pvp__nav--prev {
+  left: 10px;
+}
+
+.pvp__nav--next {
+  right: 10px;
+}
+
+.pvp__nav svg {
+  width: 13px;
+  height: 13px;
+}
+
+.pvp__nav:hover {
+  background: #ffffff;
+}
+
+/* Pointer devices only: reveal on hover, or when an arrow takes keyboard
+   focus. Touch screens have no hover, so there the arrows simply stay on. */
+@media (hover: hover) {
+  .pvp__nav {
+    opacity: 0;
+  }
+
+  .pvp__stage:hover .pvp__nav,
+  .pvp__stage:focus-within .pvp__nav {
+    opacity: 1;
+  }
+}
+
 /* Circular guarantee seal, top-left of the image. */
 .pvp__seal {
   position: absolute;
@@ -2057,6 +2112,30 @@
           {%- endif -%}
           </div>
 
+          {%- comment -%}
+            Arrows: the previous one starts hidden because the rail opens on
+            the first image, so there is nowhere to go back to.
+          {%- endcomment -%}
+          {%- if s.show_arrows and product.media.size > 1 -%}
+            <button
+              type="button"
+              class="pvp__nav pvp__nav--prev"
+              data-pvp-nav="-1"
+              aria-label="{{ s.gallery_prev_label }}"
+              hidden
+            >
+              {{ pv_chev_left }}
+            </button>
+            <button
+              type="button"
+              class="pvp__nav pvp__nav--next"
+              data-pvp-nav="1"
+              aria-label="{{ s.gallery_next_label }}"
+            >
+              {{ pv_chev_right }}
+            </button>
+          {%- endif -%}
+
           {%- if s.seal_value != blank -%}
             <div class="pvp__seal">
               {%- if s.seal_top != blank -%}<span class="pvp__seal-top">{{ s.seal_top }}</span>{%- endif -%}
@@ -2981,6 +3060,8 @@
       var slides = $$('[data-pvp-slide]');
       var stage = $('.pvp__stage');
       var track = $('[data-pvp-track]');
+      var navPrev = $('[data-pvp-nav="-1"]');
+      var navNext = $('[data-pvp-nav="1"]');
       var current = 0;
 
       /* Moves the rail. `animate` false pins it to the finger. */
@@ -3007,6 +3088,11 @@
         slides.forEach(function (slide, i) {
           slide.setAttribute('aria-hidden', i === current ? 'false' : 'true');
         });
+
+        /* An arrow that cannot go anywhere is removed, not just dimmed. */
+        if (navPrev) navPrev.hidden = current === 0;
+        if (navNext) navNext.hidden = current === slides.length - 1;
+
         thumbs.forEach(function (thumb) {
           var active = thumb.getAttribute('data-pvp-thumb') === String(current);
           thumb.setAttribute('aria-selected', active ? 'true' : 'false');
@@ -3100,6 +3186,12 @@
         stage.addEventListener('touchend', release, { passive: true });
         stage.addEventListener('touchcancel', release, { passive: true });
       }
+
+      $$('[data-pvp-nav]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          select(current + Number(btn.getAttribute('data-pvp-nav')), true);
+        });
+      });
 
       thumbs.forEach(function (thumb) {
         thumb.addEventListener('click', function () {
@@ -3658,6 +3750,15 @@
       "default": "cover"
     },
     { "type": "range", "id": "thumb_size", "label": "Taille des miniatures", "min": 44, "max": 110, "step": 2, "unit": "px", "default": 64 },
+    {
+      "type": "checkbox",
+      "id": "show_arrows",
+      "label": "Flèches de navigation",
+      "info": "Visibles au survol sur ordinateur, toujours affichées sur écran tactile. Celle d'un bout de galerie disparaît.",
+      "default": true
+    },
+    { "type": "text", "id": "gallery_prev_label", "label": "Flèche précédente (accessibilité)", "default": "Image précédente" },
+    { "type": "text", "id": "gallery_next_label", "label": "Flèche suivante (accessibilité)", "default": "Image suivante" },
     {
       "type": "select",
       "id": "gallery_bleed",
