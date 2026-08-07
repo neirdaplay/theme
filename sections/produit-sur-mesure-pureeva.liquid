@@ -156,12 +156,23 @@
   touch-action: pan-y;
 }
 
-.pvp__slide {
-  aspect-ratio: var(--pv-stage-ratio);
+/* All the slides sit side by side on one rail; moving the rail is what the
+   finger drags, so the images actually travel instead of cross-fading. */
+.pvp__track {
+  display: flex;
+  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
 }
 
-.pvp__slide[hidden] {
-  display: none;
+/* While a finger is down the rail must follow it exactly, with no easing. */
+.pvp__track.is-dragging {
+  transition: none;
+}
+
+.pvp__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  aspect-ratio: var(--pv-stage-ratio);
 }
 
 /* cover fills the frame edge to edge; contain shows the whole shot and lets
@@ -171,20 +182,6 @@
   width: 100%;
   height: 100%;
   object-fit: var(--pv-stage-fit);
-}
-
-/* A short cross-fade so a swipe does not read as a glitch. */
-.pvp__stage.is-sliding .pvp__slide:not([hidden]) {
-  animation: pvp-slide-in 0.22s ease;
-}
-
-@keyframes pvp-slide-in {
-  from {
-    opacity: 0.35;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .pvp__placeholder {
@@ -2021,6 +2018,7 @@
       -%}
       <div class="{{ gallery_classes }}">
         <div class="pvp__stage">
+          <div class="pvp__track" data-pvp-track>
           {%- if product.media.size > 0 -%}
             {%- for media in product.media limit: 8 -%}
               {%- liquid
@@ -2034,7 +2032,11 @@
                   assign img_loading = 'eager'
                 endif
               -%}
-              <div class="pvp__slide" data-pvp-slide="{{ forloop.index0 }}" {% unless forloop.first %}hidden{% endunless %}>
+              <div
+                class="pvp__slide"
+                data-pvp-slide="{{ forloop.index0 }}"
+                aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"
+              >
                 {{
                   img
                   | image_url: width: 1000
@@ -2053,6 +2055,7 @@
               <div class="pvp__placeholder">{{ 'product-1' | placeholder_svg_tag }}</div>
             </div>
           {%- endif -%}
+          </div>
 
           {%- if s.seal_value != blank -%}
             <div class="pvp__seal">
@@ -2977,15 +2980,35 @@
     if (thumbs.length) {
       var slides = $$('[data-pvp-slide]');
       var stage = $('.pvp__stage');
+      var track = $('[data-pvp-track]');
       var current = 0;
 
-      var select = function (index) {
-        current = Number(index) || 0;
-        slides.forEach(function (slide) {
-          slide.hidden = slide.getAttribute('data-pvp-slide') !== String(index);
+      /* Moves the rail. `animate` false pins it to the finger. */
+      var shift = function (px, animate) {
+        if (!track) return;
+        track.classList.toggle('is-dragging', !animate);
+        track.style.transform = 'translate3d(' + px + 'px, 0, 0)';
+      };
+
+      var select = function (index, animate) {
+        var target = Number(index) || 0;
+        /* The rail has two ends: clamp rather than wrap, or jumping from the
+           last image to the first would sweep across every slide. */
+        if (target < 0) target = 0;
+        if (target > slides.length - 1) target = slides.length - 1;
+
+        /* Only a one-step move is worth animating; a jump from a distant
+           thumbnail would blur through everything in between. */
+        var stepMove = Math.abs(target - current) === 1;
+        current = target;
+
+        shift(-current * (stage ? stage.clientWidth : 0), stepMove && animate !== false && !REDUCED);
+
+        slides.forEach(function (slide, i) {
+          slide.setAttribute('aria-hidden', i === current ? 'false' : 'true');
         });
         thumbs.forEach(function (thumb) {
-          var active = thumb.getAttribute('data-pvp-thumb') === String(index);
+          var active = thumb.getAttribute('data-pvp-thumb') === String(current);
           thumb.setAttribute('aria-selected', active ? 'true' : 'false');
           thumb.tabIndex = active ? 0 : -1;
           /* Keep the active thumbnail in view once the strip scrolls. */
@@ -2995,23 +3018,27 @@
         });
       };
 
-      /* ---- Swipe ----
-         Touch only, and only once the gesture is clearly horizontal, so
-         scrolling the page through the image still works. */
-      if (stage && slides.length > 1) {
+      /* The rail is positioned in pixels, so it has to be re-measured
+         whenever the stage is resized or the layout reflows. */
+      if (stage && window.ResizeObserver) {
+        var lastWidth = stage.clientWidth;
+        new ResizeObserver(function () {
+          if (stage.clientWidth === lastWidth) return;
+          lastWidth = stage.clientWidth;
+          shift(-current * lastWidth, false);
+        }).observe(stage);
+      }
+
+      /* ---- Drag ----
+         Touch only, and the rail is only captured once the gesture is
+         clearly horizontal, so scrolling the page through the image still
+         works. */
+      if (stage && track && slides.length > 1) {
         var startX = 0;
         var startY = 0;
+        var delta = 0;
         var tracking = false;
-
-        var step = function (delta) {
-          var next = (current + delta + slides.length) % slides.length;
-          select(next);
-          if (!REDUCED) {
-            stage.classList.remove('is-sliding');
-            void stage.offsetWidth; // restart the animation
-            stage.classList.add('is-sliding');
-          }
-        };
+        var decided = false;
 
         stage.addEventListener(
           'touchstart',
@@ -3019,34 +3046,64 @@
             if (event.touches.length !== 1) return;
             startX = event.touches[0].clientX;
             startY = event.touches[0].clientY;
+            delta = 0;
             tracking = true;
+            decided = false;
           },
           { passive: true }
         );
 
         stage.addEventListener(
-          'touchend',
+          'touchmove',
           function (event) {
             if (!tracking) return;
-            tracking = false;
-            var touch = event.changedTouches[0];
-            if (!touch) return;
-            var dx = touch.clientX - startX;
-            var dy = touch.clientY - startY;
-            if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy)) return;
-            step(dx < 0 ? 1 : -1);
+            var dx = event.touches[0].clientX - startX;
+            var dy = event.touches[0].clientY - startY;
+
+            if (!decided) {
+              if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+              decided = true;
+              if (Math.abs(dx) <= Math.abs(dy)) {
+                /* A vertical gesture belongs to the page. */
+                tracking = false;
+                return;
+              }
+            }
+
+            /* Pulling past either end drags at a third of the speed, so the
+               rail feels like it has a limit instead of a bug. */
+            var atStart = current === 0 && dx > 0;
+            var atEnd = current === slides.length - 1 && dx < 0;
+            delta = atStart || atEnd ? dx / 3 : dx;
+            shift(-current * stage.clientWidth + delta, false);
           },
           { passive: true }
         );
 
-        stage.addEventListener('touchcancel', function () {
+        var release = function () {
+          if (!tracking && delta === 0) return;
           tracking = false;
-        });
+          var width = stage.clientWidth || 1;
+          /* A short flick counts as much as a long slow drag. */
+          var threshold = Math.min(60, width * 0.18);
+          var next = current;
+          if (Math.abs(delta) > threshold) next = current + (delta < 0 ? 1 : -1);
+          delta = 0;
+
+          if (next === current) {
+            shift(-current * width, !REDUCED);
+          } else {
+            select(next, true);
+          }
+        };
+
+        stage.addEventListener('touchend', release, { passive: true });
+        stage.addEventListener('touchcancel', release, { passive: true });
       }
 
       thumbs.forEach(function (thumb) {
         thumb.addEventListener('click', function () {
-          select(thumb.getAttribute('data-pvp-thumb'));
+          select(thumb.getAttribute('data-pvp-thumb'), true);
         });
       });
 
@@ -3054,12 +3111,12 @@
         var i = thumbs.indexOf(document.activeElement);
         if (i === -1) return;
         var next = null;
-        if (event.key === 'ArrowRight') next = (i + 1) % thumbs.length;
-        else if (event.key === 'ArrowLeft') next = (i - 1 + thumbs.length) % thumbs.length;
+        if (event.key === 'ArrowRight') next = Math.min(i + 1, thumbs.length - 1);
+        else if (event.key === 'ArrowLeft') next = Math.max(i - 1, 0);
         else return;
         event.preventDefault();
         thumbs[next].focus();
-        select(thumbs[next].getAttribute('data-pvp-thumb'));
+        select(thumbs[next].getAttribute('data-pvp-thumb'), true);
       });
     }
 
