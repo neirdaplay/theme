@@ -40,6 +40,7 @@
   --pv-offer-img: var(--pv-offer-img-set, 54px);
   --pv-offer-img-bg: var(--pv-offer-img-bg-set, #ffffff);
   --pv-thumb: var(--pv-thumb-set, 64px);
+  --pv-stack-gap: var(--pv-stack-gap-set, 16px);
   --pv-stage-ratio: var(--pv-stage-ratio-set, 1 / 1);
   --pv-stage-fit: var(--pv-stage-fit-set, cover);
 
@@ -274,7 +275,6 @@
   display: flex;
   gap: 10px;
   margin-top: 12px;
-  padding-bottom: 4px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -317,6 +317,215 @@
   gap: 7px;
   font-size: 12px;
   font-weight: 600;
+}
+
+/* ---- Review row and its popover ---- */
+
+.pvp__reviews {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pvp__reviews-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.pvp__reviews-toggle > span {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pvp__reviews-toggle svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.18s ease;
+}
+
+.pvp__reviews-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.pvp__reviews-note {
+  font-size: 12px;
+  color: var(--pv-muted);
+}
+
+.pvp__revpop {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 30;
+  width: min(340px, calc(100vw - var(--pv-gutter) * 2 - 4px));
+  padding: 16px;
+  border: 1px solid var(--pv-line);
+  border-radius: 14px;
+  background: var(--pv-white);
+  box-shadow: 0 18px 44px rgba(15, 27, 42, 0.18);
+  /* display:none, not visibility: a hidden-but-laid-out card widens the page. */
+  animation: pvp-pop-in 0.18s ease;
+}
+
+.pvp__revpop[hidden] {
+  display: none;
+}
+
+@keyframes pvp-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pvp__revpop-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pv-soft);
+  color: var(--pv-ink);
+}
+
+.pvp__revpop-close svg {
+  width: 10px;
+  height: 10px;
+}
+
+.pvp__revpop-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 30px;
+}
+
+.pvp__revpop-score {
+  flex: 0 0 auto;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pvp__revpop-meta {
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--pv-muted);
+}
+
+.pvp__revpop-meta .pvp__stars {
+  margin-bottom: 3px;
+}
+
+.pvp__revpop-meta b {
+  color: var(--pv-ink);
+}
+
+.pvp__revpop-sep {
+  height: 1px;
+  margin: 14px 0;
+  background: var(--pv-line);
+}
+
+.pvp__review[hidden] {
+  display: none;
+}
+
+.pvp__review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pvp__review-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pvp__review-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--pv-green);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.pvp__review-verified svg {
+  width: 9px;
+  height: 9px;
+}
+
+.pvp__review-text {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--pv-muted);
+}
+
+.pvp__revpop-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pvp__revpop-arrow {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--pv-line);
+  border-radius: 50%;
+  background: var(--pv-white);
+  color: var(--pv-ink);
+}
+
+.pvp__revpop-arrow svg {
+  width: 11px;
+  height: 11px;
+}
+
+.pvp__revpop-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.pvp__revpop-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--pv-line);
+}
+
+.pvp__revpop-dot[aria-current="true"] {
+  background: var(--pv-ink);
 }
 
 .pvp__muted {
@@ -1545,7 +1754,7 @@
   .pvp__grid {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
-    gap: 26px;
+    gap: var(--pv-stack-gap);
   }
 
   /* One column: let source order do the work again. */
@@ -1554,6 +1763,27 @@
   .pvp__videos-cell {
     grid-column: auto;
     grid-row: auto;
+  }
+
+  /* Full-bleed only makes sense stacked. "gutter" cancels this section's own
+     padding; "viewport" breaks out of every centred ancestor, so it also
+     escapes whatever padding the surrounding theme adds. */
+  .pvp__gallery--bleed-gutter .pvp__stage {
+    margin-inline: calc(var(--pv-gutter) * -1);
+    border-radius: 0;
+  }
+
+  .pvp__gallery--bleed-viewport .pvp__stage {
+    width: 100vw;
+    max-width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    border-radius: 0;
+  }
+
+  /* The thumbnails follow the image out, but keep scrolling inside the page. */
+  .pvp__gallery--bleed-gutter .pvp__thumbs,
+  .pvp__gallery--bleed-viewport .pvp__thumbs {
+    padding-inline: 2px;
   }
 
   .pvp__videos {
@@ -1637,6 +1867,7 @@
   assign included = section.blocks | where: 'type', 'included'
   assign reassurances = section.blocks | where: 'type', 'reassurance'
   assign faqs = section.blocks | where: 'type', 'faq'
+  assign reviews = section.blocks | where: 'type', 'review'
   assign videos = section.blocks | where: 'type', 'video'
 
   comment
@@ -1720,6 +1951,8 @@
 {%- capture pv_chevron -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
 {%- capture pv_arrow -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.8 8h10.4M9 3.8L13.2 8 9 12.2"/></svg>{%- endcapture -%}
 {%- capture pv_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/></svg>{%- endcapture -%}
+{%- capture pv_chev_left -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg>{%- endcapture -%}
+{%- capture pv_chev_right -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3.5L10.5 8 6 12.5"/></svg>{%- endcapture -%}
 {%- capture pv_info -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4M8 4.9v.1" stroke-linecap="round"/></svg>{%- endcapture -%}
 {%- capture pv_i_box -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>{%- endcapture -%}
 {%- capture pv_i_percent -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.2"/><path d="M15.5 8.5l-7 7"/><circle cx="9.4" cy="9.4" r="1.4"/><circle cx="14.6" cy="14.6" r="1.4"/></svg>{%- endcapture -%}
@@ -1752,6 +1985,7 @@
     --pv-offer-img-set: {{ s.offer_image_size }}px;
     --pv-offer-img-bg-set: {{ s.offer_image_bg }};
     --pv-thumb-set: {{ s.thumb_size }}px;
+    --pv-stack-gap-set: {{ s.stack_gap }}px;
     --pv-stage-ratio-set: {{ s.gallery_ratio }};
     --pv-stage-fit-set: {{ s.gallery_fit }};
     --pv-accent-soft: rgba({{ s.color_accent.red }}, {{ s.color_accent.green }}, {{ s.color_accent.blue }}, 0.15);
@@ -1779,7 +2013,13 @@
   <div class="pvp__container">
     <div class="pvp__grid">
       {%- comment -%} ================= Gallery ================= {%- endcomment -%}
-      <div class="pvp__gallery">
+      {%- liquid
+        assign gallery_classes = 'pvp__gallery'
+        unless s.gallery_bleed == 'none'
+          assign gallery_classes = gallery_classes | append: ' pvp__gallery--bleed-' | append: s.gallery_bleed
+        endunless
+      -%}
+      <div class="{{ gallery_classes }}">
         <div class="pvp__stage">
           {%- if product.media.size > 0 -%}
             {%- for media in product.media limit: 8 -%}
@@ -1865,16 +2105,97 @@
 
       {%- comment -%} ================= Info ================= {%- endcomment -%}
       <div class="pvp__info">
-        {%- if s.trust_text != blank -%}
-          <div class="pvp__trust">
-            {%- if s.trust_word != blank -%}<span>{{ s.trust_word }}</span>{%- endif -%}
+        {%- comment -%}
+          Review row: stars plus a link that opens the ratings card. It only
+          renders when there is something to say.
+        {%- endcomment -%}
+        {%- if reviews.size > 0 or s.reviews_count != blank -%}
+          {%- capture reviews_summary -%}
+            {{- s.reviews_summary | replace: '[score]', s.reviews_score | replace: '[count]', s.reviews_count -}}
+          {%- endcapture -%}
+          <div class="pvp__reviews">
             {%- if rating_num > 0 -%}
-              <span class="pvp__stars" style="--pv-star-pct: {{ rating_pct }}%; --pv-star: 13px;" role="img" aria-label="{{ s.rating_aria_label }}">
+              <span class="pvp__stars" style="--pv-star-pct: {{ rating_pct }}%; --pv-star: 15px;" role="img" aria-label="{{ s.rating_aria_label }}">
                 <span class="pvp__stars-row pvp__stars-row--empty" aria-hidden="true">{{ pv_stars_row }}</span>
                 <span class="pvp__stars-row pvp__stars-row--full" aria-hidden="true">{{ pv_stars_row }}</span>
               </span>
             {%- endif -%}
-            <span class="pvp__muted">{{ s.trust_text }}</span>
+
+            <button
+              type="button"
+              class="pvp__reviews-toggle"
+              aria-expanded="false"
+              aria-controls="pvp-revpop-{{ section.id }}"
+              data-pvp-reviews-toggle
+            >
+              <span>{{ reviews_summary | strip }}</span>
+              {{ pv_chevron }}
+            </button>
+
+            {%- if s.reviews_note != blank -%}
+              <span class="pvp__reviews-note">{{ s.reviews_note }}</span>
+            {%- endif -%}
+
+            <div class="pvp__revpop" id="pvp-revpop-{{ section.id }}" data-pvp-revpop hidden>
+              <button type="button" class="pvp__revpop-close" data-pvp-reviews-close aria-label="{{ s.close_label }}">
+                {{ pv_close }}
+              </button>
+
+              <div class="pvp__revpop-head">
+                {%- if s.reviews_score != blank -%}
+                  <span class="pvp__revpop-score">{{ s.reviews_score }}</span>
+                {%- endif -%}
+                <span class="pvp__revpop-meta">
+                  {%- if rating_num > 0 -%}
+                    <span class="pvp__stars" style="--pv-star-pct: {{ rating_pct }}%; --pv-star: 15px;" role="img" aria-label="{{ s.rating_aria_label }}">
+                      <span class="pvp__stars-row pvp__stars-row--empty" aria-hidden="true">{{ pv_stars_row }}</span>
+                      <span class="pvp__stars-row pvp__stars-row--full" aria-hidden="true">{{ pv_stars_row }}</span>
+                    </span>
+                  {%- endif -%}
+                  <span class="pvp__revpop-based">
+                    {{- s.reviews_based_on | replace: '[count]', s.reviews_count -}}
+                  </span>
+                </span>
+              </div>
+
+              {%- if reviews.size > 0 -%}
+                <div class="pvp__revpop-sep" aria-hidden="true"></div>
+
+                {%- for block in reviews -%}
+                  <div class="pvp__review" data-pvp-review="{{ forloop.index0 }}" {% unless forloop.first %}hidden{% endunless %} {{ block.shopify_attributes }}>
+                    <div class="pvp__review-head">
+                      <span class="pvp__review-name">{{ block.settings.name }}</span>
+                      {%- if block.settings.verified -%}
+                        <span class="pvp__review-verified">{{ pv_check }} {{ s.reviews_verified_label }}</span>
+                      {%- endif -%}
+                    </div>
+                    <p class="pvp__review-text">{{ block.settings.text }}</p>
+                  </div>
+                {%- endfor -%}
+
+                {%- if reviews.size > 1 -%}
+                  <div class="pvp__revpop-nav">
+                    <button type="button" class="pvp__revpop-arrow" data-pvp-review-prev aria-label="{{ s.reviews_prev_label }}">
+                      {{ pv_chev_left }}
+                    </button>
+                    <div class="pvp__revpop-dots">
+                      {%- for block in reviews -%}
+                        <button
+                          type="button"
+                          class="pvp__revpop-dot"
+                          data-pvp-review-dot="{{ forloop.index0 }}"
+                          aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+                          aria-label="{{ s.reviews_go_label }} {{ forloop.index }}"
+                        ></button>
+                      {%- endfor -%}
+                    </div>
+                    <button type="button" class="pvp__revpop-arrow" data-pvp-review-next aria-label="{{ s.reviews_next_label }}">
+                      {{ pv_chev_right }}
+                    </button>
+                  </div>
+                {%- endif -%}
+              {%- endif -%}
+            </div>
           </div>
         {%- endif -%}
 
@@ -2742,6 +3063,81 @@
       });
     }
 
+    /* ---------------- Review popover ---------------- */
+
+    var revToggle = $('[data-pvp-reviews-toggle]');
+    var revPop = $('[data-pvp-revpop]');
+
+    if (revToggle && revPop) {
+      var reviewCards = $$('[data-pvp-review]', revPop);
+      var reviewDots = $$('[data-pvp-review-dot]', revPop);
+      var reviewIndex = 0;
+
+      var showReview = function (index) {
+        if (!reviewCards.length) return;
+        reviewIndex = (index + reviewCards.length) % reviewCards.length;
+        reviewCards.forEach(function (card, i) {
+          card.hidden = i !== reviewIndex;
+        });
+        reviewDots.forEach(function (dot, i) {
+          dot.setAttribute('aria-current', i === reviewIndex ? 'true' : 'false');
+        });
+      };
+
+      var closeReviews = function (giveFocusBack) {
+        revPop.hidden = true;
+        revToggle.setAttribute('aria-expanded', 'false');
+        if (giveFocusBack) revToggle.focus();
+      };
+
+      revToggle.addEventListener('click', function () {
+        var open = revToggle.getAttribute('aria-expanded') === 'true';
+        if (open) {
+          closeReviews(false);
+        } else {
+          revPop.hidden = false;
+          revToggle.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      $$('[data-pvp-reviews-close]', revPop).forEach(function (el) {
+        el.addEventListener('click', function () {
+          closeReviews(true);
+        });
+      });
+
+      var prev = $('[data-pvp-review-prev]', revPop);
+      var next = $('[data-pvp-review-next]', revPop);
+      if (prev) {
+        prev.addEventListener('click', function () {
+          showReview(reviewIndex - 1);
+        });
+      }
+      if (next) {
+        next.addEventListener('click', function () {
+          showReview(reviewIndex + 1);
+        });
+      }
+      reviewDots.forEach(function (dot, i) {
+        dot.addEventListener('click', function () {
+          showReview(i);
+        });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (revPop.hidden || event.key !== 'Escape') return;
+        event.preventDefault();
+        closeReviews(true);
+      });
+
+      /* A click anywhere else closes it, the way a dropdown should. */
+      document.addEventListener('click', function (event) {
+        if (revPop.hidden) return;
+        if (revPop.contains(event.target) || revToggle.contains(event.target)) return;
+        closeReviews(false);
+      });
+    }
+
     /* ---------------- Video dialog ---------------- */
 
     var modal = $('[data-pvp-modal]');
@@ -3205,6 +3601,19 @@
       "default": "cover"
     },
     { "type": "range", "id": "thumb_size", "label": "Taille des miniatures", "min": 44, "max": 110, "step": 2, "unit": "px", "default": 64 },
+    {
+      "type": "select",
+      "id": "gallery_bleed",
+      "label": "Image de bord à bord",
+      "info": "Sur mobile uniquement. « Toute la largeur » sort aussi des marges ajoutées par le thème autour de la section.",
+      "options": [
+        { "value": "none", "label": "Non, garder les marges" },
+        { "value": "gutter", "label": "Jusqu'aux bords de la section" },
+        { "value": "viewport", "label": "Toute la largeur de l'écran" }
+      ],
+      "default": "gutter"
+    },
+    { "type": "range", "id": "stack_gap", "label": "Espace galerie / infos sur mobile", "min": 4, "max": 48, "step": 2, "unit": "px", "default": 16 },
     { "type": "text", "id": "thumbs_aria_label", "label": "Libellé de la galerie (accessibilité)", "default": "Images du produit" },
     { "type": "text", "id": "thumbs_item_label", "label": "Libellé d'une miniature (accessibilité)", "default": "Image" },
 
@@ -3212,8 +3621,21 @@
       "type": "header",
       "content": "En-tête"
     },
-    { "type": "text", "id": "trust_word", "label": "Ligne de confiance — mot-clé", "default": "Excellent" },
-    { "type": "text", "id": "trust_text", "label": "Ligne de confiance — texte", "default": "Trustpilot" },
+    { "type": "text", "id": "reviews_score", "label": "Note affichée", "default": "4,8" },
+    { "type": "text", "id": "reviews_count", "label": "Nombre d'avis", "info": "Laisse vide et n'ajoute aucun bloc « Avis » pour masquer toute la ligne.", "default": "1284" },
+    {
+      "type": "text",
+      "id": "reviews_summary",
+      "label": "Texte du lien",
+      "info": "[score] et [count] sont remplacés automatiquement.",
+      "default": "[score] · [count] avis"
+    },
+    { "type": "text", "id": "reviews_based_on", "label": "Texte de la fiche", "info": "[count] est remplacé automatiquement.", "default": "Basé sur [count] avis" },
+    { "type": "text", "id": "reviews_note", "label": "Mention à droite du lien", "info": "Par exemple le nom de la plateforme d'avis." },
+    { "type": "text", "id": "reviews_verified_label", "label": "Badge « vérifié »", "default": "Vérifié" },
+    { "type": "text", "id": "reviews_prev_label", "label": "Bouton précédent (accessibilité)", "default": "Avis précédent" },
+    { "type": "text", "id": "reviews_next_label", "label": "Bouton suivant (accessibilité)", "default": "Avis suivant" },
+    { "type": "text", "id": "reviews_go_label", "label": "Puce de navigation (accessibilité)", "default": "Aller à l'avis" },
     { "type": "text", "id": "subtitle", "label": "Sous-titre", "default": "Transformez votre robinet en source d'eau pure" },
     { "type": "text", "id": "per_day", "label": "Prix par jour", "default": "Dès 0,27 €/jour" },
 
@@ -3356,6 +3778,15 @@
         { "type": "image_picker", "id": "image", "label": "Image" },
         { "type": "text", "id": "label", "label": "Nom", "default": "Filtre" },
         { "type": "text", "id": "flag", "label": "Mention", "default": "Inclus" }
+      ]
+    },
+    {
+      "type": "review",
+      "name": "Avis",
+      "settings": [
+        { "type": "text", "id": "name", "label": "Prénom", "default": "Prénom N." },
+        { "type": "checkbox", "id": "verified", "label": "Achat vérifié", "default": true },
+        { "type": "textarea", "id": "text", "label": "Témoignage", "default": "Rédige ici le témoignage du client." }
       ]
     },
     {
@@ -3555,6 +3986,9 @@
         { "type": "bundle_gift" },
         { "type": "bundle_gift" },
         { "type": "bundle_gift" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
         { "type": "faq" },
         { "type": "faq" },
         { "type": "faq" },
