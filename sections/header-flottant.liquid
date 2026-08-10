@@ -467,11 +467,42 @@
    -------------------------------------------------------------------------- */
 
 @media screen and (max-width: 989px) {
+  /* A thinner bar with everything scaled to match: a full-size logo in a
+     short pill reads as cramped rather than compact. */
   .khdr__bar {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     gap: 8px;
-    padding-inline: calc(var(--kh-pad) * 0.45);
+    height: var(--kh-height-m);
+    padding-inline: calc(var(--kh-pad) * 0.4);
+  }
+
+  .khdr__wordmark {
+    font-size: calc(var(--kh-logo-size) * var(--kh-mscale));
+  }
+
+  .khdr__logo img {
+    width: calc(var(--kh-logo-w) * var(--kh-mscale));
+  }
+
+  .khdr__icon,
+  .khdr__burger {
+    width: 34px;
+    height: 34px;
+  }
+
+  .khdr__icon svg,
+  .khdr__burger svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .khdr__bubble {
+    top: 0;
+    right: -1px;
+    min-width: 15px;
+    height: 15px;
+    font-size: 9px;
   }
 
   .khdr__burger {
@@ -571,9 +602,12 @@
     --kh-logo-size: {{ s.logo_size }}px;
     --kh-logo-track: {{ s.logo_spacing | divided_by: 100.0 }}em;
     --kh-top: {{ s.offset_top }}px;
+    --kh-push-extra: {{ s.push_extra }}px;
     --kh-side: {{ s.side_margin }}px;
     --kh-max: {{ s.bar_width }}px;
     --kh-height: {{ s.bar_height }}px;
+    --kh-height-m: {{ s.bar_height_mobile }}px;
+    --kh-mscale: {{ s.logo_scale_mobile | divided_by: 100.0 }};
     --kh-radius: {{ s.bar_radius }}px;
     --kh-pad: {{ s.bar_padding }}px;
     --kh-nav-size: {{ s.nav_size }}px;
@@ -737,8 +771,10 @@
       root.parentNode.insertBefore(spacer, root.nextSibling);
 
       var sizeSpacer = function () {
-        var top = parseInt(getComputedStyle(root).getPropertyValue('--kh-top'), 10) || 0;
-        spacer.style.height = root.offsetHeight + top + 'px';
+        var css = getComputedStyle(root);
+        var top = parseInt(css.getPropertyValue('--kh-top'), 10) || 0;
+        var extra = parseInt(css.getPropertyValue('--kh-push-extra'), 10) || 0;
+        spacer.style.height = root.offsetHeight + top + extra + 'px';
       };
       sizeSpacer();
       window.addEventListener('resize', sizeSpacer);
@@ -979,12 +1015,23 @@
       "type": "select",
       "id": "layout_mode",
       "label": "Comportement",
-      "info": "« Par-dessus » laisse la première section passer sous la barre, ce qui donne l'effet flottant.",
+      "info": "« Pousse » réserve la place sous la barre, rien n'est jamais masqué. « Par-dessus » laisse la première section passer dessous pour l'effet flottant — à réserver aux pages qui commencent par une grande image.",
       "options": [
-        { "value": "overlay", "label": "Par-dessus le contenu" },
-        { "value": "push", "label": "Pousse le contenu vers le bas" }
+        { "value": "push", "label": "Pousse le contenu vers le bas" },
+        { "value": "overlay", "label": "Par-dessus le contenu" }
       ],
-      "default": "overlay"
+      "default": "push"
+    },
+    {
+      "type": "range",
+      "id": "push_extra",
+      "label": "Espace supplémentaire sous la barre",
+      "info": "S'ajoute en mode « pousse ».",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "default": 0
     },
     {
       "type": "range",
@@ -999,7 +1046,19 @@
     },
     { "type": "range", "id": "side_margin", "label": "Marge sur les côtés", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 18 },
     { "type": "range", "id": "bar_width", "label": "Largeur maximale", "min": 900, "max": 2000, "step": 20, "unit": "px", "default": 1900 },
-    { "type": "range", "id": "bar_height", "label": "Hauteur", "min": 52, "max": 110, "step": 2, "unit": "px", "default": 76 },
+    { "type": "range", "id": "bar_height", "label": "Hauteur sur ordinateur", "min": 52, "max": 110, "step": 2, "unit": "px", "default": 76 },
+    { "type": "range", "id": "bar_height_mobile", "label": "Hauteur sur mobile", "min": 40, "max": 90, "step": 2, "unit": "px", "default": 56 },
+    {
+      "type": "range",
+      "id": "logo_scale_mobile",
+      "label": "Taille du logo sur mobile",
+      "info": "En proportion de sa taille sur ordinateur.",
+      "min": 50,
+      "max": 100,
+      "step": 2,
+      "unit": "%",
+      "default": 78
+    },
     { "type": "range", "id": "bar_radius", "label": "Arrondi", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 50 },
     { "type": "range", "id": "bar_padding", "label": "Marge intérieure", "min": 10, "max": 60, "step": 2, "unit": "px", "default": 34 },
     { "type": "checkbox", "id": "shadow", "label": "Ombre portée", "default": true },
