@@ -23,9 +23,11 @@
 }
 
 /* Reserves exactly what the fixed bar covers. Computed rather than measured:
-   opening the search panel grows the bar, and the page must not jump. */
+   opening the search panel grows the bar, and the page must not jump.
+   It uses the resting offset, since that is the state at scroll zero — the
+   only moment the spacer is actually holding anything up. */
 .khdr__spacer {
-  height: calc(var(--kh-top) + var(--kh-height) + var(--kh-push-extra));
+  height: calc(var(--kh-top-rest) + var(--kh-height) + var(--kh-push-extra));
 }
 
 .khdr__spacer--desktop-only {
@@ -55,6 +57,8 @@
   left: 0;
   z-index: 200;
   padding-inline: var(--kh-side);
+  transition: top 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+    padding 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
   font-family: var(--kh-font);
   color: var(--kh-ink);
   -webkit-font-smoothing: antialiased;
@@ -117,11 +121,30 @@
   padding-inline: var(--kh-pad);
   border-radius: var(--kh-radius);
   background: var(--kh-bg);
-  transition: box-shadow 0.2s ease;
+  transition: max-width 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-radius 0.32s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.24s ease;
 }
 
 .khdr--shadow .khdr__bar {
   box-shadow: 0 6px 26px rgba(17, 24, 39, 0.1);
+}
+
+/* ---- Resting state ----
+   Before the visitor scrolls, the bar spans the full width and sits flat
+   against the top; past the threshold it gathers into the floating pill.
+   Only the resting values are declared here — the pill is the default. */
+.khdr--shrink:not(.is-stuck) {
+  top: var(--kh-top-rest);
+  padding-inline: var(--kh-side-rest);
+}
+
+.khdr--shrink:not(.is-stuck) .khdr__bar {
+  max-width: none;
+  border-radius: var(--kh-radius-rest);
+}
+
+.khdr--shrink:not(.is-stuck).khdr--shadow .khdr__bar {
+  box-shadow: 0 2px 10px rgba(17, 24, 39, 0.07);
 }
 
 /* --------------------------------------------------------------------------
@@ -586,47 +609,79 @@
 
   comment
     A header section is shared by every template, so "over the image here,
-    above the content there" can only come from the template itself.
+    above the content there" can only come from the template itself. Desktop
+    and mobile are resolved separately: a page can float on one and push on
+    the other.
   endcomment
-  assign overlay_here = false
-  if s.overlay_enable
-    case template.name
+  assign tpl = template.name
+  if tpl == 'list-collections'
+    assign tpl = 'collection'
+  endif
+  if tpl == 'article'
+    assign tpl = 'blog'
+  endif
+
+  assign over_desktop = false
+  if s.overlay_desktop
+    case tpl
       when 'index'
-        assign overlay_here = s.overlay_index
+        assign over_desktop = s.od_index
       when 'product'
-        assign overlay_here = s.overlay_product
+        assign over_desktop = s.od_product
       when 'collection'
-        assign overlay_here = s.overlay_collection
-      when 'list-collections'
-        assign overlay_here = s.overlay_collection
+        assign over_desktop = s.od_collection
       when 'page'
-        assign overlay_here = s.overlay_page
+        assign over_desktop = s.od_page
       when 'blog'
-        assign overlay_here = s.overlay_blog
-      when 'article'
-        assign overlay_here = s.overlay_blog
+        assign over_desktop = s.od_blog
       else
-        assign overlay_here = s.overlay_other
+        assign over_desktop = s.od_other
+    endcase
+  endif
+
+  assign over_mobile = false
+  if s.overlay_mobile
+    case tpl
+      when 'index'
+        assign over_mobile = s.om_index
+      when 'product'
+        assign over_mobile = s.om_product
+      when 'collection'
+        assign over_mobile = s.om_collection
+      when 'page'
+        assign over_mobile = s.om_page
+      when 'blog'
+        assign over_mobile = s.om_blog
+      else
+        assign over_mobile = s.om_other
     endcase
   endif
 
   comment
-    The spacer is what pushes the content down, so it is present wherever
-    the bar is NOT floating over things.
+    The spacer is what pushes the content down, so it exists wherever the bar
+    is NOT floating, and carries a class that hides it on the side that is.
   endcomment
   assign show_spacer = true
   assign spacer_classes = 'khdr__spacer'
-  if overlay_here
-    if s.overlay_devices == 'both'
-      assign show_spacer = false
-    elsif s.overlay_devices == 'desktop'
-      comment
-        Over the content on desktop, so the push is only needed on mobile.
-      endcomment
-      assign spacer_classes = spacer_classes | append: ' khdr__spacer--mobile-only'
-    elsif s.overlay_devices == 'mobile'
-      assign spacer_classes = spacer_classes | append: ' khdr__spacer--desktop-only'
-    endif
+  if over_desktop and over_mobile
+    assign show_spacer = false
+  elsif over_desktop
+    assign spacer_classes = spacer_classes | append: ' khdr__spacer--mobile-only'
+  elsif over_mobile
+    assign spacer_classes = spacer_classes | append: ' khdr__spacer--desktop-only'
+  endif
+
+  comment
+    With the shrink animation off, the resting state simply is the pill.
+  endcomment
+  assign rest_top = s.offset_top
+  assign rest_side = s.side_margin
+  assign rest_radius = s.bar_radius
+  if s.scroll_shrink
+    assign root_classes = root_classes | append: ' khdr--shrink'
+    assign rest_top = s.start_top
+    assign rest_side = s.start_side
+    assign rest_radius = s.start_radius
   endif
 -%}
 
@@ -675,8 +730,11 @@
     --kh-logo-size: {{ s.logo_size }}px;
     --kh-logo-track: {{ s.logo_spacing | divided_by: 100.0 }}em;
     --kh-top: {{ s.offset_top }}px;
+    --kh-top-rest: {{ rest_top }}px;
     --kh-push-extra: {{ s.push_extra }}px;
     --kh-side: {{ s.side_margin }}px;
+    --kh-side-rest: {{ rest_side }}px;
+    --kh-radius-rest: {{ rest_radius }}px;
     --kh-max: {{ s.bar_width }}px;
     --kh-height: {{ s.bar_height }}px;
     --kh-height-m: {{ s.bar_height_mobile }}px;
@@ -688,7 +746,12 @@
     --kh-nav-justify: {{ nav_justify }};
   "
 >
-<div class="{{ root_classes }}" id="khdr-{{ section.id }}" data-khdr-root>
+<div
+  class="{{ root_classes }}"
+  id="khdr-{{ section.id }}"
+  data-khdr-root
+  data-khdr-threshold="{{ s.scroll_threshold }}"
+>
   <div class="khdr__bar">
     <button
       type="button"
@@ -837,6 +900,30 @@
     }
     function $$(sel, ctx) {
       return Array.prototype.slice.call((ctx || document).querySelectorAll(sel));
+    }
+
+    /* ---------------- Rest / scrolled state ---------------- */
+
+    if (root.classList.contains('khdr--shrink')) {
+      var threshold = parseInt(root.getAttribute('data-khdr-threshold'), 10) || 40;
+      var ticking = false;
+
+      var syncStuck = function () {
+        ticking = false;
+        var stuck = window.pageYOffset > threshold;
+        root.classList.toggle('is-stuck', stuck);
+      };
+
+      /* Scroll fires far more often than the screen repaints; one check per
+         frame is enough and keeps the handler off the critical path. */
+      var onScroll = function () {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(syncStuck);
+      };
+
+      syncStuck();
+      window.addEventListener('scroll', onScroll, { passive: true });
     }
 
     /* ---------------- Desktop dropdowns ---------------- */
@@ -1071,28 +1158,25 @@
     },
     {
       "type": "checkbox",
-      "id": "overlay_enable",
-      "label": "Barre par-dessus le contenu",
-      "info": "Décoché, la barre pousse toujours le contenu vers le bas et rien n'est jamais masqué. Coché, choisis ci-dessous les pages concernées : ailleurs, elle pousse.",
+      "id": "scroll_shrink",
+      "label": "Se resserrer au défilement",
+      "info": "En haut de page la barre est pleine largeur et plate ; passé le seuil, elle se resserre en pilule flottante. Les valeurs de la pilule sont celles réglées plus bas.",
       "default": true
     },
+    { "type": "range", "id": "start_top", "label": "Repos — distance du haut", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 0 },
+    { "type": "range", "id": "start_side", "label": "Repos — marge sur les côtés", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 0 },
+    { "type": "range", "id": "start_radius", "label": "Repos — arrondi", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 0 },
     {
-      "type": "select",
-      "id": "overlay_devices",
-      "label": "Par-dessus sur…",
-      "options": [
-        { "value": "both", "label": "Ordinateur et mobile" },
-        { "value": "desktop", "label": "Ordinateur seulement" },
-        { "value": "mobile", "label": "Mobile seulement" }
-      ],
-      "default": "both"
+      "type": "range",
+      "id": "scroll_threshold",
+      "label": "Seuil de déclenchement",
+      "info": "Distance de défilement avant que la barre ne se resserre.",
+      "min": 10,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "default": 40
     },
-    { "type": "checkbox", "id": "overlay_index", "label": "Sur l'accueil", "default": true },
-    { "type": "checkbox", "id": "overlay_product", "label": "Sur les pages produit", "default": false },
-    { "type": "checkbox", "id": "overlay_collection", "label": "Sur les collections", "default": false },
-    { "type": "checkbox", "id": "overlay_page", "label": "Sur les pages", "default": false },
-    { "type": "checkbox", "id": "overlay_blog", "label": "Sur le blog et les articles", "default": false },
-    { "type": "checkbox", "id": "overlay_other", "label": "Sur le reste (panier, recherche…)", "default": false },
     {
       "type": "range",
       "id": "push_extra",
@@ -1133,6 +1217,32 @@
     { "type": "range", "id": "bar_radius", "label": "Arrondi", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 50 },
     { "type": "range", "id": "bar_padding", "label": "Marge intérieure", "min": 10, "max": 60, "step": 2, "unit": "px", "default": 34 },
     { "type": "checkbox", "id": "shadow", "label": "Ombre portée", "default": true },
+
+    {
+      "type": "header",
+      "content": "Par-dessus le contenu — ordinateur",
+      "info": "Les pages cochées laissent la barre flotter par-dessus. Les autres la voient pousser le contenu vers le bas."
+    },
+    { "type": "checkbox", "id": "overlay_desktop", "label": "Activer sur ordinateur", "default": true },
+    { "type": "checkbox", "id": "od_index", "label": "Accueil", "default": true },
+    { "type": "checkbox", "id": "od_product", "label": "Pages produit", "default": false },
+    { "type": "checkbox", "id": "od_collection", "label": "Collections", "default": false },
+    { "type": "checkbox", "id": "od_page", "label": "Pages", "default": false },
+    { "type": "checkbox", "id": "od_blog", "label": "Blog et articles", "default": false },
+    { "type": "checkbox", "id": "od_other", "label": "Le reste (panier, recherche…)", "default": false },
+
+    {
+      "type": "header",
+      "content": "Par-dessus le contenu — mobile",
+      "info": "Réglages indépendants de ceux de l'ordinateur."
+    },
+    { "type": "checkbox", "id": "overlay_mobile", "label": "Activer sur mobile", "default": true },
+    { "type": "checkbox", "id": "om_index", "label": "Accueil", "default": true },
+    { "type": "checkbox", "id": "om_product", "label": "Pages produit", "default": false },
+    { "type": "checkbox", "id": "om_collection", "label": "Collections", "default": false },
+    { "type": "checkbox", "id": "om_page", "label": "Pages", "default": false },
+    { "type": "checkbox", "id": "om_blog", "label": "Blog et articles", "default": false },
+    { "type": "checkbox", "id": "om_other", "label": "Le reste (panier, recherche…)", "default": false },
 
     {
       "type": "header",
