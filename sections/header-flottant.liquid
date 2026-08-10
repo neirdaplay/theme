@@ -15,10 +15,40 @@
    Floating header — scoped under .khdr so the rest of the theme is untouched.
    ========================================================================== */
 
-.khdr {
+/* The host stays in flow and carries the custom properties, so the spacer
+   below can read them — a fixed element cannot pass them to a sibling. */
+.khdr-host {
   --kh-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
+}
 
+/* Reserves exactly what the fixed bar covers. Computed rather than measured:
+   opening the search panel grows the bar, and the page must not jump. */
+.khdr__spacer {
+  height: calc(var(--kh-top) + var(--kh-height) + var(--kh-push-extra));
+}
+
+.khdr__spacer--desktop-only {
+  display: none;
+}
+
+@media screen and (min-width: 990px) {
+  .khdr__spacer--desktop-only {
+    display: block;
+  }
+
+  .khdr__spacer--mobile-only {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 989px) {
+  .khdr__spacer {
+    height: calc(var(--kh-top) + var(--kh-height-m) + var(--kh-push-extra));
+  }
+}
+
+.khdr {
   position: fixed;
   top: var(--kh-top);
   right: 0;
@@ -553,6 +583,51 @@
   if s.shadow
     assign root_classes = root_classes | append: ' khdr--shadow'
   endif
+
+  comment
+    A header section is shared by every template, so "over the image here,
+    above the content there" can only come from the template itself.
+  endcomment
+  assign overlay_here = false
+  if s.overlay_enable
+    case template.name
+      when 'index'
+        assign overlay_here = s.overlay_index
+      when 'product'
+        assign overlay_here = s.overlay_product
+      when 'collection'
+        assign overlay_here = s.overlay_collection
+      when 'list-collections'
+        assign overlay_here = s.overlay_collection
+      when 'page'
+        assign overlay_here = s.overlay_page
+      when 'blog'
+        assign overlay_here = s.overlay_blog
+      when 'article'
+        assign overlay_here = s.overlay_blog
+      else
+        assign overlay_here = s.overlay_other
+    endcase
+  endif
+
+  comment
+    The spacer is what pushes the content down, so it is present wherever
+    the bar is NOT floating over things.
+  endcomment
+  assign show_spacer = true
+  assign spacer_classes = 'khdr__spacer'
+  if overlay_here
+    if s.overlay_devices == 'both'
+      assign show_spacer = false
+    elsif s.overlay_devices == 'desktop'
+      comment
+        Over the content on desktop, so the push is only needed on mobile.
+      endcomment
+      assign spacer_classes = spacer_classes | append: ' khdr__spacer--mobile-only'
+    elsif s.overlay_devices == 'mobile'
+      assign spacer_classes = spacer_classes | append: ' khdr__spacer--desktop-only'
+    endif
+  endif
 -%}
 
 {%- capture kh_burger -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.5 7h17M3.5 12h11M3.5 17h14"/></svg>{%- endcapture -%}
@@ -583,10 +658,8 @@
 {%- endcapture -%}
 
 <div
-  class="{{ root_classes }}"
-  id="khdr-{{ section.id }}"
-  data-khdr-root
-  data-khdr-push="{{ s.layout_mode }}"
+  class="khdr-host"
+  data-khdr-host
   style="
     --kh-bg: {{ s.color_bar }};
     --kh-ink: {{ s.color_text }};
@@ -615,6 +688,7 @@
     --kh-nav-justify: {{ nav_justify }};
   "
 >
+<div class="{{ root_classes }}" id="khdr-{{ section.id }}" data-khdr-root>
   <div class="khdr__bar">
     <button
       type="button"
@@ -747,6 +821,11 @@
 </div>
 </div>
 
+{%- if show_spacer -%}
+  <div class="{{ spacer_classes }}" data-khdr-spacer aria-hidden="true"></div>
+{%- endif -%}
+</div>
+
 <script>
   (function () {
     var root = document.getElementById('khdr-{{ section.id }}');
@@ -758,27 +837,6 @@
     }
     function $$(sel, ctx) {
       return Array.prototype.slice.call((ctx || document).querySelectorAll(sel));
-    }
-
-    /* ---------------- Reserve the space it floats over ---------------- */
-
-    /* The bar is fixed, so it is out of flow. In "push" mode the page needs
-       a spacer of exactly its height — measured, not guessed, because the
-       logo and the menu both change it. */
-    if (root.getAttribute('data-khdr-push') === 'push') {
-      var spacer = document.createElement('div');
-      spacer.setAttribute('data-khdr-spacer', '');
-      root.parentNode.insertBefore(spacer, root.nextSibling);
-
-      var sizeSpacer = function () {
-        var css = getComputedStyle(root);
-        var top = parseInt(css.getPropertyValue('--kh-top'), 10) || 0;
-        var extra = parseInt(css.getPropertyValue('--kh-push-extra'), 10) || 0;
-        spacer.style.height = root.offsetHeight + top + extra + 'px';
-      };
-      sizeSpacer();
-      window.addEventListener('resize', sizeSpacer);
-      if (window.ResizeObserver) new ResizeObserver(sizeSpacer).observe(root);
     }
 
     /* ---------------- Desktop dropdowns ---------------- */
@@ -1012,21 +1070,34 @@
       "content": "Forme de la barre"
     },
     {
-      "type": "select",
-      "id": "layout_mode",
-      "label": "Comportement",
-      "info": "« Pousse » réserve la place sous la barre, rien n'est jamais masqué. « Par-dessus » laisse la première section passer dessous pour l'effet flottant — à réserver aux pages qui commencent par une grande image.",
-      "options": [
-        { "value": "push", "label": "Pousse le contenu vers le bas" },
-        { "value": "overlay", "label": "Par-dessus le contenu" }
-      ],
-      "default": "push"
+      "type": "checkbox",
+      "id": "overlay_enable",
+      "label": "Barre par-dessus le contenu",
+      "info": "Décoché, la barre pousse toujours le contenu vers le bas et rien n'est jamais masqué. Coché, choisis ci-dessous les pages concernées : ailleurs, elle pousse.",
+      "default": true
     },
+    {
+      "type": "select",
+      "id": "overlay_devices",
+      "label": "Par-dessus sur…",
+      "options": [
+        { "value": "both", "label": "Ordinateur et mobile" },
+        { "value": "desktop", "label": "Ordinateur seulement" },
+        { "value": "mobile", "label": "Mobile seulement" }
+      ],
+      "default": "both"
+    },
+    { "type": "checkbox", "id": "overlay_index", "label": "Sur l'accueil", "default": true },
+    { "type": "checkbox", "id": "overlay_product", "label": "Sur les pages produit", "default": false },
+    { "type": "checkbox", "id": "overlay_collection", "label": "Sur les collections", "default": false },
+    { "type": "checkbox", "id": "overlay_page", "label": "Sur les pages", "default": false },
+    { "type": "checkbox", "id": "overlay_blog", "label": "Sur le blog et les articles", "default": false },
+    { "type": "checkbox", "id": "overlay_other", "label": "Sur le reste (panier, recherche…)", "default": false },
     {
       "type": "range",
       "id": "push_extra",
       "label": "Espace supplémentaire sous la barre",
-      "info": "S'ajoute en mode « pousse ».",
+      "info": "S'ajoute là où la barre pousse le contenu.",
       "min": 0,
       "max": 80,
       "step": 4,
