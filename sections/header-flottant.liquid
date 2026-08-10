@@ -1,0 +1,1036 @@
+{% comment %}
+  header-flottant.liquid
+  A floating pill header: rounded white bar over the page, logo on the left,
+  a Shopify menu in the middle, icons on the right.
+
+  Fixed to the viewport, so it keeps its place through the scroll. On narrow
+  screens the menu collapses into a drawer and the logo centres itself.
+
+  Self-contained: styles and behaviour are both inlined, so this file is the
+  only thing that needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Floating header — scoped under .khdr so the rest of the theme is untouched.
+   ========================================================================== */
+
+.khdr {
+  --kh-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  position: fixed;
+  top: var(--kh-top);
+  right: 0;
+  left: 0;
+  z-index: 200;
+  padding-inline: var(--kh-side);
+  font-family: var(--kh-font);
+  color: var(--kh-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.khdr *,
+.khdr *::before,
+.khdr *::after {
+  box-sizing: border-box;
+}
+
+:where(.khdr) :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.khdr) :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+:where(.khdr) :where(button) {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.khdr :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.khdr__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   The pill
+   -------------------------------------------------------------------------- */
+
+.khdr__bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: var(--kh-max);
+  height: var(--kh-height);
+  margin-inline: auto;
+  padding-inline: var(--kh-pad);
+  border-radius: var(--kh-radius);
+  background: var(--kh-bg);
+  transition: box-shadow 0.2s ease;
+}
+
+.khdr--shadow .khdr__bar {
+  box-shadow: 0 6px 26px rgba(17, 24, 39, 0.1);
+}
+
+/* --------------------------------------------------------------------------
+   Logo
+   -------------------------------------------------------------------------- */
+
+.khdr__logo {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.khdr__logo img {
+  display: block;
+  width: var(--kh-logo-w);
+  height: auto;
+}
+
+.khdr__wordmark {
+  font-size: var(--kh-logo-size);
+  font-weight: 700;
+  letter-spacing: var(--kh-logo-track);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.khdr__word-1 {
+  color: var(--kh-logo-1);
+}
+
+.khdr__word-2 {
+  color: var(--kh-logo-2);
+}
+
+/* --------------------------------------------------------------------------
+   Navigation
+   -------------------------------------------------------------------------- */
+
+.khdr__nav {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: var(--kh-nav-justify);
+}
+
+.khdr__menu {
+  display: flex;
+  align-items: center;
+  gap: var(--kh-nav-gap);
+}
+
+.khdr__item {
+  position: relative;
+}
+
+.khdr__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding-block: 6px;
+  font-size: var(--kh-nav-size);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 0.16s ease;
+}
+
+.khdr__link:hover,
+.khdr__link[aria-current="page"] {
+  color: var(--kh-accent);
+}
+
+.khdr__link svg {
+  width: 10px;
+  height: 10px;
+  transition: transform 0.18s ease;
+}
+
+.khdr__item:hover .khdr__link svg,
+.khdr__link[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* ---- Dropdown ---- */
+
+.khdr__sub {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 2;
+  min-width: 190px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--kh-bg);
+  box-shadow: 0 10px 34px rgba(17, 24, 39, 0.14);
+  transform: translateX(-50%);
+  /* display:none, not visibility: a laid-out panel would widen the page. */
+  animation: khdr-drop 0.16s ease;
+}
+
+.khdr__sub[hidden] {
+  display: none;
+}
+
+@keyframes khdr-drop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+
+.khdr__sub a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  white-space: nowrap;
+  transition: background-color 0.14s ease;
+}
+
+.khdr__sub a:hover {
+  background: var(--kh-soft);
+  color: var(--kh-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Icons
+   -------------------------------------------------------------------------- */
+
+.khdr__icons {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.khdr__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.khdr__icon:hover {
+  background: var(--kh-soft);
+  color: var(--kh-accent);
+}
+
+.khdr__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.khdr__bubble {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding-inline: 4px;
+  border-radius: 9px;
+  background: var(--kh-bubble);
+  color: var(--kh-bubble-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.khdr__bubble[hidden] {
+  display: none;
+}
+
+/* ---- Burger ---- */
+
+.khdr__burger {
+  display: none;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.khdr__burger svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Search panel
+   -------------------------------------------------------------------------- */
+
+.khdr__search {
+  max-width: var(--kh-max);
+  margin: 8px auto 0;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--kh-bg);
+  box-shadow: 0 10px 34px rgba(17, 24, 39, 0.14);
+  animation: khdr-drop-plain 0.16s ease;
+}
+
+.khdr__search[hidden] {
+  display: none;
+}
+
+@keyframes khdr-drop-plain {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.khdr__search form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.khdr__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  padding-inline: 16px;
+  border: 1px solid var(--kh-line);
+  border-radius: 22px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+}
+
+.khdr__search button[type="submit"] {
+  flex: 0 0 auto;
+  height: 44px;
+  padding-inline: 20px;
+  border-radius: 22px;
+  background: var(--kh-ink);
+  color: var(--kh-bg);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile drawer
+   -------------------------------------------------------------------------- */
+
+.khdr__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(17, 24, 39, 0.45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.24s ease;
+}
+
+.khdr__scrim[hidden] {
+  display: none;
+}
+
+.khdr__scrim.is-open {
+  opacity: 1;
+}
+
+.khdr__drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 301;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 86vw);
+  padding: 18px;
+  background: var(--kh-bg);
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+  overflow-y: auto;
+}
+
+.khdr__drawer[hidden] {
+  display: none;
+}
+
+.khdr__drawer.is-open {
+  transform: none;
+}
+
+.khdr__drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.khdr__drawer-close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--kh-soft);
+}
+
+.khdr__drawer-close svg {
+  width: 13px;
+  height: 13px;
+}
+
+.khdr__drawer-menu > li + li {
+  border-top: 1px solid var(--kh-line);
+}
+
+.khdr__drawer-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 2px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.khdr__drawer-link svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  transition: transform 0.18s ease;
+}
+
+.khdr__drawer-link[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.khdr__drawer-sub {
+  padding: 0 0 10px 12px;
+}
+
+.khdr__drawer-sub[hidden] {
+  display: none;
+}
+
+.khdr__drawer-sub a {
+  display: block;
+  padding: 8px 0;
+  font-size: 13.5px;
+  color: var(--kh-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 989px) {
+  .khdr__bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+    padding-inline: calc(var(--kh-pad) * 0.45);
+  }
+
+  .khdr__burger {
+    display: grid;
+    justify-self: start;
+  }
+
+  .khdr__nav {
+    display: none;
+  }
+
+  .khdr__logo {
+    justify-self: center;
+  }
+
+  .khdr__icons {
+    justify-self: end;
+  }
+
+  /* The account link lives in the drawer on small screens. */
+  .khdr__icon--account {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .khdr *,
+  .khdr *::before,
+  .khdr *::after,
+  .khdr__drawer,
+  .khdr__scrim {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign menu = linklists[s.menu]
+
+  assign nav_justify = 'center'
+  if s.nav_align == 'right'
+    assign nav_justify = 'flex-end'
+  endif
+
+  assign root_classes = 'khdr'
+  if s.shadow
+    assign root_classes = root_classes | append: ' khdr--shadow'
+  endif
+-%}
+
+{%- capture kh_burger -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.5 7h17M3.5 12h11M3.5 17h14"/></svg>{%- endcapture -%}
+{%- capture kh_search -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.8"/><path d="M15.6 15.6L20.5 20.5"/></svg>{%- endcapture -%}
+{%- capture kh_account -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.2a7.7 7.7 0 0115 0"/></svg>{%- endcapture -%}
+{%- capture kh_bag -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 7.5h13.6l-1 12.3H6.2z"/><path d="M8.7 9.4V6.6a3.3 3.3 0 016.6 0v2.8"/></svg>{%- endcapture -%}
+{%- capture kh_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/></svg>{%- endcapture -%}
+{%- capture kh_chevron -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
+
+{%- capture kh_logo -%}
+  {%- if s.logo_image != blank -%}
+    {%- liquid
+      assign logo_h = s.logo_width
+      if s.logo_image.aspect_ratio > 0
+        assign logo_h = s.logo_width | divided_by: s.logo_image.aspect_ratio | round
+      endif
+    -%}
+    {{
+      s.logo_image
+      | image_url: width: 600
+      | image_tag: width: s.logo_width, height: logo_h, loading: 'eager', alt: shop.name
+    }}
+  {%- else -%}
+    <span class="khdr__wordmark">
+      <span class="khdr__word-1">{{ s.logo_text_1 }}</span><span class="khdr__word-2">{{ s.logo_text_2 }}</span>
+    </span>
+  {%- endif -%}
+{%- endcapture -%}
+
+<div
+  class="{{ root_classes }}"
+  id="khdr-{{ section.id }}"
+  data-khdr-root
+  data-khdr-push="{{ s.layout_mode }}"
+  style="
+    --kh-bg: {{ s.color_bar }};
+    --kh-ink: {{ s.color_text }};
+    --kh-muted: {{ s.color_muted }};
+    --kh-accent: {{ s.color_accent }};
+    --kh-soft: {{ s.color_soft }};
+    --kh-line: {{ s.color_line }};
+    --kh-bubble: {{ s.color_bubble }};
+    --kh-bubble-ink: {{ s.color_bubble_text }};
+    --kh-logo-1: {{ s.color_logo_1 }};
+    --kh-logo-2: {{ s.color_logo_2 }};
+    --kh-logo-w: {{ s.logo_width }}px;
+    --kh-logo-size: {{ s.logo_size }}px;
+    --kh-logo-track: {{ s.logo_spacing | divided_by: 100.0 }}em;
+    --kh-top: {{ s.offset_top }}px;
+    --kh-side: {{ s.side_margin }}px;
+    --kh-max: {{ s.bar_width }}px;
+    --kh-height: {{ s.bar_height }}px;
+    --kh-radius: {{ s.bar_radius }}px;
+    --kh-pad: {{ s.bar_padding }}px;
+    --kh-nav-size: {{ s.nav_size }}px;
+    --kh-nav-gap: {{ s.nav_gap }}px;
+    --kh-nav-justify: {{ nav_justify }};
+  "
+>
+  <div class="khdr__bar">
+    <button
+      type="button"
+      class="khdr__burger"
+      data-khdr-open-drawer
+      aria-label="{{ s.menu_label }}"
+      aria-expanded="false"
+    >
+      {{ kh_burger }}
+    </button>
+
+    <a class="khdr__logo" href="{{ routes.root_url }}">{{ kh_logo }}</a>
+
+    {%- if menu.links.size > 0 -%}
+      <nav class="khdr__nav" aria-label="{{ s.menu_label }}">
+        <ul class="khdr__menu">
+          {%- for link in menu.links -%}
+            <li class="khdr__item">
+              {%- if link.links.size > 0 -%}
+                <a
+                  class="khdr__link"
+                  href="{{ link.url }}"
+                  data-khdr-sub-toggle="{{ forloop.index0 }}"
+                  aria-expanded="false"
+                  {% if link.current %}aria-current="page"{% endif %}
+                >
+                  <span>{{ link.title }}</span>
+                  {{ kh_chevron }}
+                </a>
+                <ul class="khdr__sub" data-khdr-sub="{{ forloop.index0 }}" hidden>
+                  {%- for child in link.links -%}
+                    <li><a href="{{ child.url }}">{{ child.title }}</a></li>
+                  {%- endfor -%}
+                </ul>
+              {%- else -%}
+                <a class="khdr__link" href="{{ link.url }}" {% if link.current %}aria-current="page"{% endif %}>
+                  {{- link.title -}}
+                </a>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+    {%- else -%}
+      <span class="khdr__nav"></span>
+    {%- endif -%}
+
+    <div class="khdr__icons">
+      {%- if s.show_search -%}
+        <button
+          type="button"
+          class="khdr__icon"
+          data-khdr-search-toggle
+          aria-label="{{ s.search_label }}"
+          aria-expanded="false"
+        >
+          {{ kh_search }}
+        </button>
+      {%- endif -%}
+
+      {%- if s.show_account -%}
+        <a class="khdr__icon khdr__icon--account" href="{{ routes.account_url }}" aria-label="{{ s.account_label }}">
+          {{ kh_account }}
+        </a>
+      {%- endif -%}
+
+      {%- if s.show_cart -%}
+        <a class="khdr__icon" href="{{ routes.cart_url }}" aria-label="{{ s.cart_label }}">
+          {{ kh_bag }}
+          <span class="khdr__bubble" data-khdr-count {% if cart.item_count == 0 %}hidden{% endif %}>
+            {{- cart.item_count -}}
+          </span>
+        </a>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- if s.show_search -%}
+    <div class="khdr__search" data-khdr-search hidden>
+      <form action="{{ routes.search_url }}" method="get" role="search">
+        <input
+          type="search"
+          name="q"
+          placeholder="{{ s.search_placeholder }}"
+          aria-label="{{ s.search_label }}"
+          data-khdr-search-input
+        >
+        <button type="submit">{{ s.search_submit }}</button>
+      </form>
+    </div>
+  {%- endif -%}
+
+{%- comment -%}
+  ---------- Mobile drawer ----------
+  Kept inside the root: the colour custom properties live on its style
+  attribute, and a panel rendered outside would come out unstyled. Both
+  panels are position:fixed, so being nested changes nothing visually.
+{%- endcomment -%}
+<button type="button" class="khdr__scrim" data-khdr-scrim tabindex="-1" aria-hidden="true" hidden></button>
+<div class="khdr__drawer" data-khdr-drawer role="dialog" aria-modal="true" aria-label="{{ s.menu_label }}" hidden>
+  <div class="khdr__drawer-head">
+    <span class="khdr__logo">{{ kh_logo }}</span>
+    <button type="button" class="khdr__drawer-close" data-khdr-close-drawer aria-label="{{ s.close_label }}">
+      {{ kh_close }}
+    </button>
+  </div>
+
+  <ul class="khdr__drawer-menu">
+    {%- for link in menu.links -%}
+      <li>
+        {%- if link.links.size > 0 -%}
+          <button type="button" class="khdr__drawer-link" data-khdr-drawer-toggle="{{ forloop.index0 }}" aria-expanded="false">
+            <span>{{ link.title }}</span>
+            {{ kh_chevron }}
+          </button>
+          <ul class="khdr__drawer-sub" data-khdr-drawer-sub="{{ forloop.index0 }}" hidden>
+            {%- for child in link.links -%}
+              <li><a href="{{ child.url }}">{{ child.title }}</a></li>
+            {%- endfor -%}
+          </ul>
+        {%- else -%}
+          <a class="khdr__drawer-link" href="{{ link.url }}">{{ link.title }}</a>
+        {%- endif -%}
+      </li>
+    {%- endfor -%}
+    {%- if s.show_account -%}
+      <li><a class="khdr__drawer-link" href="{{ routes.account_url }}">{{ s.account_label }}</a></li>
+    {%- endif -%}
+  </ul>
+</div>
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('khdr-{{ section.id }}');
+    if (!root || root.dataset.khdrReady === 'true') return;
+    root.dataset.khdrReady = 'true';
+
+    function $(sel, ctx) {
+      return (ctx || document).querySelector(sel);
+    }
+    function $$(sel, ctx) {
+      return Array.prototype.slice.call((ctx || document).querySelectorAll(sel));
+    }
+
+    /* ---------------- Reserve the space it floats over ---------------- */
+
+    /* The bar is fixed, so it is out of flow. In "push" mode the page needs
+       a spacer of exactly its height — measured, not guessed, because the
+       logo and the menu both change it. */
+    if (root.getAttribute('data-khdr-push') === 'push') {
+      var spacer = document.createElement('div');
+      spacer.setAttribute('data-khdr-spacer', '');
+      root.parentNode.insertBefore(spacer, root.nextSibling);
+
+      var sizeSpacer = function () {
+        var top = parseInt(getComputedStyle(root).getPropertyValue('--kh-top'), 10) || 0;
+        spacer.style.height = root.offsetHeight + top + 'px';
+      };
+      sizeSpacer();
+      window.addEventListener('resize', sizeSpacer);
+      if (window.ResizeObserver) new ResizeObserver(sizeSpacer).observe(root);
+    }
+
+    /* ---------------- Desktop dropdowns ---------------- */
+
+    var closeSubs = function (except) {
+      $$('[data-khdr-sub]', root).forEach(function (panel) {
+        if (panel === except) return;
+        panel.hidden = true;
+        var trigger = $('[data-khdr-sub-toggle="' + panel.getAttribute('data-khdr-sub') + '"]', root);
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    };
+
+    /* Pointer devices open on hover, so intercepting the click there would
+       close the panel the hover just opened — and swallow a parent link the
+       visitor meant to follow. Touch screens have no hover, so there the
+       first tap opens and the second follows the link. */
+    var canHover = window.matchMedia('(hover: hover)').matches;
+
+    $$('[data-khdr-sub-toggle]', root).forEach(function (trigger) {
+      var id = trigger.getAttribute('data-khdr-sub-toggle');
+      var panel = $('[data-khdr-sub="' + id + '"]', root);
+      if (!panel) return;
+
+      var setOpen = function (open) {
+        if (open) closeSubs(panel);
+        panel.hidden = !open;
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+
+      var item = trigger.closest('.khdr__item');
+
+      if (canHover) {
+        if (item) {
+          item.addEventListener('mouseenter', function () {
+            setOpen(true);
+          });
+          item.addEventListener('mouseleave', function () {
+            setOpen(false);
+          });
+          /* Keyboard users never hover: tabbing into the item opens it. */
+          item.addEventListener('focusin', function () {
+            setOpen(true);
+          });
+          item.addEventListener('focusout', function (event) {
+            if (!item.contains(event.relatedTarget)) setOpen(false);
+          });
+        }
+      } else {
+        trigger.addEventListener('click', function (event) {
+          if (trigger.getAttribute('aria-expanded') === 'true') return; // let it through
+          event.preventDefault();
+          setOpen(true);
+        });
+      }
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!root.contains(event.target)) closeSubs(null);
+    });
+
+    /* ---------------- Search ---------------- */
+
+    var searchToggle = $('[data-khdr-search-toggle]', root);
+    var searchPanel = $('[data-khdr-search]', root);
+
+    if (searchToggle && searchPanel) {
+      searchToggle.addEventListener('click', function () {
+        var open = searchToggle.getAttribute('aria-expanded') === 'true';
+        searchPanel.hidden = open;
+        searchToggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+        if (!open) {
+          var field = $('[data-khdr-search-input]', searchPanel);
+          if (field) field.focus();
+        }
+      });
+    }
+
+    /* ---------------- Drawer ---------------- */
+
+    var drawer = $('[data-khdr-drawer]');
+    var scrim = $('[data-khdr-scrim]');
+    var burger = $('[data-khdr-open-drawer]', root);
+
+    function lockScroll(locked) {
+      document.documentElement.style.overflow = locked ? 'hidden' : '';
+      document.body.style.overflow = locked ? 'hidden' : '';
+    }
+
+    function openDrawer() {
+      if (!drawer || !scrim) return;
+      drawer.hidden = false;
+      scrim.hidden = false;
+      lockScroll(true);
+      window.requestAnimationFrame(function () {
+        drawer.classList.add('is-open');
+        scrim.classList.add('is-open');
+      });
+      if (burger) burger.setAttribute('aria-expanded', 'true');
+      var close = $('[data-khdr-close-drawer]', drawer);
+      if (close) close.focus();
+    }
+
+    function closeDrawer() {
+      if (!drawer || !scrim) return;
+      drawer.classList.remove('is-open');
+      scrim.classList.remove('is-open');
+      lockScroll(false);
+
+      var done = false;
+      var finish = function () {
+        if (done) return;
+        done = true;
+        drawer.hidden = true;
+        scrim.hidden = true;
+        if (burger) {
+          burger.setAttribute('aria-expanded', 'false');
+          burger.focus();
+        }
+      };
+      drawer.addEventListener('transitionend', function once(e) {
+        if (e.target !== drawer) return;
+        drawer.removeEventListener('transitionend', once);
+        finish();
+      });
+      window.setTimeout(finish, 360);
+    }
+
+    if (burger) burger.addEventListener('click', openDrawer);
+    if (scrim) scrim.addEventListener('click', closeDrawer);
+    var closeBtn = drawer && $('[data-khdr-close-drawer]', drawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      if (drawer && !drawer.hidden) {
+        event.preventDefault();
+        closeDrawer();
+      } else if (searchPanel && !searchPanel.hidden) {
+        event.preventDefault();
+        searchPanel.hidden = true;
+        searchToggle.setAttribute('aria-expanded', 'false');
+        searchToggle.focus();
+      }
+    });
+
+    /* Drawer accordions */
+    $$('[data-khdr-drawer-toggle]', drawer || document).forEach(function (trigger) {
+      var id = trigger.getAttribute('data-khdr-drawer-toggle');
+      var panel = $('[data-khdr-drawer-sub="' + id + '"]', drawer);
+      if (!panel) return;
+      trigger.addEventListener('click', function () {
+        var open = trigger.getAttribute('aria-expanded') === 'true';
+        panel.hidden = open;
+        trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+    });
+
+    /* ---------------- Cart count ---------------- */
+
+    var bubble = $('[data-khdr-count]', root);
+    if (bubble) {
+      var refresh = function () {
+        fetch('{{ routes.cart_url }}.js', { headers: { Accept: 'application/json' } })
+          .then(function (r) {
+            return r.ok ? r.json() : null;
+          })
+          .then(function (cart) {
+            if (!cart) return;
+            bubble.textContent = cart.item_count;
+            bubble.hidden = cart.item_count === 0;
+          })
+          .catch(function () {});
+      };
+      /* The product section announces its own adds; anything else that
+         reloads the page updates the count on its own. */
+      document.addEventListener('pvp:cart-added', refresh);
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "En-tête flottant",
+  "tag": "div",
+  "class": "header-flottant-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Logo"
+    },
+    { "type": "image_picker", "id": "logo_image", "label": "Logo", "info": "Sans logo, le texte ci-dessous est utilisé." },
+    { "type": "range", "id": "logo_width", "label": "Largeur du logo", "min": 70, "max": 280, "step": 5, "unit": "px", "default": 150 },
+    { "type": "text", "id": "logo_text_1", "label": "Texte — 1re partie", "default": "KOKO" },
+    { "type": "text", "id": "logo_text_2", "label": "Texte — 2e partie", "default": "WAX" },
+    { "type": "color", "id": "color_logo_1", "label": "Couleur — 1re partie", "default": "#111827" },
+    { "type": "color", "id": "color_logo_2", "label": "Couleur — 2e partie", "default": "#F0B8B8" },
+    { "type": "range", "id": "logo_size", "label": "Taille du texte", "min": 14, "max": 40, "step": 1, "unit": "px", "default": 24 },
+    { "type": "range", "id": "logo_spacing", "label": "Espacement des lettres", "min": 0, "max": 20, "step": 1, "unit": "%", "default": 6 },
+
+    {
+      "type": "header",
+      "content": "Menu"
+    },
+    { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" },
+    {
+      "type": "select",
+      "id": "nav_align",
+      "label": "Position du menu",
+      "options": [
+        { "value": "center", "label": "Centré" },
+        { "value": "right", "label": "À droite" }
+      ],
+      "default": "center"
+    },
+    { "type": "range", "id": "nav_size", "label": "Taille du texte", "min": 11, "max": 20, "step": 1, "unit": "px", "default": 14 },
+    { "type": "range", "id": "nav_gap", "label": "Espace entre les liens", "min": 10, "max": 56, "step": 2, "unit": "px", "default": 28 },
+
+    {
+      "type": "header",
+      "content": "Icônes"
+    },
+    { "type": "checkbox", "id": "show_search", "label": "Recherche", "default": true },
+    { "type": "checkbox", "id": "show_account", "label": "Compte client", "default": true },
+    { "type": "checkbox", "id": "show_cart", "label": "Panier", "default": true },
+    { "type": "text", "id": "search_placeholder", "label": "Champ de recherche", "default": "Que cherches-tu ?" },
+    { "type": "text", "id": "search_submit", "label": "Bouton de recherche", "default": "Rechercher" },
+
+    {
+      "type": "header",
+      "content": "Forme de la barre"
+    },
+    {
+      "type": "select",
+      "id": "layout_mode",
+      "label": "Comportement",
+      "info": "« Par-dessus » laisse la première section passer sous la barre, ce qui donne l'effet flottant.",
+      "options": [
+        { "value": "overlay", "label": "Par-dessus le contenu" },
+        { "value": "push", "label": "Pousse le contenu vers le bas" }
+      ],
+      "default": "overlay"
+    },
+    {
+      "type": "range",
+      "id": "offset_top",
+      "label": "Distance du haut",
+      "info": "À augmenter pour laisser passer une barre d'annonce au-dessus.",
+      "min": 0,
+      "max": 120,
+      "step": 2,
+      "unit": "px",
+      "default": 12
+    },
+    { "type": "range", "id": "side_margin", "label": "Marge sur les côtés", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 18 },
+    { "type": "range", "id": "bar_width", "label": "Largeur maximale", "min": 900, "max": 2000, "step": 20, "unit": "px", "default": 1900 },
+    { "type": "range", "id": "bar_height", "label": "Hauteur", "min": 52, "max": 110, "step": 2, "unit": "px", "default": 76 },
+    { "type": "range", "id": "bar_radius", "label": "Arrondi", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 50 },
+    { "type": "range", "id": "bar_padding", "label": "Marge intérieure", "min": 10, "max": 60, "step": 2, "unit": "px", "default": 34 },
+    { "type": "checkbox", "id": "shadow", "label": "Ombre portée", "default": true },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bar", "label": "Fond de la barre", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_text", "label": "Texte et icônes", "default": "#111827" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#6B7280" },
+    { "type": "color", "id": "color_accent", "label": "Survol", "default": "#E39B9B" },
+    { "type": "color", "id": "color_soft", "label": "Fond au survol des icônes", "default": "#F4F4F5" },
+    { "type": "color", "id": "color_line", "label": "Filets", "default": "#E5E7EB" },
+    { "type": "color", "id": "color_bubble", "label": "Pastille du panier", "default": "#111827" },
+    { "type": "color", "id": "color_bubble_text", "label": "Texte de la pastille", "default": "#FFFFFF" },
+
+    {
+      "type": "header",
+      "content": "Accessibilité"
+    },
+    { "type": "text", "id": "menu_label", "label": "Menu", "default": "Menu principal" },
+    { "type": "text", "id": "search_label", "label": "Recherche", "default": "Rechercher" },
+    { "type": "text", "id": "account_label", "label": "Compte", "default": "Mon compte" },
+    { "type": "text", "id": "cart_label", "label": "Panier", "default": "Panier" },
+    { "type": "text", "id": "close_label", "label": "Fermer", "default": "Fermer" }
+  ],
+  "presets": [
+    {
+      "name": "En-tête flottant"
+    }
+  ]
+}
+{% endschema %}
