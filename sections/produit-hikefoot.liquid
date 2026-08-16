@@ -251,12 +251,12 @@
 .hkf__bought {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
+  gap: 8px;
+  font-size: var(--hk-bought-size, 11.5px);
   color: var(--hk-muted);
 }
 
-.hkf__bought svg {
+.hkf__bought > svg {
   flex: 0 0 auto;
   width: 13px;
   height: 13px;
@@ -265,6 +265,36 @@
 
 .hkf__bought b {
   color: var(--hk-ink);
+}
+
+/* ---- Buyer faces ----
+   Overlapping avatars in place of the bag icon. Each one carries a ring in
+   the page colour so the stack reads as separate discs rather than a blob. */
+.hkf__faces {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding-left: 2px;
+}
+
+.hkf__face {
+  display: block;
+  width: var(--hk-face, 26px);
+  height: var(--hk-face, 26px);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--hk-soft);
+  box-shadow: 0 0 0 2px var(--hk-white);
+}
+
+.hkf__face + .hkf__face {
+  margin-left: calc(var(--hk-face, 26px) / -3.5);
+}
+
+.hkf__face img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .hkf__head {
@@ -605,17 +635,27 @@
 .hkf__bullets li {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 9px;
   font-size: 13px;
   line-height: 1.45;
 }
 
-.hkf__bullets svg {
+/* Coche vert foncé sur pastille vert pâle : les deux teintes viennent des
+   réglages de couleur, donc la pastille suit l'accent du thème. */
+.hkf__bullets-ic {
+  display: grid;
+  place-items: center;
   flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  margin-top: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--hk-green-soft);
   color: var(--hk-green);
+}
+
+.hkf__bullets-ic svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* ---- Variant pickers ---- */
@@ -1067,9 +1107,13 @@
    Reassurance
    -------------------------------------------------------------------------- */
 
+/* Une seule rangée, quel que soit le nombre de colonnes : les pistes sont
+   créées à la demande et se partagent la largeur à parts égales. Une colonne
+   masquée ne crée pas de piste, donc les restantes se réétalent seules. */
 .hkf__reassure {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 12px;
   margin-top: 16px;
   padding: 14px;
@@ -1079,10 +1123,34 @@
   text-align: center;
 }
 
+/* Au-delà de quatre colonnes la rangée unique deviendrait illisible : on
+   repasse alors en grille souple plutôt que d'écraser le texte. */
+.hkf__reassure:has(> li:nth-child(5)) {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
 .hkf__reassure li {
   font-size: 11.5px;
   line-height: 1.45;
   color: var(--hk-muted);
+}
+
+/* Sous 480 px, trois colonnes hachent le texte en bouillie. La troisième
+   s'efface pour laisser respirer le stock et la garantie. */
+@media (max-width: 479px) {
+  .hkf__reassure {
+    gap: 8px;
+    padding: 12px 10px;
+  }
+
+  .hkf--reassure-2 .hkf__reassure > li:nth-child(n + 3) {
+    display: none;
+  }
+
+  .hkf:not(.hkf--reassure-2) .hkf__reassure li {
+    font-size: 10.5px;
+  }
 }
 
 .hkf__reassure-icon {
@@ -1344,6 +1412,9 @@
   if s.sticky_gallery
     assign root_classes = root_classes | append: ' hkf--sticky'
   endif
+  if s.reassure_mobile == 'two'
+    assign root_classes = root_classes | append: ' hkf--reassure-2'
+  endif
 -%}
 
 {%- capture hk_star -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.5l2.6 5.3 5.8.85-4.2 4.1.99 5.8L10 14.8l-5.19 2.75.99-5.8-4.2-4.1 5.8-.85z"/></svg>{%- endcapture -%}
@@ -1387,6 +1458,8 @@
     --hk-sticky-top: {{ s.sticky_top }}px;
     --hk-stack-gap: {{ s.stack_gap }}px;
     --hk-ugc: {{ s.ugc_width }}px;
+    --hk-face: {{ s.bought_face_size }}px;
+    --hk-bought-size: {{ s.bought_size }}px;
     background: {{ s.color_bg }};
     padding-top: {{ s.padding_top }}px;
     padding-bottom: {{ s.padding_bottom }}px;
@@ -1508,7 +1581,31 @@
       {%- comment -%} ================= Info ================= {%- endcomment -%}
       <div class="hkf__info">
         {%- if s.show_bought and s.bought_text != blank -%}
-          <p class="hkf__bought">{{ hk_bag }}<span>{{ s.bought_text }}</span></p>
+          {%- comment -%}
+            Les visages sont trois réglages distincts, lus par clé pour ne pas
+            recopier trois fois le même balisage. Sans aucune photo, la ligne
+            garde l'icône panier d'origine.
+          {%- endcomment -%}
+          {%- capture bought_faces -%}
+            {%- for i in (1..3) -%}
+              {%- assign face_key = 'bought_face_' | append: i -%}
+              {%- assign face = s[face_key] -%}
+              {%- if face != blank -%}
+                <span class="hkf__face">
+                  {{- face | image_url: width: 140 | image_tag: width: 70, height: 70, loading: 'lazy', alt: '' -}}
+                </span>
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endcapture -%}
+          {%- assign bought_faces = bought_faces | strip -%}
+          <p class="hkf__bought">
+            {%- if bought_faces != blank -%}
+              <span class="hkf__faces" aria-hidden="true">{{ bought_faces }}</span>
+            {%- else -%}
+              {{ hk_bag }}
+            {%- endif -%}
+            <span>{{ s.bought_text }}</span>
+          </p>
         {%- endif -%}
 
         <div class="hkf__head">
@@ -1644,10 +1741,33 @@
           </div>
         {%- endif -%}
 
+        {%- comment -%} ---------- Sell-out risk ---------- {%- endcomment -%}
+        {%- if s.show_risk and s.risk_label != blank -%}
+          <div class="hkf__risk">
+            <button
+              type="button"
+              class="hkf__risk-trigger"
+              aria-expanded="{{ s.risk_open }}"
+              aria-controls="hkf-risk-{{ section.id }}"
+              data-hkf-risk
+            >
+              <span class="hkf__risk-dot" aria-hidden="true"></span>
+              <span>{{ s.risk_label }}</span>
+              {{ hk_chevron }}
+            </button>
+            <div class="hkf__risk-panel" id="hkf-risk-{{ section.id }}" data-hkf-risk-panel {% unless s.risk_open %}hidden{% endunless %}>
+              <div class="hkf__risk-inner">{{ s.risk_text }}</div>
+            </div>
+          </div>
+        {%- endif -%}
+
         {%- if s.show_bullets and bullets.size > 0 -%}
           <ul class="hkf__bullets">
             {%- for block in bullets -%}
-              <li {{ block.shopify_attributes }}>{{ hk_check }}<span>{{ block.settings.text }}</span></li>
+              <li {{ block.shopify_attributes }}>
+                <span class="hkf__bullets-ic" aria-hidden="true">{{ hk_check }}</span>
+                <span>{{ block.settings.text }}</span>
+              </li>
             {%- endfor -%}
           </ul>
         {%- endif -%}
@@ -1865,26 +1985,6 @@
               </li>
             {%- endfor -%}
           </ul>
-        {%- endif -%}
-
-        {%- comment -%} ---------- Sell-out risk ---------- {%- endcomment -%}
-        {%- if s.show_risk and s.risk_label != blank -%}
-          <div class="hkf__risk">
-            <button
-              type="button"
-              class="hkf__risk-trigger"
-              aria-expanded="{{ s.risk_open }}"
-              aria-controls="hkf-risk-{{ section.id }}"
-              data-hkf-risk
-            >
-              <span class="hkf__risk-dot" aria-hidden="true"></span>
-              <span>{{ s.risk_label }}</span>
-              {{ hk_chevron }}
-            </button>
-            <div class="hkf__risk-panel" id="hkf-risk-{{ section.id }}" data-hkf-risk-panel {% unless s.risk_open %}hidden{% endunless %}>
-              <div class="hkf__risk-inner">{{ s.risk_text }}</div>
-            </div>
-          </div>
         {%- endif -%}
 
         {%- comment -%} ---------- UGC ---------- {%- endcomment -%}
@@ -2652,6 +2752,11 @@
     },
     { "type": "checkbox", "id": "show_bought", "label": "Afficher la ligne « achetée X fois »", "default": true },
     { "type": "text", "id": "bought_text", "label": "Texte", "default": "Achetée plus de 2 637 929 fois" },
+    { "type": "range", "id": "bought_size", "label": "Taille du texte", "min": 10, "max": 18, "step": 1, "unit": "px", "default": 12 },
+    { "type": "image_picker", "id": "bought_face_1", "label": "Photo de client 1", "info": "Les photos remplacent l'icône panier. Laisse les trois vides pour garder l'icône." },
+    { "type": "image_picker", "id": "bought_face_2", "label": "Photo de client 2" },
+    { "type": "image_picker", "id": "bought_face_3", "label": "Photo de client 3" },
+    { "type": "range", "id": "bought_face_size", "label": "Taille des photos", "min": 18, "max": 44, "step": 2, "unit": "px", "default": 26 },
     { "type": "checkbox", "id": "show_price", "label": "Afficher le prix en haut", "default": true },
 
     {
@@ -2739,6 +2844,17 @@
       "content": "Réassurance"
     },
     { "type": "checkbox", "id": "show_reassure", "label": "Afficher la réassurance", "default": true },
+    {
+      "type": "select",
+      "id": "reassure_mobile",
+      "label": "Sur mobile",
+      "info": "Les colonnes tiennent toujours sur une seule ligne. Sous 480 px, trois deviennent très étroites.",
+      "options": [
+        { "value": "two", "label": "Garder 2 colonnes (masque la 3ᵉ)" },
+        { "value": "three", "label": "Garder les 3 colonnes" }
+      ],
+      "default": "two"
+    },
 
     {
       "type": "header",
