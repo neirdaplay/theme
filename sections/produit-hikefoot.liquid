@@ -1,0 +1,2774 @@
+{% comment %}
+  produit-hikefoot.liquid
+  Shoe product page: sticky gallery on the left, everything else scrolling on
+  the right — trust line, title, rating with a review card, bullets, colour
+  and size pickers, multi-pair bundles, add to cart, reassurance, UGC row and
+  a sell-out risk panel.
+
+  Every part has its own on/off switch.
+
+  Self-contained: styles and behaviour are both inlined, so this file is the
+  only thing that needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   HikeFoot product — scoped under .hkf so the rest of the theme is untouched.
+   ========================================================================== */
+
+.hkf {
+  --hk-white: #ffffff;
+  --hk-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --hk-thumb: var(--hk-thumb-set, 68px);
+  --hk-stage-ratio: var(--hk-stage-ratio-set, 1 / 1);
+  --hk-stage-fit: var(--hk-stage-fit-set, cover);
+
+  font-family: var(--hk-font);
+  color: var(--hk-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.hkf *,
+.hkf *::before,
+.hkf *::after {
+  box-sizing: border-box;
+}
+
+:where(.hkf) :where(p) {
+  margin: 0;
+}
+
+:where(.hkf) :where(h1, h2, h3) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+:where(.hkf) :where(ul, ol) {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.hkf) :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.hkf) :where(a) {
+  color: inherit;
+}
+
+:where(.hkf) :where(img) {
+  display: block;
+  max-width: 100%;
+}
+
+.hkf :focus-visible {
+  outline: 2px solid var(--hk-accent);
+  outline-offset: 2px;
+}
+
+.hkf__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.hkf__container {
+  max-width: calc(var(--hk-max) + 48px);
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+.hkf__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+/* --------------------------------------------------------------------------
+   Sticky gallery
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: 900px) {
+  /* The gallery's grid area is as tall as the info column and is also its
+     containing block, so it releases by itself at the end of the section. */
+  .hkf--sticky .hkf__gallery {
+    position: sticky;
+    top: var(--hk-sticky-top);
+  }
+
+  /* Set by the script when the gallery is taller than the window: sticking
+     it there would park its bottom off-screen for the whole scroll. */
+  .hkf--sticky.hkf--sticky-off .hkf__gallery {
+    position: static;
+  }
+}
+
+.hkf__stage {
+  position: relative;
+  border-radius: var(--hk-radius);
+  overflow: hidden;
+  background: var(--hk-soft);
+  /* Horizontal swipes belong to the gallery, vertical ones to the page. */
+  touch-action: pan-y;
+}
+
+.hkf__track {
+  display: flex;
+  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+.hkf__track.is-dragging {
+  transition: none;
+}
+
+.hkf__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  aspect-ratio: var(--hk-stage-ratio);
+}
+
+.hkf__slide img,
+.hkf__placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: var(--hk-stage-fit);
+}
+
+.hkf__placeholder {
+  display: grid;
+  place-items: center;
+  color: #b6bcc4;
+}
+
+.hkf__placeholder svg {
+  width: 28%;
+  height: auto;
+}
+
+.hkf__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #7c848f;
+  box-shadow: 0 2px 10px rgba(15, 27, 42, 0.16);
+  transform: translateY(-50%);
+  transition: opacity 0.18s ease, background-color 0.16s ease;
+}
+
+/* display:grid above would otherwise defeat the [hidden] attribute. */
+.hkf__nav[hidden] {
+  display: none;
+}
+
+.hkf__nav--prev {
+  left: 10px;
+}
+
+.hkf__nav--next {
+  right: 10px;
+}
+
+.hkf__nav svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Pointer devices only: touch screens have no hover, so there they stay on. */
+@media (hover: hover) {
+  .hkf__nav {
+    opacity: 0;
+  }
+
+  .hkf__stage:hover .hkf__nav,
+  .hkf__stage:focus-within .hkf__nav {
+    opacity: 1;
+  }
+}
+
+.hkf__thumbs {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hkf__thumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.hkf__thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--hk-thumb);
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--hk-soft);
+  overflow: hidden;
+  line-height: 0;
+  transition: border-color 0.16s ease;
+}
+
+.hkf__thumb img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.hkf__thumb[aria-selected="true"] {
+  border-color: var(--hk-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Info column
+   -------------------------------------------------------------------------- */
+
+.hkf__bought {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--hk-muted);
+}
+
+.hkf__bought svg {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  color: var(--hk-ink);
+}
+
+.hkf__bought b {
+  color: var(--hk-ink);
+}
+
+.hkf__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 18px;
+  margin-top: 8px;
+}
+
+.hkf__title {
+  flex: 1 1 260px;
+  min-width: 0;
+  font-size: clamp(1.05rem, 0.8rem + 0.7vw, 1.3rem);
+  font-weight: 700;
+}
+
+.hkf__prices {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.hkf__price {
+  color: var(--hk-price);
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hkf__was {
+  color: var(--hk-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.hkf__was[hidden] {
+  display: none;
+}
+
+/* ---- Rating ---- */
+
+.hkf__rating {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hkf__stars {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+
+.hkf__stars-row {
+  display: flex;
+  gap: 2px;
+}
+
+.hkf__stars-row svg {
+  flex: 0 0 auto;
+  width: var(--hk-star-size, 15px);
+  height: var(--hk-star-size, 15px);
+}
+
+.hkf__stars-row--empty {
+  color: var(--hk-line);
+}
+
+.hkf__stars-row--full {
+  position: absolute;
+  inset: 0;
+  width: var(--hk-star-pct, 100%);
+  overflow: hidden;
+  color: var(--hk-star);
+}
+
+.hkf__rating-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--hk-green);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.hkf__rating-toggle svg {
+  width: 11px;
+  height: 11px;
+  transition: transform 0.18s ease;
+}
+
+.hkf__rating-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+/* ---- Review card ---- */
+
+.hkf__revpop {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 30;
+  width: min(370px, calc(100vw - 52px));
+  padding: 16px;
+  border: 1px solid var(--hk-line);
+  border-radius: 14px;
+  background: var(--hk-white);
+  box-shadow: 0 18px 44px rgba(15, 27, 42, 0.18);
+  /* display:none, not visibility: a hidden-but-laid-out card widens the page. */
+  animation: hkf-pop 0.18s ease;
+}
+
+.hkf__revpop[hidden] {
+  display: none;
+}
+
+@keyframes hkf-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hkf__revpop-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--hk-soft);
+}
+
+.hkf__revpop-close svg {
+  width: 10px;
+  height: 10px;
+}
+
+.hkf__revpop-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 32px;
+  font-size: 12.5px;
+  color: var(--hk-muted);
+}
+
+.hkf__revpop-score {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--hk-ink);
+}
+
+.hkf__revpop-head b {
+  color: var(--hk-ink);
+}
+
+.hkf__bars {
+  margin-top: 12px;
+}
+
+.hkf__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hkf__bar + .hkf__bar {
+  margin-top: 5px;
+}
+
+.hkf__bar-label {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: 24px;
+  font-size: 10.5px;
+  color: var(--hk-muted);
+}
+
+.hkf__bar-label svg {
+  width: 9px;
+  height: 9px;
+  color: var(--hk-star);
+}
+
+.hkf__bar-track {
+  flex: 1 1 auto;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--hk-soft);
+  overflow: hidden;
+}
+
+.hkf__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--hk-star);
+}
+
+.hkf__bar-count {
+  flex: 0 0 auto;
+  width: 62px;
+  font-size: 10.5px;
+  color: var(--hk-muted);
+  text-align: right;
+}
+
+.hkf__revpop-sep {
+  height: 1px;
+  margin: 14px 0;
+  background: var(--hk-line);
+}
+
+.hkf__review[hidden] {
+  display: none;
+}
+
+.hkf__review-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.hkf__review-photo {
+  flex: 0 0 auto;
+  width: 62px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--hk-soft);
+}
+
+.hkf__review-photo img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.hkf__review-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.hkf__review-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.hkf__review-all {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--hk-muted);
+  white-space: nowrap;
+}
+
+.hkf__review-text {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--hk-muted);
+}
+
+.hkf__revpop-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.hkf__revpop-arrow {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--hk-line);
+  border-radius: 50%;
+  background: var(--hk-white);
+}
+
+.hkf__revpop-arrow svg {
+  width: 11px;
+  height: 11px;
+}
+
+.hkf__revpop-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.hkf__revpop-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hk-line);
+}
+
+.hkf__revpop-dot[aria-current="true"] {
+  background: var(--hk-ink);
+}
+
+/* ---- Bullets ---- */
+
+.hkf__bullets {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.hkf__bullets li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.hkf__bullets svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  color: var(--hk-green);
+}
+
+/* ---- Variant pickers ---- */
+
+.hkf__picker {
+  margin-top: 16px;
+}
+
+.hkf__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hkf__swatch {
+  width: 58px;
+  padding: 0;
+  border: 2px solid var(--hk-line);
+  border-radius: 8px;
+  background: var(--hk-soft);
+  overflow: hidden;
+  line-height: 0;
+  transition: border-color 0.16s ease;
+}
+
+.hkf__swatch img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.hkf__swatch-blank {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.hkf__swatch[aria-checked="true"] {
+  border-color: var(--hk-ink);
+}
+
+.hkf__sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.hkf__size {
+  min-width: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--hk-line);
+  border-radius: 6px;
+  background: var(--hk-white);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.hkf__size[aria-checked="true"] {
+  border-color: var(--hk-green);
+  background: var(--hk-green-soft);
+  color: var(--hk-green);
+}
+
+.hkf__size[data-sold="true"] {
+  color: var(--hk-line);
+  text-decoration: line-through;
+}
+
+.hkf__chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 14px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--hk-muted);
+}
+
+.hkf__chosen a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hkf__finder {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--hk-line);
+  border-radius: 8px;
+  background: var(--hk-white);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  transition: border-color 0.16s ease;
+}
+
+.hkf__finder:hover {
+  border-color: var(--hk-ink);
+}
+
+/* ---- Endorsement ---- */
+
+.hkf__endorse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--hk-muted);
+}
+
+.hkf__endorse img {
+  flex: 0 0 auto;
+  width: auto;
+  max-height: 24px;
+}
+
+.hkf__endorse b {
+  color: var(--hk-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Bundles
+   -------------------------------------------------------------------------- */
+
+.hkf__bundle {
+  margin-top: 18px;
+}
+
+.hkf__bundle-note {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--hk-muted);
+}
+
+.hkf__bundle-note b {
+  color: var(--hk-ink);
+}
+
+.hkf__offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.hkf__offer {
+  position: relative;
+  padding: 26px 12px 12px;
+  border: 2px solid var(--hk-line);
+  border-radius: 10px;
+  background: var(--hk-white);
+  text-align: center;
+  transition: border-color 0.16s ease;
+}
+
+.hkf__offer[aria-checked="true"] {
+  border-color: var(--hk-green);
+}
+
+.hkf__offer-flag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 4px;
+  border-radius: 7px 7px 0 0;
+  background: var(--hk-flag-bg);
+  color: var(--hk-flag-ink);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hkf__offer-flag[hidden] {
+  display: none;
+}
+
+.hkf__offer-img {
+  width: 74px;
+  margin-inline: auto;
+}
+
+.hkf__offer-title {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hkf__offer-price {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--hk-price);
+}
+
+.hkf__offer-was {
+  margin-inline: 4px;
+  color: var(--hk-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.hkf__offer-unit {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--hk-muted);
+}
+
+.hkf__offer-save {
+  display: block;
+  margin-top: 8px;
+  padding: 5px;
+  border-radius: 6px;
+  background: var(--hk-green-soft);
+  color: var(--hk-green);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hkf__offer-save[hidden] {
+  display: none;
+}
+
+/* ---- Per-pair pickers ---- */
+
+.hkf__pairs {
+  margin-top: 14px;
+}
+
+.hkf__pairs[hidden] {
+  display: none;
+}
+
+.hkf__pairs-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--hk-muted);
+}
+
+.hkf__pair {
+  position: relative;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--hk-line);
+  border-radius: 10px;
+  background: var(--hk-white);
+}
+
+.hkf__pair-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hkf__pair-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--hk-green-soft);
+  color: var(--hk-green);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.hkf__pair-stock svg {
+  width: 8px;
+  height: 8px;
+}
+
+.hkf__pair-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--hk-muted);
+}
+
+.hkf__pair-remove[hidden] {
+  display: none;
+}
+
+.hkf__pair-remove svg {
+  width: 9px;
+  height: 9px;
+}
+
+.hkf__pair-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.hkf__pair-img {
+  flex: 0 0 auto;
+  width: 58px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--hk-soft);
+}
+
+.hkf__pair-img img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.hkf__pair-opts {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 8px;
+}
+
+.hkf__pair-opt span {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 10px;
+  color: var(--hk-muted);
+}
+
+.hkf__pair-opt select {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--hk-line);
+  border-radius: 6px;
+  background: var(--hk-white);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.hkf__pair-add {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px dashed var(--hk-green);
+  border-radius: 8px;
+  background: var(--hk-green-soft);
+  color: var(--hk-green);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.hkf__pair-add[hidden] {
+  display: none;
+}
+
+.hkf__pair-add small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* --------------------------------------------------------------------------
+   Add to cart
+   -------------------------------------------------------------------------- */
+
+.hkf__atc {
+  margin-top: 16px;
+}
+
+.hkf__buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--hk-green);
+  color: var(--hk-white);
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.hkf__buy:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.hkf__buy[aria-disabled="true"] {
+  filter: grayscale(0.7);
+  cursor: not-allowed;
+}
+
+.hkf__buy.is-loading {
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.hkf__buy-was {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  text-transform: none;
+}
+
+.hkf__buy-was[hidden] {
+  display: none;
+}
+
+.hkf__buy svg {
+  width: 15px;
+  height: 15px;
+}
+
+.hkf__error {
+  margin-top: 8px;
+  padding: 9px 11px;
+  border-radius: 6px;
+  background: var(--hk-red-soft);
+  color: var(--hk-red);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hkf__error[hidden] {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Reassurance
+   -------------------------------------------------------------------------- */
+
+.hkf__reassure {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--hk-line);
+  border-radius: 10px;
+  background: var(--hk-soft);
+  text-align: center;
+}
+
+.hkf__reassure li {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--hk-muted);
+}
+
+.hkf__reassure-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto 6px;
+  border-radius: 50%;
+  background: var(--hk-white);
+  color: var(--hk-ink);
+}
+
+.hkf__reassure-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.hkf__reassure-icon img {
+  width: 18px;
+  height: auto;
+}
+
+.hkf__reassure-flag {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.hkf__reassure-title {
+  display: block;
+  font-weight: 700;
+  color: var(--hk-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Sell-out risk
+   -------------------------------------------------------------------------- */
+
+.hkf__risk {
+  margin-top: 16px;
+}
+
+.hkf__risk-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--hk-red);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.hkf__risk-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.hkf__risk-trigger svg {
+  width: 11px;
+  height: 11px;
+  margin-left: auto;
+  transition: transform 0.18s ease;
+}
+
+.hkf__risk-trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.hkf__risk-panel {
+  overflow: hidden;
+  transition: height 0.26s ease;
+}
+
+.hkf__risk-panel[hidden] {
+  display: none;
+}
+
+.hkf__risk-inner {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--hk-red-soft);
+  color: var(--hk-red);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* --------------------------------------------------------------------------
+   UGC row
+   -------------------------------------------------------------------------- */
+
+.hkf__ugc {
+  margin-top: 20px;
+}
+
+.hkf__ugc-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.hkf__ugc-list {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.hkf__ugc-list::-webkit-scrollbar {
+  display: none;
+}
+
+.hkf__ugc-list li {
+  flex: 0 0 auto;
+  width: var(--hk-ugc, 150px);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--hk-soft);
+}
+
+.hkf__ugc-list img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 899px) {
+  .hkf__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--hk-stack-gap);
+  }
+
+  .hkf__container {
+    padding-inline: 18px;
+  }
+
+  .hkf__prices {
+    align-items: flex-start;
+  }
+
+  .hkf__pair-body {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hkf *,
+  .hkf *::before,
+  .hkf *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign variant = product.selected_or_first_available_variant
+
+  assign bullets = section.blocks | where: 'type', 'bullet'
+  assign offers = section.blocks | where: 'type', 'offer'
+  assign reassurances = section.blocks | where: 'type', 'reassurance'
+  assign reviews = section.blocks | where: 'type', 'review'
+  assign ugcs = section.blocks | where: 'type', 'ugc'
+
+  assign rating_num = s.rating_value | plus: 0.0
+  assign rating_pct = rating_num | divided_by: 5.0 | times: 100
+
+  assign root_classes = 'hkf'
+  if s.sticky_gallery
+    assign root_classes = root_classes | append: ' hkf--sticky'
+  endif
+-%}
+
+{%- capture hk_star -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.5l2.6 5.3 5.8.85-4.2 4.1.99 5.8L10 14.8l-5.19 2.75.99-5.8-4.2-4.1 5.8-.85z"/></svg>{%- endcapture -%}
+{%- capture hk_stars_row -%}{{ hk_star }}{{ hk_star }}{{ hk_star }}{{ hk_star }}{{ hk_star }}{%- endcapture -%}
+{%- capture hk_check -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>{%- endcapture -%}
+{%- capture hk_chevron -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
+{%- capture hk_left -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg>{%- endcapture -%}
+{%- capture hk_right -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3.5L10.5 8 6 12.5"/></svg>{%- endcapture -%}
+{%- capture hk_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/></svg>{%- endcapture -%}
+{%- capture hk_arrow -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.8 8h10.4M9 3.8L13.2 8 9 12.2"/></svg>{%- endcapture -%}
+{%- capture hk_bag -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 7.5h13.6l-1 12.3H6.2z"/><path d="M8.7 9.4V6.6a3.3 3.3 0 016.6 0v2.8"/></svg>{%- endcapture -%}
+{%- capture hk_box -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>{%- endcapture -%}
+{%- capture hk_shield -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.4l7.6 2.8v6c0 4.7-3.2 8.6-7.6 10.4C7.6 19.8 4.4 15.9 4.4 11.2v-6z"/><path d="M8.6 11.8l2.5 2.5 4.5-4.6"/></svg>{%- endcapture -%}
+{%- capture hk_truck -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.5 6.5h11v10h-11zM13.5 10h4l3 3v3.5h-7z"/><circle cx="6.5" cy="18.5" r="1.8"/><circle cx="17" cy="18.5" r="1.8"/></svg>{%- endcapture -%}
+{%- capture hk_clock -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9.2"/><path d="M12 6.6V12l3.6 2.2"/></svg>{%- endcapture -%}
+
+<div
+  class="{{ root_classes }}"
+  id="hkf-{{ section.id }}"
+  data-hkf-root
+  style="
+    --hk-ink: {{ s.color_ink }};
+    --hk-muted: {{ s.color_muted }};
+    --hk-line: {{ s.color_line }};
+    --hk-soft: {{ s.color_soft }};
+    --hk-accent: {{ s.color_accent }};
+    --hk-green: {{ s.color_green }};
+    --hk-green-soft: {{ s.color_green_soft }};
+    --hk-price: {{ s.color_price }};
+    --hk-star: {{ s.color_star }};
+    --hk-red: {{ s.color_red }};
+    --hk-red-soft: {{ s.color_red_soft }};
+    --hk-flag-bg: {{ s.color_flag_bg }};
+    --hk-flag-ink: {{ s.color_flag_ink }};
+    --hk-max: {{ s.container_width }}px;
+    --hk-radius: {{ s.gallery_radius }}px;
+    --hk-thumb-set: {{ s.thumb_size }}px;
+    --hk-stage-ratio-set: {{ s.gallery_ratio }};
+    --hk-stage-fit-set: {{ s.gallery_fit }};
+    --hk-sticky-top: {{ s.sticky_top }}px;
+    --hk-stack-gap: {{ s.stack_gap }}px;
+    --hk-ugc: {{ s.ugc_width }}px;
+    background: {{ s.color_bg }};
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+  "
+>
+  {%- comment -%}
+    Everything the script needs: the variant matrix so a pair's dropdowns can
+    be resolved to a real variant, and the money format so totals computed in
+    the browser read exactly like the ones Liquid printed.
+  {%- endcomment -%}
+  <script type="application/json" data-hkf-config>
+    {
+      "cartAddUrl": {{ routes.cart_add_url | json }},
+      "cartUrl": {{ routes.cart_url | json }},
+      "rootUrl": {{ routes.root_url | json }},
+      "moneyFormat": {{ shop.money_format | json }},
+      "afterAdd": {{ s.after_add_action | json }},
+      "optionNames": {{ product.options | json }},
+      "variants": [
+        {%- for v in product.variants -%}
+          {
+            "id": {{ v.id | json }},
+            "options": {{ v.options | json }},
+            "price": {{ v.price | json }},
+            "compareAt": {{ v.compare_at_price | default: 0 | json }},
+            "available": {{ v.available | json }},
+            "image": {%- if v.image -%}{{ v.image | image_url: width: 200 | json }}{%- else -%}null{%- endif -%}
+          }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      ],
+      "strings": {
+        "error": {{ s.error_label | json }},
+        "soldOut": {{ s.sold_out_label | json }},
+        "buy": {{ s.buy_label | json }}
+      }
+    }
+  </script>
+
+  <div class="hkf__container">
+    <div class="hkf__grid">
+      {%- comment -%} ================= Gallery ================= {%- endcomment -%}
+      <div class="hkf__gallery">
+        <div class="hkf__stage">
+          <div class="hkf__track" data-hkf-track>
+            {%- if product.media.size > 0 -%}
+              {%- for media in product.media limit: 12 -%}
+                {%- liquid
+                  assign img = media.preview_image
+                  assign img_h = 1000
+                  if img.aspect_ratio > 0
+                    assign img_h = 1000 | divided_by: img.aspect_ratio | round
+                  endif
+                  assign img_loading = 'lazy'
+                  if forloop.first
+                    assign img_loading = 'eager'
+                  endif
+                -%}
+                <div
+                  class="hkf__slide"
+                  data-hkf-slide="{{ forloop.index0 }}"
+                  aria-hidden="{% if forloop.first %}false{% else %}true{% endif %}"
+                >
+                  {{
+                    img
+                    | image_url: width: 1000
+                    | image_tag:
+                      width: 1000,
+                      height: img_h,
+                      widths: '400,600,800,1000',
+                      sizes: '(min-width: 900px) 50vw, 100vw',
+                      loading: img_loading,
+                      alt: img.alt
+                  }}
+                </div>
+              {%- endfor -%}
+            {%- else -%}
+              <div class="hkf__slide">
+                <div class="hkf__placeholder">{{ 'product-1' | placeholder_svg_tag }}</div>
+              </div>
+            {%- endif -%}
+          </div>
+
+          {%- if s.show_arrows and product.media.size > 1 -%}
+            <button type="button" class="hkf__nav hkf__nav--prev" data-hkf-nav="-1" aria-label="{{ s.gallery_prev_label }}" hidden>
+              {{ hk_left }}
+            </button>
+            <button type="button" class="hkf__nav hkf__nav--next" data-hkf-nav="1" aria-label="{{ s.gallery_next_label }}">
+              {{ hk_right }}
+            </button>
+          {%- endif -%}
+        </div>
+
+        {%- comment -%} Thumbnails under the image, not stacked beside it. {%- endcomment -%}
+        {%- if product.media.size > 1 -%}
+          <div class="hkf__thumbs" role="tablist" aria-label="{{ s.thumbs_aria_label }}">
+            {%- for media in product.media limit: 12 -%}
+              <button
+                type="button"
+                class="hkf__thumb"
+                role="tab"
+                aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"
+                data-hkf-thumb="{{ forloop.index0 }}"
+                aria-label="{{ s.thumbs_item_label }} {{ forloop.index }}"
+              >
+                {{ media.preview_image | image_url: width: 200 | image_tag: width: 100, height: 100, loading: 'lazy', alt: '' }}
+              </button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ================= Info ================= {%- endcomment -%}
+      <div class="hkf__info">
+        {%- if s.show_bought and s.bought_text != blank -%}
+          <p class="hkf__bought">{{ hk_bag }}<span>{{ s.bought_text }}</span></p>
+        {%- endif -%}
+
+        <div class="hkf__head">
+          <h1 class="hkf__title">{{ product.title | escape }}</h1>
+          {%- if s.show_price -%}
+            <span class="hkf__prices">
+              <span class="hkf__price" data-hkf-price>{{ variant.price | money }}</span>
+              <s class="hkf__was" data-hkf-was {% unless variant.compare_at_price > variant.price %}hidden{% endunless %}>
+                {{- variant.compare_at_price | money -}}
+              </s>
+            </span>
+          {%- endif -%}
+        </div>
+
+        {%- comment -%} ---------- Rating and review card ---------- {%- endcomment -%}
+        {%- if s.show_rating -%}
+          <div class="hkf__rating">
+            {%- if rating_num > 0 -%}
+              <span class="hkf__stars" style="--hk-star-pct: {{ rating_pct }}%; --hk-star-size: 15px;" role="img" aria-label="{{ s.rating_aria_label }}">
+                <span class="hkf__stars-row hkf__stars-row--empty" aria-hidden="true">{{ hk_stars_row }}</span>
+                <span class="hkf__stars-row hkf__stars-row--full" aria-hidden="true">{{ hk_stars_row }}</span>
+              </span>
+            {%- endif -%}
+            <button
+              type="button"
+              class="hkf__rating-toggle"
+              aria-expanded="false"
+              aria-controls="hkf-revpop-{{ section.id }}"
+              data-hkf-reviews-toggle
+            >
+              <span>{{ s.rating_summary | replace: '[score]', s.rating_score | replace: '[count]', s.rating_count }}</span>
+              {{ hk_chevron }}
+            </button>
+
+            <div class="hkf__revpop" id="hkf-revpop-{{ section.id }}" data-hkf-revpop hidden>
+              <button type="button" class="hkf__revpop-close" data-hkf-reviews-close aria-label="{{ s.close_label }}">
+                {{ hk_close }}
+              </button>
+
+              <div class="hkf__revpop-head">
+                <span class="hkf__revpop-score">{{ s.rating_score }}</span>
+                {%- if rating_num > 0 -%}
+                  <span class="hkf__stars" style="--hk-star-pct: {{ rating_pct }}%; --hk-star-size: 14px;" aria-hidden="true">
+                    <span class="hkf__stars-row hkf__stars-row--empty">{{ hk_stars_row }}</span>
+                    <span class="hkf__stars-row hkf__stars-row--full">{{ hk_stars_row }}</span>
+                  </span>
+                {%- endif -%}
+                <span>{{ s.rating_based_on | replace: '[count]', s.rating_count }}</span>
+              </div>
+
+              {%- comment -%}
+                Five buckets, 5 stars down to 1. The counts are typed, and the
+                bar widths are worked out from their share of the total.
+              {%- endcomment -%}
+              {%- liquid
+                assign c5 = s.stars_5 | plus: 0
+                assign c4 = s.stars_4 | plus: 0
+                assign c3 = s.stars_3 | plus: 0
+                assign c2 = s.stars_2 | plus: 0
+                assign c1 = s.stars_1 | plus: 0
+                assign c_total = c5 | plus: c4 | plus: c3 | plus: c2 | plus: c1 | at_least: 1
+              -%}
+              {%- if c_total > 1 -%}
+                <div class="hkf__bars">
+                  {%- for level in (1..5) -%}
+                    {%- liquid
+                      assign star_n = 6 | minus: level
+                      case star_n
+                        when 5
+                          assign bucket = c5
+                        when 4
+                          assign bucket = c4
+                        when 3
+                          assign bucket = c3
+                        when 2
+                          assign bucket = c2
+                        else
+                          assign bucket = c1
+                      endcase
+                      assign pct = bucket | times: 100.0 | divided_by: c_total
+                    -%}
+                    <div class="hkf__bar">
+                      <span class="hkf__bar-label">{{ star_n }}{{ hk_star }}</span>
+                      <span class="hkf__bar-track"><span class="hkf__bar-fill" style="width: {{ pct }}%;"></span></span>
+                      <span class="hkf__bar-count">({{ bucket }})</span>
+                    </div>
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+
+              {%- if reviews.size > 0 -%}
+                <div class="hkf__revpop-sep" aria-hidden="true"></div>
+                {%- for block in reviews -%}
+                  <div class="hkf__review" data-hkf-review="{{ forloop.index0 }}" {% unless forloop.first %}hidden{% endunless %} {{ block.shopify_attributes }}>
+                    <div class="hkf__review-top">
+                      {%- if block.settings.image != blank -%}
+                        <span class="hkf__review-photo">
+                          {{ block.settings.image | image_url: width: 200 | image_tag: width: 100, height: 100, loading: 'lazy', alt: '' }}
+                        </span>
+                      {%- endif -%}
+                      <span class="hkf__review-body">
+                        <span class="hkf__review-name">
+                          <span>{{ block.settings.name }}</span>
+                          {%- if s.reviews_all_url != blank -%}
+                            <a class="hkf__review-all" href="{{ s.reviews_all_url }}">{{ s.reviews_all_label }} ›</a>
+                          {%- endif -%}
+                        </span>
+                        <span class="hkf__review-text">{{ block.settings.text }}</span>
+                      </span>
+                    </div>
+                  </div>
+                {%- endfor -%}
+
+                {%- if reviews.size > 1 -%}
+                  <div class="hkf__revpop-nav">
+                    <button type="button" class="hkf__revpop-arrow" data-hkf-review-prev aria-label="{{ s.reviews_prev_label }}">{{ hk_left }}</button>
+                    <div class="hkf__revpop-dots">
+                      {%- for block in reviews -%}
+                        <button
+                          type="button"
+                          class="hkf__revpop-dot"
+                          data-hkf-review-dot="{{ forloop.index0 }}"
+                          aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+                          aria-label="{{ s.reviews_go_label }} {{ forloop.index }}"
+                        ></button>
+                      {%- endfor -%}
+                    </div>
+                    <button type="button" class="hkf__revpop-arrow" data-hkf-review-next aria-label="{{ s.reviews_next_label }}">{{ hk_right }}</button>
+                  </div>
+                {%- endif -%}
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- if s.show_bullets and bullets.size > 0 -%}
+          <ul class="hkf__bullets">
+            {%- for block in bullets -%}
+              <li {{ block.shopify_attributes }}>{{ hk_check }}<span>{{ block.settings.text }}</span></li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- comment -%} ---------- Variant pickers ---------- {%- endcomment -%}
+        {%- if s.show_picker and product.options.size > 0 -%}
+          <div class="hkf__picker">
+            {%- for option in product.options_with_values -%}
+              {%- comment -%}
+                The option's position is captured here rather than read back
+                through forloop.parentloop inside the values loop, which does
+                not resolve reliably.
+              {%- endcomment -%}
+              {%- assign opt_index = forloop.index0 -%}
+              {%- assign opt_current = variant.options[opt_index] -%}
+              {%- if forloop.first -%}
+                {%- comment -%}
+                  First option as image swatches: one variant per value gives
+                  the picture, which is what a colour row needs.
+                {%- endcomment -%}
+                <div class="hkf__swatches" role="radiogroup" aria-label="{{ option.name }}">
+                  {%- for value in option.values -%}
+                    {%- comment -%}
+                      Variants carry option1/2/3, never a property named after
+                      the option, so the swatch image is found through option1.
+                    {%- endcomment -%}
+                    {%- assign match = product.variants | where: 'option1', value | first -%}
+                    <button
+                      type="button"
+                      class="hkf__swatch"
+                      role="radio"
+                      aria-checked="{% if value == opt_current %}true{% else %}false{% endif %}"
+                      tabindex="{% if value == opt_current %}0{% else %}-1{% endif %}"
+                      data-hkf-opt="{{ opt_index }}"
+                      data-hkf-value="{{ value | escape }}"
+                      aria-label="{{ value }}"
+                    >
+                      {%- if match.image != blank -%}
+                        {{ match.image | image_url: width: 160 | image_tag: width: 80, height: 80, loading: 'lazy', alt: '' }}
+                      {%- else -%}
+                        <span class="hkf__swatch-blank"></span>
+                      {%- endif -%}
+                    </button>
+                  {%- endfor -%}
+                </div>
+              {%- else -%}
+                <div class="hkf__sizes" role="radiogroup" aria-label="{{ option.name }}">
+                  {%- for value in option.values -%}
+                    <button
+                      type="button"
+                      class="hkf__size"
+                      role="radio"
+                      aria-checked="{% if value == opt_current %}true{% else %}false{% endif %}"
+                      tabindex="{% if value == opt_current %}0{% else %}-1{% endif %}"
+                      data-hkf-opt="{{ opt_index }}"
+                      data-hkf-value="{{ value | escape }}"
+                    >
+                      {{- value -}}
+                    </button>
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+
+            <p class="hkf__chosen">
+              <span data-hkf-chosen>{{ variant.title }}</span>
+              {%- if s.sizeguide_url != blank -%}
+                <a href="{{ s.sizeguide_url }}">{{ s.sizeguide_label }}</a>
+              {%- endif -%}
+            </p>
+          </div>
+        {%- endif -%}
+
+        {%- if s.show_finder and s.finder_label != blank -%}
+          <button type="button" class="hkf__finder" data-hkf-finder>{{ s.finder_label }}</button>
+        {%- endif -%}
+
+        {%- if s.show_endorse and s.endorse_text != blank -%}
+          <div class="hkf__endorse">
+            {%- if s.endorse_logo != blank -%}
+              {{ s.endorse_logo | image_url: width: 160 | image_tag: width: 80, height: 24, loading: 'lazy', alt: '' }}
+            {%- endif -%}
+            <span>{{ s.endorse_text }}</span>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} ---------- Bundles ---------- {%- endcomment -%}
+        {%- if s.show_bundle and offers.size > 0 -%}
+          <div class="hkf__bundle" data-hkf-bundle>
+            {%- if s.bundle_note != blank -%}
+              <p class="hkf__bundle-note">{{ s.bundle_note }}</p>
+            {%- endif -%}
+
+            <div class="hkf__offers" role="radiogroup" aria-label="{{ s.bundle_aria_label }}">
+              {%- for block in offers -%}
+                {%- liquid
+                  assign b = block.settings
+                  assign qty = b.pairs | at_least: 1
+                  assign unit = b.unit_price | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  if unit <= 0
+                    assign unit = variant.price
+                  endif
+                  assign unit_was = b.unit_compare | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                -%}
+                <button
+                  type="button"
+                  class="hkf__offer"
+                  role="radio"
+                  aria-checked="{% if forloop.first %}true{% else %}false{% endif %}"
+                  tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"
+                  data-hkf-offer="{{ forloop.index0 }}"
+                  data-qty="{{ qty }}"
+                  data-unit="{{ unit }}"
+                  data-unit-was="{{ unit_was }}"
+                  data-code="{{ b.discount_code | strip | escape }}"
+                  {{ block.shopify_attributes }}
+                >
+                  <span class="hkf__offer-flag" {% if b.flag == blank %}hidden{% endif %}>{{ b.flag }}</span>
+                  {%- if b.image != blank -%}
+                    <span class="hkf__offer-img">
+                      {{ b.image | image_url: width: 200 | image_tag: width: 100, height: 70, loading: 'lazy', alt: '' }}
+                    </span>
+                  {%- endif -%}
+                  <span class="hkf__offer-title">{{ b.title }}</span>
+                  <span class="hkf__offer-price">
+                    {%- if unit_was > unit -%}<s class="hkf__offer-was">{{ unit_was | money }}</s>{%- endif -%}
+                    {{ unit | money }}
+                    <span class="hkf__offer-unit">{{ s.per_pair_label }}</span>
+                  </span>
+                  <span class="hkf__offer-save" {% if b.save_label == blank %}hidden{% endif %}>{{ b.save_label }}</span>
+                </button>
+              {%- endfor -%}
+            </div>
+
+            {%- comment -%}
+              One row per pair, each with the product's own option dropdowns.
+              Rows are cloned from this template as the chosen quantity grows.
+            {%- endcomment -%}
+            <div class="hkf__pairs" data-hkf-pairs hidden>
+              {%- if s.pairs_title != blank -%}
+                <p class="hkf__pairs-title">{{ s.pairs_title }}</p>
+              {%- endif -%}
+              <div data-hkf-pair-list></div>
+              <button type="button" class="hkf__pair-add" data-hkf-pair-add hidden>
+                {{ s.pair_add_label }}
+                {%- if s.pair_add_note != blank -%}<small>{{ s.pair_add_note }}</small>{%- endif -%}
+              </button>
+            </div>
+
+            <template data-hkf-pair-template>
+              <div class="hkf__pair" data-hkf-pair>
+                <div class="hkf__pair-head">
+                  <span data-hkf-pair-label></span>
+                  <span class="hkf__pair-stock">{{ hk_check }}<span>{{ s.in_stock_label }}</span></span>
+                  <button type="button" class="hkf__pair-remove" data-hkf-pair-remove aria-label="{{ s.pair_remove_label }}" hidden>
+                    {{ hk_close }}
+                  </button>
+                </div>
+                <div class="hkf__pair-body">
+                  <span class="hkf__pair-img" data-hkf-pair-img></span>
+                  <div class="hkf__pair-opts" data-hkf-pair-opts></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} ---------- Add to cart ---------- {%- endcomment -%}
+        <div class="hkf__atc">
+          <button type="button" class="hkf__buy" data-hkf-add {% unless variant.available %}aria-disabled="true"{% endunless %}>
+            <span data-hkf-buy-label>
+              {%- if variant.available -%}{{ s.buy_label }}{%- else -%}{{ s.sold_out_label }}{%- endif -%}
+            </span>
+            <s class="hkf__buy-was" data-hkf-buy-was {% unless variant.compare_at_price > variant.price %}hidden{% endunless %}>
+              {{- variant.compare_at_price | money -}}
+            </s>
+            <span data-hkf-buy-total>{{ variant.price | money }}</span>
+            {{ hk_arrow }}
+          </button>
+          <p class="hkf__error" role="alert" data-hkf-error hidden></p>
+        </div>
+
+        {%- if s.show_reassure and reassurances.size > 0 -%}
+          <ul class="hkf__reassure">
+            {%- for block in reassurances -%}
+              {%- liquid
+                assign r = block.settings
+                case r.icon
+                  when 'box'
+                    assign r_icon = hk_box
+                  when 'shield'
+                    assign r_icon = hk_shield
+                  when 'truck'
+                    assign r_icon = hk_truck
+                  when 'clock'
+                    assign r_icon = hk_clock
+                  else
+                    assign r_icon = hk_check
+                endcase
+              -%}
+              <li {{ block.shopify_attributes }}>
+                <span class="hkf__reassure-icon">
+                  {%- if r.image != blank -%}
+                    {{ r.image | image_url: width: 80 | image_tag: width: 40, height: 40, loading: 'lazy', alt: '' }}
+                  {%- elsif r.flag != blank -%}
+                    <span class="hkf__reassure-flag">{{ r.flag }}</span>
+                  {%- else -%}
+                    {{ r_icon }}
+                  {%- endif -%}
+                </span>
+                <span class="hkf__reassure-title">{{ r.title }}</span>
+                {%- if r.text != blank -%}<span>{{ r.text }}</span>{%- endif -%}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        {%- comment -%} ---------- Sell-out risk ---------- {%- endcomment -%}
+        {%- if s.show_risk and s.risk_label != blank -%}
+          <div class="hkf__risk">
+            <button
+              type="button"
+              class="hkf__risk-trigger"
+              aria-expanded="{{ s.risk_open }}"
+              aria-controls="hkf-risk-{{ section.id }}"
+              data-hkf-risk
+            >
+              <span class="hkf__risk-dot" aria-hidden="true"></span>
+              <span>{{ s.risk_label }}</span>
+              {{ hk_chevron }}
+            </button>
+            <div class="hkf__risk-panel" id="hkf-risk-{{ section.id }}" data-hkf-risk-panel {% unless s.risk_open %}hidden{% endunless %}>
+              <div class="hkf__risk-inner">{{ s.risk_text }}</div>
+            </div>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} ---------- UGC ---------- {%- endcomment -%}
+        {%- if s.show_ugc and ugcs.size > 0 -%}
+          <div class="hkf__ugc">
+            {%- if s.ugc_title != blank -%}
+              <h2 class="hkf__ugc-title">{{ s.ugc_title }}</h2>
+            {%- endif -%}
+            <ul class="hkf__ugc-list">
+              {%- for block in ugcs -%}
+                <li {{ block.shopify_attributes }}>
+                  {%- if block.settings.image != blank -%}
+                    {{ block.settings.image | image_url: width: 400 | image_tag: width: 200, height: 200, loading: 'lazy', alt: '' }}
+                  {%- endif -%}
+                </li>
+              {%- endfor -%}
+            </ul>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('hkf-{{ section.id }}');
+    if (!root || root.dataset.hkfReady === 'true') return;
+    root.dataset.hkfReady = 'true';
+
+    function $(sel, ctx) {
+      return (ctx || root).querySelector(sel);
+    }
+    function $$(sel, ctx) {
+      return Array.prototype.slice.call((ctx || root).querySelectorAll(sel));
+    }
+
+    var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var config;
+    try {
+      config = JSON.parse($('[data-hkf-config]').textContent);
+    } catch (error) {
+      console.warn('[hikefoot] configuration illisible', error);
+      return;
+    }
+
+    /* ---------------- Money ----------------
+       Totals are worked out in the browser, so they have to come back out in
+       the shop's own format rather than a guess at it. */
+    function formatMoney(cents) {
+      var value = (cents || 0) / 100;
+
+      function withDelimiters(precision, thousands, decimal) {
+        var fixed = value.toFixed(precision);
+        var parts = fixed.split('.');
+        var whole = parts[0].replace(/(\d)(?=(\d\d\d)+(?!\d))/g, '$1' + thousands);
+        return parts[1] ? whole + decimal + parts[1] : whole;
+      }
+
+      /* No literal brace pattern is written here: Shopify's Liquid lexer
+         stops a tag at the first closing brace, even inside a JS string. */
+      var format = config.moneyFormat;
+      if (!format) return withDelimiters(2, ',', '.');
+
+      return format.replace(/\{\{\s*(\w+)\s*\}\}/g, function (_, name) {
+        switch (name) {
+          case 'amount':
+            return withDelimiters(2, ',', '.');
+          case 'amount_no_decimals':
+            return withDelimiters(0, ',', '.');
+          case 'amount_with_comma_separator':
+            return withDelimiters(2, '.', ',');
+          case 'amount_no_decimals_with_comma_separator':
+            return withDelimiters(0, '.', ',');
+          case 'amount_with_apostrophe_separator':
+            return withDelimiters(2, "'", '.');
+          case 'amount_with_space_separator':
+            return withDelimiters(2, ' ', ',');
+          case 'amount_no_decimals_with_space_separator':
+            return withDelimiters(0, ' ', ',');
+          default:
+            return withDelimiters(2, ',', '.');
+        }
+      });
+    }
+
+    /* ---------------- Variant matrix ---------------- */
+
+    var variants = config.variants || [];
+    var optionCount = (config.optionNames || []).length;
+    var current = variants[0] || null;
+
+    /* The picker holds one chosen value per option; a variant is whichever
+       row matches all of them. */
+    var chosen = [];
+
+    function findVariant(values) {
+      for (var i = 0; i < variants.length; i++) {
+        var v = variants[i];
+        var ok = true;
+        for (var j = 0; j < values.length; j++) {
+          if (v.options[j] !== values[j]) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) return v;
+      }
+      return null;
+    }
+
+    /* ---------------- Sticky gallery guard ---------------- */
+
+    if (root.classList.contains('hkf--sticky')) {
+      var stickyCol = $('.hkf__gallery');
+      if (stickyCol) {
+        var measureSticky = function () {
+          var top = parseInt(getComputedStyle(root).getPropertyValue('--hk-sticky-top'), 10) || 0;
+          var fits = stickyCol.offsetHeight + top + 24 <= window.innerHeight;
+          root.classList.toggle('hkf--sticky-off', !fits);
+        };
+        measureSticky();
+        window.addEventListener('resize', measureSticky);
+        window.addEventListener('load', measureSticky);
+        if (window.ResizeObserver) new ResizeObserver(measureSticky).observe(stickyCol);
+      }
+    }
+
+    /* ---------------- Gallery ---------------- */
+
+    var thumbs = $$('[data-hkf-thumb]');
+    var slides = $$('[data-hkf-slide]');
+    var stage = $('.hkf__stage');
+    var track = $('[data-hkf-track]');
+    var navPrev = $('[data-hkf-nav="-1"]');
+    var navNext = $('[data-hkf-nav="1"]');
+    var slideIndex = 0;
+
+    function shift(px, animate) {
+      if (!track) return;
+      track.classList.toggle('is-dragging', !animate);
+      track.style.transform = 'translate3d(' + px + 'px, 0, 0)';
+    }
+
+    function goToSlide(index, animate) {
+      if (!slides.length) return;
+      var target = Number(index) || 0;
+      /* The rail has two ends: clamp rather than wrap, or jumping from the
+         last image to the first would sweep across every slide. */
+      if (target < 0) target = 0;
+      if (target > slides.length - 1) target = slides.length - 1;
+
+      var stepMove = Math.abs(target - slideIndex) === 1;
+      slideIndex = target;
+      shift(-slideIndex * (stage ? stage.clientWidth : 0), stepMove && animate !== false && !REDUCED);
+
+      slides.forEach(function (slide, i) {
+        slide.setAttribute('aria-hidden', i === slideIndex ? 'false' : 'true');
+      });
+      if (navPrev) navPrev.hidden = slideIndex === 0;
+      if (navNext) navNext.hidden = slideIndex === slides.length - 1;
+      thumbs.forEach(function (thumb) {
+        var active = thumb.getAttribute('data-hkf-thumb') === String(slideIndex);
+        thumb.setAttribute('aria-selected', active ? 'true' : 'false');
+        thumb.tabIndex = active ? 0 : -1;
+        if (active && thumb.scrollIntoView) thumb.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      });
+    }
+
+    if (stage && window.ResizeObserver) {
+      var lastWidth = stage.clientWidth;
+      new ResizeObserver(function () {
+        if (stage.clientWidth === lastWidth) return;
+        lastWidth = stage.clientWidth;
+        shift(-slideIndex * lastWidth, false);
+      }).observe(stage);
+    }
+
+    thumbs.forEach(function (thumb) {
+      thumb.addEventListener('click', function () {
+        goToSlide(thumb.getAttribute('data-hkf-thumb'), true);
+      });
+    });
+
+    if (thumbs.length) {
+      thumbs[0].parentNode.addEventListener('keydown', function (event) {
+        var i = thumbs.indexOf(document.activeElement);
+        if (i === -1) return;
+        var next = null;
+        if (event.key === 'ArrowRight') next = Math.min(i + 1, thumbs.length - 1);
+        else if (event.key === 'ArrowLeft') next = Math.max(i - 1, 0);
+        else return;
+        event.preventDefault();
+        thumbs[next].focus();
+        goToSlide(thumbs[next].getAttribute('data-hkf-thumb'), true);
+      });
+    }
+
+    $$('[data-hkf-nav]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        goToSlide(slideIndex + Number(btn.getAttribute('data-hkf-nav')), true);
+      });
+    });
+
+    /* ---- Swipe: touch only, and only once clearly horizontal ---- */
+    if (stage && track && slides.length > 1) {
+      var startX = 0;
+      var startY = 0;
+      var delta = 0;
+      var tracking = false;
+      var decided = false;
+
+      stage.addEventListener(
+        'touchstart',
+        function (event) {
+          if (event.touches.length !== 1) return;
+          startX = event.touches[0].clientX;
+          startY = event.touches[0].clientY;
+          delta = 0;
+          tracking = true;
+          decided = false;
+        },
+        { passive: true }
+      );
+
+      stage.addEventListener(
+        'touchmove',
+        function (event) {
+          if (!tracking) return;
+          var dx = event.touches[0].clientX - startX;
+          var dy = event.touches[0].clientY - startY;
+          if (!decided) {
+            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+            decided = true;
+            if (Math.abs(dx) <= Math.abs(dy)) {
+              tracking = false;
+              return;
+            }
+          }
+          var atStart = slideIndex === 0 && dx > 0;
+          var atEnd = slideIndex === slides.length - 1 && dx < 0;
+          delta = atStart || atEnd ? dx / 3 : dx;
+          shift(-slideIndex * stage.clientWidth + delta, false);
+        },
+        { passive: true }
+      );
+
+      var release = function () {
+        if (!tracking && delta === 0) return;
+        tracking = false;
+        var width = stage.clientWidth || 1;
+        var threshold = Math.min(60, width * 0.18);
+        var next = slideIndex;
+        if (Math.abs(delta) > threshold) next = slideIndex + (delta < 0 ? 1 : -1);
+        delta = 0;
+        if (next === slideIndex) shift(-slideIndex * width, !REDUCED);
+        else goToSlide(next, true);
+      };
+
+      stage.addEventListener('touchend', release, { passive: true });
+      stage.addEventListener('touchcancel', release, { passive: true });
+    }
+
+    /* ---------------- Review popover ---------------- */
+
+    var revToggle = $('[data-hkf-reviews-toggle]');
+    var revPop = $('[data-hkf-revpop]');
+
+    if (revToggle && revPop) {
+      var cards = $$('[data-hkf-review]', revPop);
+      var dots = $$('[data-hkf-review-dot]', revPop);
+      var reviewIndex = 0;
+
+      var showReview = function (index) {
+        if (!cards.length) return;
+        reviewIndex = (index + cards.length) % cards.length;
+        cards.forEach(function (card, i) {
+          card.hidden = i !== reviewIndex;
+        });
+        dots.forEach(function (dot, i) {
+          dot.setAttribute('aria-current', i === reviewIndex ? 'true' : 'false');
+        });
+      };
+
+      var closeReviews = function (giveFocusBack) {
+        revPop.hidden = true;
+        revToggle.setAttribute('aria-expanded', 'false');
+        if (giveFocusBack) revToggle.focus();
+      };
+
+      revToggle.addEventListener('click', function () {
+        var open = revToggle.getAttribute('aria-expanded') === 'true';
+        if (open) closeReviews(false);
+        else {
+          revPop.hidden = false;
+          revToggle.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      $$('[data-hkf-reviews-close]', revPop).forEach(function (el) {
+        el.addEventListener('click', function () {
+          closeReviews(true);
+        });
+      });
+
+      var rPrev = $('[data-hkf-review-prev]', revPop);
+      var rNext = $('[data-hkf-review-next]', revPop);
+      if (rPrev) rPrev.addEventListener('click', function () { showReview(reviewIndex - 1); });
+      if (rNext) rNext.addEventListener('click', function () { showReview(reviewIndex + 1); });
+      dots.forEach(function (dot, i) {
+        dot.addEventListener('click', function () { showReview(i); });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (revPop.hidden || event.key !== 'Escape') return;
+        event.preventDefault();
+        closeReviews(true);
+      });
+
+      document.addEventListener('click', function (event) {
+        if (revPop.hidden) return;
+        if (revPop.contains(event.target) || revToggle.contains(event.target)) return;
+        closeReviews(false);
+      });
+    }
+
+    /* ---------------- Sell-out risk ---------------- */
+
+    var riskTrigger = $('[data-hkf-risk]');
+    var riskPanel = $('[data-hkf-risk-panel]');
+    if (riskTrigger && riskPanel) {
+      if (!riskPanel.hidden) riskPanel.style.height = 'auto';
+
+      riskTrigger.addEventListener('click', function () {
+        var open = riskTrigger.getAttribute('aria-expanded') === 'true';
+        riskTrigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+
+        if (REDUCED) {
+          riskPanel.hidden = open;
+          return;
+        }
+        if (open) {
+          riskPanel.style.height = riskPanel.scrollHeight + 'px';
+          void riskPanel.offsetHeight;
+          riskPanel.style.height = '0px';
+          riskPanel.addEventListener('transitionend', function once(e) {
+            if (e.propertyName !== 'height' || e.target !== riskPanel) return;
+            riskPanel.hidden = true;
+            riskPanel.removeEventListener('transitionend', once);
+          });
+        } else {
+          riskPanel.hidden = false;
+          var target = riskPanel.scrollHeight;
+          riskPanel.style.height = '0px';
+          void riskPanel.offsetHeight;
+          riskPanel.style.height = target + 'px';
+          riskPanel.addEventListener('transitionend', function once(e) {
+            if (e.propertyName !== 'height' || e.target !== riskPanel) return;
+            riskPanel.style.height = 'auto';
+            riskPanel.removeEventListener('transitionend', once);
+          });
+        }
+      });
+    }
+
+    /* ---------------- Bundle and pairs ---------------- */
+
+    var bundle = $('[data-hkf-bundle]');
+    var offers = $$('[data-hkf-offer]');
+    var pairsBox = $('[data-hkf-pairs]');
+    var pairList = $('[data-hkf-pair-list]');
+    var pairTemplate = $('[data-hkf-pair-template]');
+    var pairAdd = $('[data-hkf-pair-add]');
+    var offerIndex = 0;
+
+    var priceEl = $('[data-hkf-price]');
+    var wasEl = $('[data-hkf-was]');
+    var buyTotal = $('[data-hkf-buy-total]');
+    var buyWas = $('[data-hkf-buy-was]');
+    var buyLabel = $('[data-hkf-buy-label]');
+    var chosenEl = $('[data-hkf-chosen]');
+    var addButton = $('[data-hkf-add]');
+    var errorBox = $('[data-hkf-error]');
+
+    function currentOffer() {
+      return offers[offerIndex] || null;
+    }
+
+    function offerQty() {
+      var o = currentOffer();
+      return o ? Number(o.getAttribute('data-qty')) || 1 : 1;
+    }
+
+    function offerUnit() {
+      var o = currentOffer();
+      var unit = o ? Number(o.getAttribute('data-unit')) : 0;
+      return unit > 0 ? unit : current ? current.price : 0;
+    }
+
+    function offerUnitWas() {
+      var o = currentOffer();
+      return o ? Number(o.getAttribute('data-unit-was')) || 0 : 0;
+    }
+
+    /** Every row's dropdown values, in option order. */
+    function pairRows() {
+      return $$('[data-hkf-pair]', pairList || root);
+    }
+
+    function rowVariant(row) {
+      var values = $$('select', row).map(function (sel) {
+        return sel.value;
+      });
+      return findVariant(values);
+    }
+
+    function buildRow(index) {
+      var frag = pairTemplate.content.cloneNode(true);
+      var row = frag.querySelector('[data-hkf-pair]');
+      var label = frag.querySelector('[data-hkf-pair-label]');
+      var opts = frag.querySelector('[data-hkf-pair-opts]');
+
+      label.textContent = ({{ s.pair_label | json }}).replace('[n]', index + 1);
+
+      (config.optionNames || []).forEach(function (name, oi) {
+        var wrap = document.createElement('label');
+        wrap.className = 'hkf__pair-opt';
+        var caption = document.createElement('span');
+        caption.textContent = name;
+        var select = document.createElement('select');
+
+        /* Values in the order the product declares them, without repeats. */
+        var seen = {};
+        variants.forEach(function (v) {
+          var value = v.options[oi];
+          if (seen[value]) return;
+          seen[value] = true;
+          var option = document.createElement('option');
+          option.value = value;
+          option.textContent = value;
+          select.appendChild(option);
+        });
+        select.value = (current && current.options[oi]) || select.value;
+
+        select.addEventListener('change', function () {
+          syncRow(row);
+          renderTotals();
+        });
+
+        wrap.appendChild(caption);
+        wrap.appendChild(select);
+        opts.appendChild(wrap);
+      });
+
+      pairList.appendChild(frag);
+      syncRow(row);
+      return row;
+    }
+
+    function syncRow(row) {
+      var v = rowVariant(row);
+      var holder = $('[data-hkf-pair-img]', row);
+      if (holder) {
+        holder.innerHTML = '';
+        if (v && v.image) {
+          var img = document.createElement('img');
+          img.src = v.image;
+          img.alt = '';
+          img.loading = 'lazy';
+          holder.appendChild(img);
+        }
+      }
+      var stock = $('.hkf__pair-stock', row);
+      if (stock) stock.hidden = !(v && v.available);
+    }
+
+    function syncRemoveButtons() {
+      var rows = pairRows();
+      rows.forEach(function (row, i) {
+        var btn = $('[data-hkf-pair-remove]', row);
+        /* The first pair is the order itself: it can never be removed. */
+        if (btn) btn.hidden = i === 0 || rows.length <= 1;
+        var label = $('[data-hkf-pair-label]', row);
+        if (label) label.textContent = ({{ s.pair_label | json }}).replace('[n]', i + 1);
+      });
+    }
+
+    function setRowCount(target) {
+      if (!pairList || !pairTemplate) return;
+      var rows = pairRows();
+      while (rows.length < target) {
+        buildRow(rows.length);
+        rows = pairRows();
+      }
+      while (rows.length > target) {
+        rows[rows.length - 1].remove();
+        rows = pairRows();
+      }
+      syncRemoveButtons();
+    }
+
+    function renderTotals() {
+      var qty = pairsBox && !pairsBox.hidden ? pairRows().length : offerQty();
+      if (qty < 1) qty = 1;
+
+      var unit = offerUnit();
+      var unitWas = offerUnitWas();
+      /* A bundle with no compare price of its own falls back to the plain
+         variant price, which is what the discount is measured against. */
+      if (unitWas <= unit && current) unitWas = current.compareAt > current.price ? current.compareAt : current.price;
+
+      var total = unit * qty;
+      var totalWas = unitWas * qty;
+
+      if (buyTotal) buyTotal.textContent = formatMoney(total);
+      if (buyWas) {
+        buyWas.textContent = formatMoney(totalWas);
+        buyWas.hidden = totalWas <= total;
+      }
+      if (priceEl) priceEl.textContent = formatMoney(current ? current.price : unit);
+      if (wasEl && current) {
+        wasEl.textContent = formatMoney(current.compareAt);
+        wasEl.hidden = !(current.compareAt > current.price);
+      }
+      if (pairAdd) pairAdd.hidden = !(pairsBox && !pairsBox.hidden) || pairRows().length >= 6;
+    }
+
+    offers.forEach(function (offer, i) {
+      offer.addEventListener('click', function () {
+        offerIndex = i;
+        offers.forEach(function (other, j) {
+          other.setAttribute('aria-checked', j === i ? 'true' : 'false');
+          other.tabIndex = j === i ? 0 : -1;
+        });
+        var qty = offerQty();
+        /* One pair needs no chooser: the picker above already said which. */
+        if (pairsBox) pairsBox.hidden = qty < 2;
+        setRowCount(qty < 2 ? 0 : qty);
+        renderTotals();
+      });
+    });
+
+    if (pairAdd) {
+      pairAdd.addEventListener('click', function () {
+        setRowCount(pairRows().length + 1);
+        renderTotals();
+      });
+    }
+
+    if (pairList) {
+      pairList.addEventListener('click', function (event) {
+        var btn = event.target.closest('[data-hkf-pair-remove]');
+        if (!btn) return;
+        var row = btn.closest('[data-hkf-pair]');
+        if (row && pairRows().length > 1) {
+          row.remove();
+          syncRemoveButtons();
+          renderTotals();
+        }
+      });
+    }
+
+    /* ---------------- Option pickers ---------------- */
+
+    function applyChoice(optIndex, value) {
+      chosen[optIndex] = value;
+      var found = findVariant(chosen);
+      if (found) current = found;
+
+      $$('[data-hkf-opt]').forEach(function (btn) {
+        if (Number(btn.getAttribute('data-hkf-opt')) !== optIndex) return;
+        var on = btn.getAttribute('data-hkf-value') === value;
+        btn.setAttribute('aria-checked', on ? 'true' : 'false');
+        btn.tabIndex = on ? 0 : -1;
+      });
+
+      if (chosenEl && current) chosenEl.textContent = current.options.join(' / ');
+      if (addButton) {
+        var sold = current ? !current.available : true;
+        addButton.setAttribute('aria-disabled', sold ? 'true' : 'false');
+        if (buyLabel) buyLabel.textContent = sold ? config.strings.soldOut : config.strings.buy;
+      }
+      renderTotals();
+    }
+
+    if (current) chosen = current.options.slice();
+
+    $$('[data-hkf-opt]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        applyChoice(Number(btn.getAttribute('data-hkf-opt')), btn.getAttribute('data-hkf-value'));
+      });
+    });
+
+    /* ---------------- Add to cart ---------------- */
+
+    function readResponse(response) {
+      return response.json().then(function (data) {
+        if (!response.ok) throw new Error(data.description || data.message || config.strings.error);
+        return data;
+      });
+    }
+
+    if (addButton) {
+      addButton.addEventListener('click', function () {
+        if (addButton.classList.contains('is-loading')) return;
+        if (addButton.getAttribute('aria-disabled') === 'true') return;
+
+        if (errorBox) errorBox.hidden = true;
+        addButton.classList.add('is-loading');
+
+        var items = [];
+        if (pairsBox && !pairsBox.hidden) {
+          pairRows().forEach(function (row) {
+            var v = rowVariant(row);
+            if (v) items.push({ id: v.id, quantity: 1 });
+          });
+        }
+        if (!items.length && current) items.push({ id: current.id, quantity: 1 });
+
+        fetch(config.cartAddUrl, {
+          method: 'POST',
+          headers: { Accept: 'application/javascript', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: items })
+        })
+          .then(readResponse)
+          .then(function (payload) {
+            document.dispatchEvent(new CustomEvent('hkf:cart-added', { bubbles: true, detail: payload }));
+
+            var offer = currentOffer();
+            var code = offer ? offer.getAttribute('data-code') : '';
+            var destination = config.afterAdd === 'checkout' ? '/checkout' : config.cartUrl;
+
+            /* A bundle discount only exists at checkout, so the code has to
+               be applied on the way there rather than shown as a promise. */
+            if (config.afterAdd !== 'stay') {
+              if (code) {
+                window.location.href =
+                  config.rootUrl.replace(/\/$/, '') +
+                  '/discount/' +
+                  encodeURIComponent(code) +
+                  '?redirect=' +
+                  encodeURIComponent(destination);
+              } else {
+                window.location.href = destination;
+              }
+              return;
+            }
+
+            var drawer = document.querySelector('cart-drawer, [data-cart-drawer]');
+            if (drawer && typeof drawer.open === 'function') drawer.open();
+            addButton.classList.remove('is-loading');
+          })
+          .catch(function (error) {
+            addButton.classList.remove('is-loading');
+            if (errorBox) {
+              errorBox.textContent = error.message || config.strings.error;
+              errorBox.hidden = false;
+            }
+          });
+      });
+    }
+
+    /* First paint: the offer row starts on its first card. */
+    if (offers.length) offers[0].click();
+    else renderTotals();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Produit HikeFoot",
+  "tag": "section",
+  "class": "produit-hikefoot-section",
+  "max_blocks": 50,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Panier"
+    },
+    {
+      "type": "select",
+      "id": "after_add_action",
+      "label": "Après l'ajout",
+      "options": [
+        { "value": "stay", "label": "Rester sur la page" },
+        { "value": "cart", "label": "Aller au panier" },
+        { "value": "checkout", "label": "Passer au paiement" }
+      ],
+      "default": "stay"
+    },
+    { "type": "text", "id": "buy_label", "label": "Texte du bouton", "default": "Ajouter au panier" },
+    { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
+    { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Ajout impossible pour le moment. Réessaie dans un instant." },
+
+    {
+      "type": "header",
+      "content": "Galerie"
+    },
+    {
+      "type": "select",
+      "id": "gallery_ratio",
+      "label": "Format de l'image",
+      "options": [
+        { "value": "1 / 1", "label": "Carré" },
+        { "value": "4 / 5", "label": "Portrait 4:5" },
+        { "value": "3 / 4", "label": "Portrait 3:4" },
+        { "value": "4 / 3", "label": "Paysage 4:3" }
+      ],
+      "default": "1 / 1"
+    },
+    {
+      "type": "select",
+      "id": "gallery_fit",
+      "label": "Cadrage",
+      "options": [
+        { "value": "cover", "label": "Remplir le cadre" },
+        { "value": "contain", "label": "Image entière" }
+      ],
+      "default": "cover"
+    },
+    { "type": "range", "id": "gallery_radius", "label": "Arrondi", "min": 0, "max": 28, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "thumb_size", "label": "Taille des miniatures", "min": 44, "max": 110, "step": 2, "unit": "px", "default": 68 },
+    { "type": "checkbox", "id": "show_arrows", "label": "Flèches de navigation", "default": true },
+    {
+      "type": "checkbox",
+      "id": "sticky_gallery",
+      "label": "Galerie fixe au défilement",
+      "info": "Sur ordinateur seulement. Désactivée d'elle-même si la galerie est plus haute que la fenêtre.",
+      "default": true
+    },
+    { "type": "range", "id": "sticky_top", "label": "Distance du haut", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 20 },
+    { "type": "text", "id": "thumbs_aria_label", "label": "Libellé galerie (accessibilité)", "default": "Images du produit" },
+    { "type": "text", "id": "thumbs_item_label", "label": "Libellé miniature (accessibilité)", "default": "Image" },
+    { "type": "text", "id": "gallery_prev_label", "label": "Flèche précédente (accessibilité)", "default": "Image précédente" },
+    { "type": "text", "id": "gallery_next_label", "label": "Flèche suivante (accessibilité)", "default": "Image suivante" },
+
+    {
+      "type": "header",
+      "content": "En-tête"
+    },
+    { "type": "checkbox", "id": "show_bought", "label": "Afficher la ligne « achetée X fois »", "default": true },
+    { "type": "text", "id": "bought_text", "label": "Texte", "default": "Achetée plus de 2 637 929 fois" },
+    { "type": "checkbox", "id": "show_price", "label": "Afficher le prix en haut", "default": true },
+
+    {
+      "type": "header",
+      "content": "Note et avis"
+    },
+    { "type": "checkbox", "id": "show_rating", "label": "Afficher la ligne de note", "default": true },
+    {
+      "type": "select",
+      "id": "rating_value",
+      "label": "Remplissage des étoiles",
+      "options": [
+        { "value": "0", "label": "Masquer les étoiles" },
+        { "value": "4", "label": "4 / 5" },
+        { "value": "4.5", "label": "4,5 / 5" },
+        { "value": "4.8", "label": "4,8 / 5" },
+        { "value": "5", "label": "5 / 5" }
+      ],
+      "default": "5"
+    },
+    { "type": "text", "id": "rating_score", "label": "Note affichée", "default": "5.0" },
+    { "type": "text", "id": "rating_count", "label": "Nombre d'avis", "default": "140 558" },
+    {
+      "type": "text",
+      "id": "rating_summary",
+      "label": "Texte du lien",
+      "info": "[score] et [count] sont remplacés automatiquement.",
+      "default": "Excellent [score] | ([count]+ avis)"
+    },
+    { "type": "text", "id": "rating_based_on", "label": "Texte de la fiche", "default": "Basé sur [count] avis" },
+    { "type": "text", "id": "rating_aria_label", "label": "Description de la note (accessibilité)", "default": "Note de 5 sur 5" },
+    { "type": "text", "id": "stars_5", "label": "Nombre d'avis 5 étoiles", "default": "137670" },
+    { "type": "text", "id": "stars_4", "label": "Nombre d'avis 4 étoiles", "default": "2098" },
+    { "type": "text", "id": "stars_3", "label": "Nombre d'avis 3 étoiles", "default": "709" },
+    { "type": "text", "id": "stars_2", "label": "Nombre d'avis 2 étoiles", "default": "41" },
+    { "type": "text", "id": "stars_1", "label": "Nombre d'avis 1 étoile", "default": "40" },
+    { "type": "url", "id": "reviews_all_url", "label": "Lien « voir tous les avis »" },
+    { "type": "text", "id": "reviews_all_label", "label": "Texte du lien", "default": "Voir tout" },
+    { "type": "text", "id": "reviews_prev_label", "label": "Avis précédent (accessibilité)", "default": "Avis précédent" },
+    { "type": "text", "id": "reviews_next_label", "label": "Avis suivant (accessibilité)", "default": "Avis suivant" },
+    { "type": "text", "id": "reviews_go_label", "label": "Puce (accessibilité)", "default": "Aller à l'avis" },
+    { "type": "text", "id": "close_label", "label": "Fermer", "default": "Fermer" },
+
+    {
+      "type": "header",
+      "content": "Arguments"
+    },
+    { "type": "checkbox", "id": "show_bullets", "label": "Afficher les arguments", "default": true },
+
+    {
+      "type": "header",
+      "content": "Couleurs et pointures"
+    },
+    { "type": "checkbox", "id": "show_picker", "label": "Afficher le sélecteur", "default": true },
+    { "type": "url", "id": "sizeguide_url", "label": "Lien guide des tailles" },
+    { "type": "text", "id": "sizeguide_label", "label": "Texte du lien", "default": "Guide des tailles et de l'ajustement" },
+    { "type": "checkbox", "id": "show_finder", "label": "Bouton « trouver ma pointure »", "default": true },
+    { "type": "text", "id": "finder_label", "label": "Texte du bouton", "default": "Trouver ma pointure idéale" },
+
+    {
+      "type": "header",
+      "content": "Caution"
+    },
+    { "type": "checkbox", "id": "show_endorse", "label": "Afficher la caution", "default": true },
+    { "type": "image_picker", "id": "endorse_logo", "label": "Logo" },
+    { "type": "text", "id": "endorse_text", "label": "Texte", "default": "Plus de 2 millions de personnes portent nos chaussures minimalistes." },
+
+    {
+      "type": "header",
+      "content": "Offres groupées"
+    },
+    { "type": "checkbox", "id": "show_bundle", "label": "Afficher les offres", "default": true },
+    { "type": "text", "id": "bundle_note", "label": "Mention au-dessus", "default": "La promotion groupée est valable jusqu'à 23 h 59" },
+    { "type": "text", "id": "bundle_aria_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de l'offre" },
+    { "type": "text", "id": "per_pair_label", "label": "Mention sous le prix", "default": "par paire" },
+    { "type": "text", "id": "pairs_title", "label": "Titre du choix des paires", "default": "Choisissez vos couleurs" },
+    { "type": "text", "id": "pair_label", "label": "Libellé d'une paire", "info": "[n] est remplacé par le numéro.", "default": "Paire n°[n]" },
+    { "type": "text", "id": "in_stock_label", "label": "Mention « en stock »", "default": "En stock" },
+    { "type": "text", "id": "pair_remove_label", "label": "Retirer une paire (accessibilité)", "default": "Retirer cette paire" },
+    { "type": "text", "id": "pair_add_label", "label": "Bouton « ajouter une paire »", "default": "+ Ajouter une autre paire" },
+    { "type": "text", "id": "pair_add_note", "label": "Mention du bouton", "default": "Économisez 15 % sur toute autre paire ajoutée" },
+
+    {
+      "type": "header",
+      "content": "Réassurance"
+    },
+    { "type": "checkbox", "id": "show_reassure", "label": "Afficher la réassurance", "default": true },
+
+    {
+      "type": "header",
+      "content": "Risque de rupture"
+    },
+    { "type": "checkbox", "id": "show_risk", "label": "Afficher l'encart", "default": true },
+    { "type": "checkbox", "id": "risk_open", "label": "Ouvert par défaut", "default": false },
+    { "type": "text", "id": "risk_label", "label": "Titre", "default": "Risque de rupture : élevé" },
+    {
+      "type": "richtext",
+      "id": "risk_text",
+      "label": "Texte",
+      "default": "<p>Ce produit est très demandé. D'après le volume des ventes des 3 dernières heures, il est probable qu'il soit en rupture de stock aujourd'hui.</p>"
+    },
+
+    {
+      "type": "header",
+      "content": "Photos clients"
+    },
+    { "type": "checkbox", "id": "show_ugc", "label": "Afficher la rangée", "default": true },
+    { "type": "text", "id": "ugc_title", "label": "Titre", "default": "2 millions de clients adorent nos chaussures !" },
+    { "type": "range", "id": "ugc_width", "label": "Largeur des photos", "min": 90, "max": 260, "step": 10, "unit": "px", "default": 150 },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond de section", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_ink", "label": "Texte principal", "default": "#1F2937" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#6B7280" },
+    { "type": "color", "id": "color_line", "label": "Bordures", "default": "#E5E7EB" },
+    { "type": "color", "id": "color_soft", "label": "Fonds clairs", "default": "#F4F5F7" },
+    { "type": "color", "id": "color_accent", "label": "Focus clavier", "default": "#2563EB" },
+    { "type": "color", "id": "color_green", "label": "Vert (bouton, coches)", "default": "#3F7D3B" },
+    { "type": "color", "id": "color_green_soft", "label": "Vert clair", "default": "#EAF3E8" },
+    { "type": "color", "id": "color_price", "label": "Prix", "default": "#C0392B" },
+    { "type": "color", "id": "color_star", "label": "Étoiles", "default": "#F5A623" },
+    { "type": "color", "id": "color_red", "label": "Rouge (rupture)", "default": "#D94A4A" },
+    { "type": "color", "id": "color_red_soft", "label": "Rouge clair", "default": "#FDF0F0" },
+    { "type": "color", "id": "color_flag_bg", "label": "Bandeau d'offre", "default": "#3F7D3B" },
+    { "type": "color", "id": "color_flag_ink", "label": "Texte du bandeau", "default": "#FFFFFF" },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 900, "max": 1400, "step": 20, "unit": "px", "default": 1120 },
+    { "type": "range", "id": "stack_gap", "label": "Espace galerie / infos sur mobile", "min": 4, "max": 48, "step": 2, "unit": "px", "default": 18 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 24 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 }
+  ],
+  "blocks": [
+    {
+      "type": "bullet",
+      "name": "Argument",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Texte", "default": "Décris ici un bénéfice court et concret." }
+      ]
+    },
+    {
+      "type": "offer",
+      "name": "Offre groupée",
+      "settings": [
+        { "type": "range", "id": "pairs", "label": "Nombre de paires", "min": 1, "max": 6, "step": 1, "default": 2 },
+        { "type": "text", "id": "title", "label": "Titre", "default": "2 Paires" },
+        { "type": "text", "id": "flag", "label": "Bandeau", "info": "Laisse vide pour le masquer.", "default": "Le plus populaire" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "unit_price", "label": "Prix par paire", "default": "56,66" },
+        { "type": "text", "id": "unit_compare", "label": "Prix barré par paire", "default": "99,90" },
+        { "type": "text", "id": "save_label", "label": "Mention d'économie", "default": "Économisez 43 %" },
+        {
+          "type": "text",
+          "id": "discount_code",
+          "label": "Code de réduction",
+          "info": "Appliqué automatiquement au passage en caisse. Crée-le dans Shopify avec les mêmes conditions, sinon le panier ne correspondra pas au prix affiché."
+        }
+      ]
+    },
+    {
+      "type": "reassurance",
+      "name": "Réassurance",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icône",
+          "options": [
+            { "value": "check", "label": "Coche" },
+            { "value": "box", "label": "Colis" },
+            { "value": "shield", "label": "Bouclier" },
+            { "value": "truck", "label": "Livraison" },
+            { "value": "clock", "label": "Horloge" }
+          ],
+          "default": "check"
+        },
+        { "type": "text", "id": "flag", "label": "Drapeau ou emoji", "info": "Prioritaire sur l'icône. Par exemple 🇫🇷.", "default": "" },
+        { "type": "image_picker", "id": "image", "label": "Image", "info": "Prioritaire sur le drapeau et l'icône." },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Livraison offerte" },
+        { "type": "text", "id": "text", "label": "Précision", "default": "Expédié sous 24 h" }
+      ]
+    },
+    {
+      "type": "review",
+      "name": "Avis",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Photo" },
+        { "type": "text", "id": "name", "label": "Prénom", "default": "Prénom N." },
+        { "type": "textarea", "id": "text", "label": "Témoignage", "default": "Rédige ici le témoignage du client." }
+      ]
+    },
+    {
+      "type": "ugc",
+      "name": "Photo client",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Photo" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Produit HikeFoot",
+      "blocks": [
+        { "type": "bullet" },
+        { "type": "bullet" },
+        { "type": "bullet" },
+        { "type": "offer" },
+        { "type": "offer" },
+        { "type": "offer" },
+        { "type": "reassurance" },
+        { "type": "reassurance" },
+        { "type": "reassurance" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "review" },
+        { "type": "ugc" },
+        { "type": "ugc" },
+        { "type": "ugc" }
+      ]
+    }
+  ]
+}
+{% endschema %}
