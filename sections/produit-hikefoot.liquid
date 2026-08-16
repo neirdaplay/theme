@@ -1109,9 +1109,96 @@
   cursor: not-allowed;
 }
 
+.hkf__buy:active {
+  transform: scale(0.985);
+}
+
 .hkf__buy.is-loading {
   opacity: 0.75;
   pointer-events: none;
+}
+
+/* ---- Confirmation ----
+   Le contenu normal s'efface et la coche se dessine à sa place, le temps
+   réglé, avant que la destination ne prenne la main. */
+.hkf__buy-done {
+  display: none;
+  align-items: center;
+  gap: 0.55em;
+}
+
+.hkf__buy.is-done {
+  background: var(--hk-added);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.hkf__buy.is-done > :not(.hkf__buy-done) {
+  display: none;
+}
+
+.hkf__buy.is-done .hkf__buy-done {
+  display: inline-flex;
+}
+
+.hkf__buy-tick {
+  display: grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.hkf__buy-tick svg {
+  width: 0.95em;
+  height: 0.95em;
+}
+
+/* Le trait se dessine plutôt que d'apparaître d'un bloc. */
+.hkf__buy-tick svg path {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+}
+
+.hkf__buy.is-done .hkf__buy-tick svg path {
+  animation: hkf-tick 0.4s cubic-bezier(0.65, 0, 0.35, 1) 0.06s forwards;
+}
+
+.hkf__buy.is-done .hkf__buy-tick {
+  animation: hkf-tick-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes hkf-tick {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hkf-tick-pop {
+  0% {
+    transform: scale(0.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Un trait à moitié dessiné n'est pas une coche : sans animation, on
+   l'affiche entière tout de suite. */
+@media (prefers-reduced-motion: reduce) {
+  .hkf__buy:active {
+    transform: none;
+  }
+
+  .hkf__buy-tick svg path {
+    stroke-dashoffset: 0;
+  }
+
+  .hkf__buy.is-done .hkf__buy-tick,
+  .hkf__buy.is-done .hkf__buy-tick svg path {
+    animation: none;
+  }
 }
 
 .hkf__buy-was {
@@ -1497,6 +1584,7 @@
     --hk-green-soft: {{ s.color_green_soft }};
     --hk-price: {{ s.color_price }};
     --hk-star: {{ s.color_star }};
+    --hk-added: {{ s.color_added }};
     --hk-red: {{ s.color_red }};
     --hk-red-rgb: {{ s.color_red.red }}, {{ s.color_red.green }}, {{ s.color_red.blue }};
     --hk-red-soft: {{ s.color_red_soft }};
@@ -1530,6 +1618,7 @@
       "rootUrl": {{ routes.root_url | json }},
       "moneyFormat": {{ shop.money_format | json }},
       "afterAdd": {{ s.after_add_action | json }},
+      "addedDelay": {{ s.added_delay | json }},
       "optionNames": {{ product.options | json }},
       "variants": [
         {%- for v in product.variants -%}
@@ -2036,6 +2125,15 @@
                 <span data-hkf-buy-total>{{ variant.price | money }}</span>
               </span>
               {{ hk_arrow }}
+              {%- comment -%}
+                L'état de confirmation. Il vit dans le bouton plutôt que de
+                remplacer son contenu par du JS : le libellé reste traduisible
+                depuis l'éditeur et rien n'est reconstruit à chaud.
+              {%- endcomment -%}
+              <span class="hkf__buy-done" data-hkf-buy-done aria-hidden="true">
+                <span class="hkf__buy-tick">{{ hk_check }}</span>
+                <span>{{ s.added_label }}</span>
+              </span>
             </button>
             <p class="hkf__error" role="alert" data-hkf-error hidden></p>
           </div>
@@ -2723,9 +2821,68 @@
       });
     }
 
+    /** Un code de remise groupée ne s'applique qu'en passant par /discount. */
+    function discountHref(code, destination) {
+      return (
+        config.rootUrl.replace(/\/$/, '') +
+        '/discount/' +
+        encodeURIComponent(code) +
+        '?redirect=' +
+        encodeURIComponent(destination)
+      );
+    }
+
+    /** Où va le client une fois l'ajout confirmé. */
+    function goAfterAdd(code) {
+      var mode = config.afterAdd;
+
+      if (mode === 'cart' || mode === 'checkout') {
+        var destination = mode === 'checkout' ? '/checkout' : config.cartUrl;
+        window.location.href = code ? discountHref(code, destination) : destination;
+        return;
+      }
+
+      if (mode === 'drawer') {
+        var drawer = document.querySelector('cart-drawer, [data-cart-drawer]');
+        if (drawer && typeof drawer.open === 'function') {
+          /* Le tiroir ne recharge pas la page : la remise groupée doit donc
+             être posée à part, sans quoi elle n'existerait qu'au paiement. */
+          if (code) applyDiscountInBackground(code);
+          drawer.open();
+          resetBuy();
+          return;
+        }
+        /* Pas de tiroir dans ce thème : mieux vaut la page panier qu'un clic
+           qui semble ne rien faire. */
+        window.location.href = code ? discountHref(code, config.cartUrl) : config.cartUrl;
+        return;
+      }
+
+      if (code) applyDiscountInBackground(code);
+      resetBuy();
+    }
+
+    /** Pose le code de remise sans quitter la page. Au pire, il manquera. */
+    function applyDiscountInBackground(code) {
+      try {
+        fetch(config.rootUrl.replace(/\/$/, '') + '/discount/' + encodeURIComponent(code), {
+          credentials: 'same-origin'
+        }).catch(function () {});
+      } catch (e) {
+        /* Rien à faire : le client peut encore saisir le code au paiement. */
+      }
+    }
+
+    /** Rend au bouton son état normal après la confirmation. */
+    function resetBuy() {
+      addButton.classList.remove('is-done');
+      addButton.classList.remove('is-loading');
+    }
+
     if (addButton) {
       addButton.addEventListener('click', function () {
         if (addButton.classList.contains('is-loading')) return;
+        if (addButton.classList.contains('is-done')) return;
         if (addButton.getAttribute('aria-disabled') === 'true') return;
 
         if (errorBox) errorBox.hidden = true;
@@ -2751,27 +2908,15 @@
 
             var offer = currentOffer();
             var code = offer ? offer.getAttribute('data-code') : '';
-            var destination = config.afterAdd === 'checkout' ? '/checkout' : config.cartUrl;
 
-            /* A bundle discount only exists at checkout, so the code has to
-               be applied on the way there rather than shown as a promise. */
-            if (config.afterAdd !== 'stay') {
-              if (code) {
-                window.location.href =
-                  config.rootUrl.replace(/\/$/, '') +
-                  '/discount/' +
-                  encodeURIComponent(code) +
-                  '?redirect=' +
-                  encodeURIComponent(destination);
-              } else {
-                window.location.href = destination;
-              }
-              return;
-            }
-
-            var drawer = document.querySelector('cart-drawer, [data-cart-drawer]');
-            if (drawer && typeof drawer.open === 'function') drawer.open();
+            /* La coche s'affiche d'abord ; la destination ne prend la main
+               qu'ensuite, pour que le client voie que c'est parti. */
             addButton.classList.remove('is-loading');
+            addButton.classList.add('is-done');
+
+            window.setTimeout(function () {
+              goAfterAdd(code);
+            }, config.addedDelay);
           })
           .catch(function (error) {
             addButton.classList.remove('is-loading');
@@ -2825,14 +2970,28 @@
       "type": "select",
       "id": "after_add_action",
       "label": "Après l'ajout",
+      "info": "Une remise groupée ne s'applique de façon sûre qu'en allant au panier ou au paiement.",
       "options": [
         { "value": "stay", "label": "Rester sur la page" },
-        { "value": "cart", "label": "Aller au panier" },
-        { "value": "checkout", "label": "Passer au paiement" }
+        { "value": "drawer", "label": "Ouvrir le panier coulissant" },
+        { "value": "cart", "label": "Aller à la page panier" },
+        { "value": "checkout", "label": "Paiement direct" }
       ],
-      "default": "stay"
+      "default": "drawer"
     },
     { "type": "text", "id": "buy_label", "label": "Texte du bouton", "default": "Ajouter au panier" },
+    { "type": "text", "id": "added_label", "label": "Texte de confirmation", "default": "Ajouté au panier" },
+    {
+      "type": "range",
+      "id": "added_delay",
+      "label": "Durée de la confirmation",
+      "info": "Temps d'affichage de la coche avant d'ouvrir la destination.",
+      "min": 300,
+      "max": 2000,
+      "step": 100,
+      "unit": "ms",
+      "default": 800
+    },
     { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
     { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Ajout impossible pour le moment. Réessaie dans un instant." },
 
@@ -3050,6 +3209,7 @@
     { "type": "color", "id": "color_accent", "label": "Focus clavier", "default": "#2563EB" },
     { "type": "color", "id": "color_green", "label": "Vert (bouton, coches)", "default": "#3F7D3B" },
     { "type": "color", "id": "color_green_soft", "label": "Vert clair", "default": "#EAF3E8" },
+    { "type": "color", "id": "color_added", "label": "Vert de confirmation", "default": "#2E6A2B" },
     { "type": "color", "id": "color_price", "label": "Prix", "default": "#C0392B" },
     { "type": "color", "id": "color_star", "label": "Étoiles", "default": "#F5A623" },
     { "type": "color", "id": "color_red", "label": "Rouge (rupture)", "default": "#D94A4A" },
