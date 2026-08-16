@@ -1044,19 +1044,64 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: clamp(8px, 2.4vw, 18px);
   width: 100%;
   min-height: 54px;
-  padding: 12px 20px;
+  padding: 12px clamp(12px, 3vw, 20px);
   border: 0;
   border-radius: 8px;
   background: var(--hk-green);
   color: var(--hk-white);
-  font-size: 14.5px;
+  font-size: clamp(12.5px, 3.2vw, 14.5px);
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+/* Le libellé ne se coupe jamais en deux lignes. */
+.hkf__buy-label {
+  white-space: nowrap;
+}
+
+/* Le prix vit dans sa propre pastille claire, détachée du fond du bouton. */
+.hkf__buy-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: clamp(5px, 1.5vw, 9px);
+  padding: 5px clamp(9px, 2.4vw, 15px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.17);
+  text-transform: none;
+  white-space: nowrap;
+}
+
+/* La flèche prend l'espace libre pour se coller à droite, comme sur la
+   référence ; quand il n'y en a plus, la rangée se recentre d'elle-même. */
+.hkf__buy > svg {
+  margin-left: auto;
+}
+
+/* Sous 360 px, libellé + pastille + flèche ne tiennent plus côte à côte. La
+   flèche, qui est décorative, s'efface et la pastille passe dessous — le
+   libellé, lui, reste sur une seule ligne. */
+@media (max-width: 359px) {
+  .hkf__buy {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .hkf__buy > svg {
+    display: none;
+  }
+
+  .hkf__buy-label {
+    flex: 1 0 100%;
+    text-align: center;
+  }
 }
 
 .hkf__buy:hover {
@@ -1241,34 +1286,46 @@
   margin-top: 16px;
 }
 
+/* Pastille sur fond rouge pâle, calée sur son contenu : elle doit se lire
+   comme une étiquette cliquable, pas comme une ligne de tableau. */
 .hkf__risk-trigger {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 0;
+  gap: 10px;
+  width: auto;
+  max-width: 100%;
+  padding: 7px 16px 7px 8px;
   border: 0;
-  background: none;
+  border-radius: 999px;
+  background: var(--hk-red-soft);
   color: var(--hk-red);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   text-align: left;
+  transition: filter 0.16s ease;
 }
 
+.hkf__risk-trigger:hover {
+  filter: brightness(0.97);
+}
+
+/* Le halo autour du point reprend le rouge du réglage, en très transparent :
+   c'est la seule façon d'obtenir un rgba() depuis un sélecteur de couleur. */
 .hkf__risk-dot {
   flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: currentColor;
+  box-shadow: 0 0 0 5px rgba(var(--hk-red-rgb), 0.13);
 }
 
 .hkf__risk-trigger svg {
-  width: 11px;
-  height: 11px;
-  margin-left: auto;
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
   transition: transform 0.18s ease;
 }
 
@@ -1287,11 +1344,11 @@
 
 .hkf__risk-inner {
   margin-top: 8px;
-  padding: 12px 14px;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
   background: var(--hk-red-soft);
   color: var(--hk-red);
-  font-size: 12px;
+  font-size: 12.5px;
   line-height: 1.55;
 }
 
@@ -1446,6 +1503,7 @@
     --hk-price: {{ s.color_price }};
     --hk-star: {{ s.color_star }};
     --hk-red: {{ s.color_red }};
+    --hk-red-rgb: {{ s.color_red.red }}, {{ s.color_red.green }}, {{ s.color_red.blue }};
     --hk-red-soft: {{ s.color_red_soft }};
     --hk-flag-bg: {{ s.color_flag_bg }};
     --hk-flag-ink: {{ s.color_flag_ink }};
@@ -1559,7 +1617,7 @@
         </div>
 
         {%- comment -%} Thumbnails under the image, not stacked beside it. {%- endcomment -%}
-        {%- if product.media.size > 1 -%}
+        {%- if s.show_thumbs and product.media.size > 1 -%}
           <div class="hkf__thumbs" role="tablist" aria-label="{{ s.thumbs_aria_label }}">
             {%- for media in product.media limit: 12 -%}
               <button
@@ -1609,7 +1667,9 @@
         {%- endif -%}
 
         <div class="hkf__head">
-          <h1 class="hkf__title">{{ product.title | escape }}</h1>
+          {%- if s.show_title -%}
+            <h1 class="hkf__title">{{ product.title | escape }}</h1>
+          {%- endif -%}
           {%- if s.show_price -%}
             <span class="hkf__prices">
               <span class="hkf__price" data-hkf-price>{{ variant.price | money }}</span>
@@ -1832,12 +1892,18 @@
               {%- endif -%}
             {%- endfor -%}
 
-            <p class="hkf__chosen">
-              <span data-hkf-chosen>{{ variant.title }}</span>
-              {%- if s.sizeguide_url != blank -%}
-                <a href="{{ s.sizeguide_url }}">{{ s.sizeguide_label }}</a>
-              {%- endif -%}
-            </p>
+            {%- if s.show_chosen or s.show_sizeguide -%}
+              <p class="hkf__chosen">
+                {%- if s.show_chosen -%}
+                  <span data-hkf-chosen>{{ variant.title }}</span>
+                {%- else -%}
+                  <span></span>
+                {%- endif -%}
+                {%- if s.show_sizeguide and s.sizeguide_url != blank -%}
+                  <a href="{{ s.sizeguide_url }}">{{ s.sizeguide_label }}</a>
+                {%- endif -%}
+              </p>
+            {%- endif -%}
           </div>
         {%- endif -%}
 
@@ -1861,7 +1927,31 @@
               <p class="hkf__bundle-note">{{ s.bundle_note }}</p>
             {%- endif -%}
 
-            <div class="hkf__offers" role="radiogroup" aria-label="{{ s.bundle_aria_label }}">
+            {%- comment -%}
+              Quelle offre est cochée à l'ouverture : celle marquée par défaut,
+              sinon la première à une seule paire (le dépliant des couleurs ne
+              sert à rien pour une paire), sinon la première tout court.
+            {%- endcomment -%}
+            {%- liquid
+              assign default_offer = -1
+              for block in offers
+                if block.settings.is_default and default_offer < 0
+                  assign default_offer = forloop.index0
+                endif
+              endfor
+              if default_offer < 0
+                for block in offers
+                  assign o_qty = block.settings.pairs | at_least: 1
+                  if o_qty == 1 and default_offer < 0
+                    assign default_offer = forloop.index0
+                  endif
+                endfor
+              endif
+              if default_offer < 0
+                assign default_offer = 0
+              endif
+            -%}
+            <div class="hkf__offers" role="radiogroup" aria-label="{{ s.bundle_aria_label }}" data-hkf-default-offer="{{ default_offer }}">
               {%- for block in offers -%}
                 {%- liquid
                   assign b = block.settings
@@ -1876,8 +1966,8 @@
                   type="button"
                   class="hkf__offer"
                   role="radio"
-                  aria-checked="{% if forloop.first %}true{% else %}false{% endif %}"
-                  tabindex="{% if forloop.first %}0{% else %}-1{% endif %}"
+                  aria-checked="{% if forloop.index0 == default_offer %}true{% else %}false{% endif %}"
+                  tabindex="{% if forloop.index0 == default_offer %}0{% else %}-1{% endif %}"
                   data-hkf-offer="{{ forloop.index0 }}"
                   data-qty="{{ qty }}"
                   data-unit="{{ unit }}"
@@ -1936,19 +2026,23 @@
         {%- endif -%}
 
         {%- comment -%} ---------- Add to cart ---------- {%- endcomment -%}
-        <div class="hkf__atc">
-          <button type="button" class="hkf__buy" data-hkf-add {% unless variant.available %}aria-disabled="true"{% endunless %}>
-            <span data-hkf-buy-label>
-              {%- if variant.available -%}{{ s.buy_label }}{%- else -%}{{ s.sold_out_label }}{%- endif -%}
-            </span>
-            <s class="hkf__buy-was" data-hkf-buy-was {% unless variant.compare_at_price > variant.price %}hidden{% endunless %}>
-              {{- variant.compare_at_price | money -}}
-            </s>
-            <span data-hkf-buy-total>{{ variant.price | money }}</span>
-            {{ hk_arrow }}
-          </button>
-          <p class="hkf__error" role="alert" data-hkf-error hidden></p>
-        </div>
+        {%- if s.show_atc -%}
+          <div class="hkf__atc">
+            <button type="button" class="hkf__buy" data-hkf-add {% unless variant.available %}aria-disabled="true"{% endunless %}>
+              <span class="hkf__buy-label" data-hkf-buy-label>
+                {%- if variant.available -%}{{ s.buy_label }}{%- else -%}{{ s.sold_out_label }}{%- endif -%}
+              </span>
+              <span class="hkf__buy-price">
+                <s class="hkf__buy-was" data-hkf-buy-was {% unless variant.compare_at_price > variant.price %}hidden{% endunless %}>
+                  {{- variant.compare_at_price | money -}}
+                </s>
+                <span data-hkf-buy-total>{{ variant.price | money }}</span>
+              </span>
+              {{ hk_arrow }}
+            </button>
+            <p class="hkf__error" role="alert" data-hkf-error hidden></p>
+          </div>
+        {%- endif -%}
 
         {%- if s.show_reassure and reassurances.size > 0 -%}
           <ul class="hkf__reassure">
@@ -2359,7 +2453,10 @@
     var pairList = $('[data-hkf-pair-list]');
     var pairTemplate = $('[data-hkf-pair-template]');
     var pairAdd = $('[data-hkf-pair-add]');
-    var offerIndex = 0;
+    /* L'offre cochée au chargement est celle que Liquid a désignée, pas
+       forcément la première du groupe. */
+    var offerGroup = $('[data-hkf-default-offer]');
+    var offerIndex = offerGroup ? Number(offerGroup.getAttribute('data-hkf-default-offer')) || 0 : 0;
 
     var priceEl = $('[data-hkf-price]');
     var wasEl = $('[data-hkf-was]');
@@ -2648,8 +2745,9 @@
       });
     }
 
-    /* First paint: the offer row starts on its first card. */
-    if (offers.length) offers[0].click();
+    /* Premier rendu : on simule le clic sur l'offre désignée par défaut, ce
+       qui accorde d'un coup la coche, le dépliant des paires et les totaux. */
+    if (offers.length) (offers[offerIndex] || offers[0]).click();
     else renderTotals();
   })();
 </script>
@@ -2665,6 +2763,7 @@
       "type": "header",
       "content": "Panier"
     },
+    { "type": "checkbox", "id": "show_atc", "label": "Afficher le bouton d'ajout", "default": true },
     {
       "type": "select",
       "id": "after_add_action",
@@ -2731,6 +2830,7 @@
       "default": "cover"
     },
     { "type": "range", "id": "gallery_radius", "label": "Arrondi", "min": 0, "max": 28, "step": 2, "unit": "px", "default": 12 },
+    { "type": "checkbox", "id": "show_thumbs", "label": "Afficher les miniatures", "default": true },
     { "type": "range", "id": "thumb_size", "label": "Taille des miniatures", "min": 44, "max": 110, "step": 2, "unit": "px", "default": 68 },
     { "type": "checkbox", "id": "show_arrows", "label": "Flèches de navigation", "default": true },
     {
@@ -2750,6 +2850,7 @@
       "type": "header",
       "content": "En-tête"
     },
+    { "type": "checkbox", "id": "show_title", "label": "Afficher le titre du produit", "default": true },
     { "type": "checkbox", "id": "show_bought", "label": "Afficher la ligne « achetée X fois »", "default": true },
     { "type": "text", "id": "bought_text", "label": "Texte", "default": "Achetée plus de 2 637 929 fois" },
     { "type": "range", "id": "bought_size", "label": "Taille du texte", "min": 10, "max": 18, "step": 1, "unit": "px", "default": 12 },
@@ -2811,6 +2912,8 @@
       "content": "Couleurs et pointures"
     },
     { "type": "checkbox", "id": "show_picker", "label": "Afficher le sélecteur", "default": true },
+    { "type": "checkbox", "id": "show_chosen", "label": "Afficher la variante choisie", "info": "La ligne « Bleu clair / EU 38 » sous les pointures.", "default": true },
+    { "type": "checkbox", "id": "show_sizeguide", "label": "Afficher le lien guide des tailles", "default": true },
     { "type": "url", "id": "sizeguide_url", "label": "Lien guide des tailles" },
     { "type": "text", "id": "sizeguide_label", "label": "Texte du lien", "default": "Guide des tailles et de l'ajustement" },
     { "type": "checkbox", "id": "show_finder", "label": "Bouton « trouver ma pointure »", "default": true },
@@ -2919,6 +3022,13 @@
       "name": "Offre groupée",
       "settings": [
         { "type": "range", "id": "pairs", "label": "Nombre de paires", "min": 1, "max": 6, "step": 1, "default": 2 },
+        {
+          "type": "checkbox",
+          "id": "is_default",
+          "label": "Cochée à l'ouverture",
+          "info": "Sans aucune case cochée, c'est l'offre à une paire qui est sélectionnée au chargement.",
+          "default": false
+        },
         { "type": "text", "id": "title", "label": "Titre", "default": "2 Paires" },
         { "type": "text", "id": "flag", "label": "Bandeau", "info": "Laisse vide pour le masquer.", "default": "Le plus populaire" },
         { "type": "image_picker", "id": "image", "label": "Image" },
