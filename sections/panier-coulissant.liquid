@@ -894,6 +894,11 @@
   display: none;
 }
 
+.pnc__ins--todo {
+  border-style: dashed;
+  background: var(--pn-bg);
+}
+
 .pnc__ins-body {
   flex: 1 1 auto;
   min-width: 0;
@@ -1144,6 +1149,7 @@
       "insuranceAuto": {{ s.insurance_auto | json }},
       "showRibbon": {{ s.show_ribbon | json }},
       "showDeals": {{ s.show_deals | json }},
+      "compareFromProduct": {{ s.compare_from_product | json }},
       "goals": [
         {%- for block in tiers -%}
           {%- liquid
@@ -1407,6 +1413,16 @@
             data-pnc-ins-toggle
             aria-label="{{ s.insurance_title | default: ins_product.title | escape }}"
           ></button>
+        </div>
+      {%- elsif s.show_insurance and request.design_mode -%}
+        {%- comment -%}
+          Sans produit choisi il n'y a rien à facturer, donc rien à afficher.
+          Dans l'éditeur, on le dit plutôt que de laisser un vide inexpliqué.
+        {%- endcomment -%}
+        <div class="pnc__ins pnc__ins--todo">
+          <span class="pnc__ins-text">
+            {{ pn_shield }}<span>{{ s.insurance_todo }}</span>
+          </span>
         </div>
       {%- endif -%}
 
@@ -1721,6 +1737,40 @@
       renderInsurance();
     }
 
+    /**
+     * Le prix barré et la pastille de remise d'une ligne, pour un plein tarif
+     * donné. Appelée deux fois : sur ce que /cart.js annonce, puis sur le
+     * compare_at de la variante s'il dit mieux.
+     */
+    function paintSavings(row, full, paid) {
+      var saved = full - paid;
+      var discounted = saved > 0 && full > 0;
+
+      var was = row.querySelector('[data-pnc-line-was]');
+      if (was) {
+        if (config.showLineCompare && discounted) {
+          was.textContent = formatMoney(full);
+          was.hidden = false;
+        } else {
+          was.hidden = true;
+        }
+      }
+
+      var ribbon = row.querySelector('[data-pnc-ribbon]');
+      if (!ribbon) return;
+      if (config.showRibbon && discounted) {
+        var pct = Math.round((saved / full) * 100);
+        ribbon.querySelector('[data-pnc-ribbon-text]').textContent = config.strings.ribbon
+          .split('[x]')
+          .join(pct);
+        ribbon.hidden = false;
+        row.classList.add('has-ribbon');
+      } else {
+        ribbon.hidden = true;
+        row.classList.remove('has-ribbon');
+      }
+    }
+
     function buildLine(item, line) {
       var frag = rowTemplate.content.cloneNode(true);
       var row = frag.querySelector('[data-pnc-line]');
@@ -1770,32 +1820,28 @@
 
       frag.querySelector('[data-pnc-line-price]').textContent = formatMoney(item.final_line_price);
 
-      var full = item.original_line_price;
-      var saved = full - item.final_line_price;
+      paintSavings(row, item.original_line_price, item.final_line_price);
 
-      var was = frag.querySelector('[data-pnc-line-was]');
-      if (was) {
-        if (config.showLineCompare && saved > 0) {
-          was.textContent = formatMoney(full);
-          was.hidden = false;
-        } else {
-          was.hidden = true;
-        }
-      }
-
-      /* Le ruban : le pourcentage réellement gagné sur cette ligne. */
-      var ribbon = frag.querySelector('[data-pnc-ribbon]');
-      if (ribbon) {
-        if (config.showRibbon && saved > 0 && full > 0) {
-          var pct = Math.round((saved / full) * 100);
-          ribbon.querySelector('[data-pnc-ribbon-text]').textContent = config.strings.ribbon
-            .split('[x]')
-            .join(pct);
-          ribbon.hidden = false;
-          row.classList.add('has-ribbon');
-        } else {
-          ribbon.remove();
-        }
+      /* Une remise de panier ne se voit que si Shopify en a appliqué une. Un
+         simple prix barré sur la fiche produit n'en est pas une : il faut
+         alors aller chercher le compare_at de la variante, que /cart.js ne
+         donne pas. On le fait après coup, pour ne pas retarder l'affichage. */
+      if (config.compareFromProduct && item.original_line_price <= item.final_line_price) {
+        loadProduct(item.handle)
+          .then(function (product) {
+            var match = null;
+            (product.variants || []).forEach(function (v) {
+              if (v.id === item.variant_id) match = v;
+            });
+            if (!match || !match.compare_at_price) return;
+            var fullPrice = match.compare_at_price * item.quantity;
+            if (fullPrice > item.final_line_price) {
+              paintSavings(row, fullPrice, item.final_line_price);
+            }
+          })
+          .catch(function () {
+            /* Le produit est introuvable : la ligne reste simplement nue. */
+          });
       }
 
       /* Les promotions nommées, telles que Shopify les a appliquées. */
@@ -2411,6 +2457,13 @@
     { "type": "checkbox", "id": "show_pills", "label": "Afficher les variantes en pastilles", "default": true },
     { "type": "checkbox", "id": "show_line_compare", "label": "Afficher le prix barré", "default": true },
     { "type": "checkbox", "id": "show_ribbon", "label": "Ruban d'économie sur l'article", "default": true },
+    {
+      "type": "checkbox",
+      "id": "compare_from_product",
+      "label": "Calculer aussi depuis le prix barré du produit",
+      "info": "Le panier de Shopify ne connaît que les remises qu'il a lui-même appliquées. Coché, un simple prix barré sur la fiche produit affiche quand même le ruban.",
+      "default": true
+    },
     { "type": "text", "id": "ribbon_label", "label": "Texte du ruban", "info": "[x] est remplacé par le pourcentage calculé.", "default": "Économisez [x] %" },
     {
       "type": "checkbox",
@@ -2471,7 +2524,13 @@
       "info": "Choisis un produit ci-dessous : son prix Shopify est celui affiché et facturé.",
       "default": true
     },
-    { "type": "product", "id": "insurance_product", "label": "Produit d'assurance" },
+    {
+      "type": "product",
+      "id": "insurance_product",
+      "label": "Produit d'assurance",
+      "info": "Crée un produit « Assurance Livraison » dans Shopify, à son prix, puis choisis-le ici. Sans produit choisi, la carte ne s'affiche pas."
+    },
+    { "type": "text", "id": "insurance_todo", "label": "Rappel dans l'éditeur", "default": "Choisis un produit d'assurance dans les réglages pour afficher cette carte." },
     { "type": "text", "id": "insurance_title", "label": "Titre affiché", "info": "Reprend le nom du produit si vide.", "default": "Assurance transport" },
     { "type": "text", "id": "insurance_text", "label": "Texte", "default": "Protéger votre colis contre dommages, perte ou vol." },
     {

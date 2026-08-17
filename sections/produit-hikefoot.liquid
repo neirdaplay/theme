@@ -894,9 +894,21 @@
   display: none;
 }
 
+/* --hk-card-img est posé sur la carte quand le bloc fixe sa propre taille ;
+   sinon on retombe sur le réglage de la section. */
+/* display: block est indispensable : une <span> reste en ligne, et une boîte
+   en ligne ignore purement et simplement width — le réglage de taille n'avait
+   donc aucun effet. */
 .hkf__offer-img {
-  width: var(--hk-offer-img);
+  display: block;
+  width: var(--hk-card-img, var(--hk-offer-img));
+  max-width: 100%;
   margin-inline: auto;
+}
+
+.hkf__offer-img img {
+  width: 100%;
+  height: auto;
 }
 
 /* Le titre occupe sa propre ligne, en plus gros : c'est lui qu'on lit en
@@ -964,7 +976,7 @@
   }
 
   .hkf__offer-img {
-    width: var(--hk-offer-img-m);
+    width: var(--hk-card-img-m, var(--hk-offer-img-m));
   }
 
   .hkf__offer-unit-long {
@@ -2469,11 +2481,33 @@
                     assign unit = variant.price
                   endif
                   assign unit_was = b.unit_compare | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+
+                  comment
+                    Une taille d'image propre à la carte, laissée à zéro pour
+                    suivre le réglage de la section.
+                  endcomment
+                  assign card_style = ''
+                  if b.img_size > 0
+                    capture card_style
+                      echo '--hk-card-img: '
+                      echo b.img_size
+                      echo 'px;'
+                    endcapture
+                  endif
+                  if b.img_size_mobile > 0
+                    capture card_style
+                      echo card_style
+                      echo '--hk-card-img-m: '
+                      echo b.img_size_mobile
+                      echo 'px;'
+                    endcapture
+                  endif
                 -%}
                 <button
                   type="button"
                   class="hkf__offer"
                   role="radio"
+                  {% if card_style != blank %}style="{{ card_style }}"{% endif %}
                   {%- comment -%}
                     Aucune offre cochée : la première carte reste tout de même
                     atteignable au clavier, sinon le groupe serait injoignable.
@@ -2498,7 +2532,7 @@
                   <span class="hkf__offer-flag" {% if flag_style != blank %}style="{{ flag_style }}"{% endif %} {% if b.flag == blank %}hidden{% endif %}>{{ b.flag }}</span>
                   {%- if b.image != blank -%}
                     <span class="hkf__offer-img">
-                      {{ b.image | image_url: width: 400 | image_tag: widths: '100, 200, 400', loading: 'lazy', alt: '' }}
+                      {{ b.image | image_url: width: 1000 | image_tag: widths: '200, 400, 700, 1000', loading: 'lazy', alt: '' }}
                     </span>
                   {%- endif -%}
                   <span class="hkf__offer-title">{{ b.title }}</span>
@@ -3832,8 +3866,8 @@
     { "type": "text", "id": "bundle_aria_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de l'offre" },
     { "type": "text", "id": "per_pair_label", "label": "Mention après le prix (bureau)", "default": "par paire" },
     { "type": "text", "id": "per_pair_short", "label": "Mention après le prix (mobile)", "info": "Version courte, pour que la ligne de prix tienne sur mobile.", "default": "/paire" },
-    { "type": "range", "id": "offer_img_size", "label": "Taille des images (bureau)", "min": 40, "max": 200, "step": 4, "unit": "px", "default": 92 },
-    { "type": "range", "id": "offer_img_size_mobile", "label": "Taille des images (mobile)", "min": 32, "max": 160, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "offer_img_size", "label": "Taille des images (bureau)", "info": "Valeur par défaut ; chaque bloc d'offre peut fixer la sienne.", "min": 10, "max": 500, "step": 5, "unit": "px", "default": 95 },
+    { "type": "range", "id": "offer_img_size_mobile", "label": "Taille des images (mobile)", "min": 10, "max": 500, "step": 5, "unit": "px", "default": 70 },
     { "type": "range", "id": "offer_title_size", "label": "Taille du titre (bureau)", "min": 12, "max": 30, "step": 1, "unit": "px", "default": 19 },
     { "type": "range", "id": "offer_title_size_mobile", "label": "Taille du titre (mobile)", "min": 11, "max": 24, "step": 1, "unit": "px", "default": 16 },
     { "type": "range", "id": "offer_price_size", "label": "Taille du prix (bureau)", "min": 11, "max": 26, "step": 1, "unit": "px", "default": 17 },
@@ -3953,6 +3987,28 @@
         { "type": "color", "id": "flag_bg", "label": "Fond du bandeau", "info": "Vide = la couleur réglée pour la section." },
         { "type": "color", "id": "flag_ink", "label": "Texte du bandeau" },
         { "type": "image_picker", "id": "image", "label": "Image" },
+        {
+          "type": "range",
+          "id": "img_size",
+          "label": "Taille de l'image (bureau)",
+          "info": "0 reprend la taille réglée pour la section.",
+          "min": 0,
+          "max": 500,
+          "step": 5,
+          "unit": "px",
+          "default": 0
+        },
+        {
+          "type": "range",
+          "id": "img_size_mobile",
+          "label": "Taille de l'image (mobile)",
+          "info": "0 reprend la taille réglée pour la section.",
+          "min": 0,
+          "max": 500,
+          "step": 5,
+          "unit": "px",
+          "default": 0
+        },
         { "type": "text", "id": "unit_price", "label": "Prix par paire", "default": "56,66" },
         { "type": "text", "id": "unit_compare", "label": "Prix barré par paire", "default": "99,90" },
         { "type": "text", "id": "save_label", "label": "Mention d'économie", "default": "Économisez 43 %" },
