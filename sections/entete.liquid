@@ -1,0 +1,1210 @@
+{% comment %}
+  entete.liquid
+  Barre d'en-tête classique, à placer dans le groupe « En-tête » : logo,
+  bouton pilule, menu déroulant, recherche, panier, drapeau et compte.
+
+  Sur mobile : menu hamburger et recherche à gauche, logo centré, icônes à
+  droite. Le menu s'ouvre dans un tiroir latéral.
+
+  Elle reste dans le flux de la page — au besoin en `sticky`, jamais en
+  `fixed` : rien ne passe donc par-dessus le contenu.
+
+  Every part has its own on/off switch.
+
+  Self-contained: styles and behaviour are both inlined, so this file is the
+  only thing that needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   En-tête — scoped under .eth so the rest of the theme is untouched.
+   ========================================================================== */
+
+.eth {
+  --et-white: #ffffff;
+  --et-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  position: relative;
+  z-index: 60;
+  background: var(--et-bg);
+  border-bottom: var(--et-border) solid var(--et-line);
+  font-family: var(--et-font);
+  color: var(--et-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sticky et non fixed : la barre garde sa place dans le flux, donc elle ne
+   peut pas recouvrir le haut de la page. */
+.eth--sticky {
+  position: sticky;
+  top: 0;
+}
+
+.eth *,
+.eth *::before,
+.eth *::after {
+  box-sizing: border-box;
+}
+
+:where(.eth) :where(p, ul, ol, li, h1, h2) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(.eth) :where(ul, ol) {
+  list-style: none;
+}
+
+:where(.eth) :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+:where(.eth) :where(button) {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+:where(.eth) :where(img, svg) {
+  display: block;
+}
+
+.eth :focus-visible {
+  outline: 2px solid var(--et-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.eth__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--et-gap);
+  width: 100%;
+  max-width: var(--et-max);
+  min-height: var(--et-height);
+  margin: 0 auto;
+  padding: 8px var(--et-pad);
+}
+
+/* ---- Logo ---- */
+
+.eth__logo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.eth__logo img {
+  width: auto;
+  max-width: var(--et-logo);
+  height: auto;
+  max-height: calc(var(--et-height) - 22px);
+  object-fit: contain;
+}
+
+.eth__logo-text {
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+}
+
+.eth__logo-name {
+  font-size: var(--et-logo-size);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.eth__logo-sub {
+  margin-top: 3px;
+  font-size: calc(var(--et-logo-size) * 0.3);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--et-muted);
+}
+
+/* ---- Bouton pilule ---- */
+
+.eth__pill {
+  flex: 0 0 auto;
+  padding: 8px 18px;
+  border: 1.5px solid var(--et-pill-line);
+  border-radius: 999px;
+  background: var(--et-pill-bg);
+  color: var(--et-pill-ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.eth__pill:hover {
+  background: var(--et-pill-line);
+  color: var(--et-bg);
+}
+
+/* ---- Navigation ---- */
+
+.eth__nav {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.eth__nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: var(--et-nav-align, center);
+  gap: 2px;
+}
+
+.eth__nav-item {
+  position: relative;
+}
+
+/* Le rembourrage se resserre avec la fenêtre : six entrées tiennent alors
+   sur une seule ligne dès 1280 px, tout en gardant de l'air sur grand
+   écran. Le retour à la ligne reste le filet de sécurité. */
+.eth__nav-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 9px clamp(6px, 0.7vw, 12px);
+  border-radius: 8px;
+  font-size: var(--et-nav-size);
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  transition: color 0.16s ease, background 0.16s ease;
+}
+
+.eth__nav-link:hover,
+.eth__nav-item.is-open > .eth__nav-link {
+  color: var(--et-accent);
+}
+
+.eth__nav-link[aria-current="page"] {
+  font-weight: 700;
+}
+
+.eth__caret {
+  width: 11px;
+  height: 11px;
+  transition: transform 0.2s ease;
+}
+
+.eth__nav-item.is-open .eth__caret {
+  transform: rotate(180deg);
+}
+
+/* Le sous-menu est décalé d'un cheveu vers le haut pour que la souris puisse
+   descendre du parent sans traverser un vide. */
+.eth__sub {
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 50%;
+  z-index: 5;
+  min-width: 208px;
+  padding: 8px;
+  border: 1px solid var(--et-line);
+  border-radius: 12px;
+  background: var(--et-bg);
+  box-shadow: 0 18px 38px rgba(17, 22, 28, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+}
+
+.eth__nav-item.is-open > .eth__sub {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.eth__sub a {
+  display: block;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  transition: background 0.14s ease;
+}
+
+.eth__sub a:hover {
+  background: var(--et-soft);
+}
+
+/* ---- Recherche ---- */
+
+.eth__search {
+  flex: 0 1 var(--et-search);
+  min-width: 0;
+}
+
+.eth__search-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--et-line);
+  border-radius: 999px;
+  background: var(--et-soft);
+}
+
+.eth__search-form svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--et-muted);
+}
+
+.eth__search-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.eth__search-form input:focus {
+  outline: none;
+}
+
+/* ---- Icônes ---- */
+
+.eth__icons {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.eth__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--et-ink);
+  transition: background 0.16s ease;
+}
+
+.eth__icon:hover {
+  background: var(--et-soft);
+}
+
+.eth__icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.eth__flag {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+}
+
+.eth__flag img {
+  width: 24px;
+  height: auto;
+  border-radius: 2px;
+}
+
+.eth__bubble {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--et-badge-bg);
+  color: var(--et-badge-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.eth__bubble[hidden] {
+  display: none;
+}
+
+/* Entre 990 et 1400 px, logo + pilule + six rubriques + recherche ne tiennent
+   plus au format large : on resserre le champ et le menu plutôt que de passer
+   à la ligne. */
+@media (min-width: 990px) and (max-width: 1399px) {
+  .eth__search {
+    flex-basis: 150px;
+  }
+
+  .eth__nav-link {
+    padding-inline: 5px;
+    font-size: calc(var(--et-nav-size) - 1.5px);
+  }
+
+  .eth__pill {
+    padding-inline: 13px;
+    font-size: 12.5px;
+  }
+
+  .eth__bar {
+    gap: calc(var(--et-gap) * 0.6);
+  }
+}
+
+/* ---- Bascule mobile ---- */
+
+.eth__burger,
+.eth__search-toggle {
+  display: none;
+}
+
+@media (max-width: 989px) {
+  .eth__bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 4px;
+    min-height: var(--et-height-m);
+    padding-inline: var(--et-pad-m);
+  }
+
+  .eth__burger,
+  .eth__search-toggle {
+    display: grid;
+  }
+
+  .eth__side {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .eth__logo {
+    justify-content: center;
+  }
+
+  .eth__logo img {
+    max-height: calc(var(--et-height-m) - 18px);
+    max-width: var(--et-logo-m);
+  }
+
+  .eth__logo-name {
+    font-size: var(--et-logo-size-m);
+  }
+
+  .eth__icons {
+    justify-content: flex-end;
+  }
+
+  .eth__icon,
+  .eth__flag {
+    width: 34px;
+    height: 34px;
+  }
+
+  .eth__icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .eth__nav,
+  .eth__search,
+  .eth__pill {
+    display: none;
+  }
+}
+
+@media (min-width: 990px) {
+  .eth__side {
+    display: contents;
+  }
+}
+
+/* ---- Panneau de recherche mobile ---- */
+
+.eth__searchbox {
+  display: none;
+  padding: 0 var(--et-pad-m) 12px;
+}
+
+.eth.is-searching .eth__searchbox {
+  display: block;
+}
+
+@media (min-width: 990px) {
+  .eth__searchbox {
+    display: none !important;
+  }
+}
+
+/* ---- Tiroir de menu ---- */
+
+.eth__drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  pointer-events: none;
+}
+
+.eth__drawer[hidden] {
+  display: none;
+}
+
+.eth__drawer-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 22, 28, 0.42);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.eth__drawer.is-open .eth__drawer-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.eth__drawer-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 88vw);
+  height: 100%;
+  background: var(--et-bg);
+  box-shadow: 18px 0 48px rgba(17, 22, 28, 0.16);
+  transform: translateX(-100%);
+  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: auto;
+}
+
+.eth__drawer.is-open .eth__drawer-panel {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eth__drawer-panel,
+  .eth__drawer-scrim,
+  .eth__sub {
+    transition: none;
+  }
+}
+
+.eth__drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--et-line);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.eth__drawer-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.eth__drawer-close:hover {
+  background: var(--et-soft);
+}
+
+.eth__drawer-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.eth__drawer-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+}
+
+.eth__drawer-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.eth__drawer-link:hover {
+  background: var(--et-soft);
+}
+
+.eth__drawer-link svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s ease;
+}
+
+.eth__drawer-link[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.eth__drawer-sub {
+  overflow: hidden;
+  transition: height 0.26s ease;
+}
+
+.eth__drawer-sub[hidden] {
+  display: none;
+}
+
+.eth__drawer-sub a {
+  display: block;
+  padding: 10px 12px 10px 24px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  color: var(--et-muted);
+}
+
+.eth__drawer-sub a:hover {
+  background: var(--et-soft);
+  color: var(--et-ink);
+}
+
+.eth__drawer-foot {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--et-line);
+}
+
+.eth__drawer-pill {
+  display: block;
+  padding: 11px 18px;
+  border: 1.5px solid var(--et-pill-line);
+  border-radius: 999px;
+  background: var(--et-pill-bg);
+  color: var(--et-pill-ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign menu = linklists[s.menu]
+
+  assign root_classes = 'eth'
+  if s.sticky
+    assign root_classes = root_classes | append: ' eth--sticky'
+  endif
+-%}
+
+{%- capture et_caret -%}<svg class="eth__caret" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 6l4 4 4-4"/></svg>{%- endcapture -%}
+{%- capture et_search -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="8.8" cy="8.8" r="5.6"/><path d="M12.9 12.9l4 4"/></svg>{%- endcapture -%}
+{%- capture et_burger -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>{%- endcapture -%}
+{%- capture et_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.6 3.6l8.8 8.8M12.4 3.6l-8.8 8.8"/></svg>{%- endcapture -%}
+{%- capture et_cart -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.6 4h2.3l2.1 11.6h10.6l2-8.3H6.2"/><circle cx="9.6" cy="19.3" r="1.5"/><circle cx="17.2" cy="19.3" r="1.5"/></svg>{%- endcapture -%}
+{%- capture et_user -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="8.2" r="3.9"/><path d="M4.6 20.4c0-3.7 3.3-6.2 7.4-6.2s7.4 2.5 7.4 6.2"/></svg>{%- endcapture -%}
+
+{%- capture et_logo -%}
+  {%- if s.logo != blank -%}
+    {{ s.logo | image_url: width: 600 | image_tag: widths: '150, 300, 600', alt: shop.name }}
+  {%- else -%}
+    <span class="eth__logo-text">
+      <span class="eth__logo-name">{{ s.logo_text | default: shop.name }}</span>
+      {%- if s.logo_sub != blank -%}
+        <span class="eth__logo-sub">{{ s.logo_sub }}</span>
+      {%- endif -%}
+    </span>
+  {%- endif -%}
+{%- endcapture -%}
+
+<div
+  class="{{ root_classes }}"
+  id="eth-{{ section.id }}"
+  data-eth-root
+  style="
+    --et-ink: {{ s.color_ink }};
+    --et-muted: {{ s.color_muted }};
+    --et-line: {{ s.color_line }};
+    --et-soft: {{ s.color_soft }};
+    --et-bg: {{ s.color_bg }};
+    --et-accent: {{ s.color_accent }};
+    --et-pill-bg: {{ s.color_pill_bg }};
+    --et-pill-ink: {{ s.color_pill_ink }};
+    --et-pill-line: {{ s.color_pill_line }};
+    --et-badge-bg: {{ s.color_badge_bg }};
+    --et-badge-ink: {{ s.color_badge_ink }};
+    --et-max: {{ s.container_width }}px;
+    --et-height: {{ s.height }}px;
+    --et-height-m: {{ s.height_mobile }}px;
+    --et-pad: {{ s.padding_side }}px;
+    --et-pad-m: {{ s.padding_side_mobile }}px;
+    --et-gap: {{ s.gap }}px;
+    --et-logo: {{ s.logo_width }}px;
+    --et-logo-m: {{ s.logo_width_mobile }}px;
+    --et-logo-size: {{ s.logo_text_size }}px;
+    --et-logo-size-m: {{ s.logo_text_size_mobile }}px;
+    --et-search: {{ s.search_width }}px;
+    --et-border: {{ s.border_width }}px;
+    --et-nav-align: {{ s.nav_align }};
+    --et-nav-size: {{ s.nav_size }}px;
+  "
+>
+  <div class="eth__bar">
+    {%- comment -%}
+      Sur mobile, hamburger et loupe forment la colonne de gauche ; sur
+      ordinateur le conteneur s'efface (display: contents) et ses enfants
+      rejoignent directement la rangée.
+    {%- endcomment -%}
+    <div class="eth__side">
+      {%- if s.show_menu -%}
+        <button
+          type="button"
+          class="eth__icon eth__burger"
+          data-eth-burger
+          aria-label="{{ s.menu_label | escape }}"
+          aria-expanded="false"
+        >
+          {{- et_burger -}}
+        </button>
+      {%- endif -%}
+      {%- if s.show_search -%}
+        <button
+          type="button"
+          class="eth__icon eth__search-toggle"
+          data-eth-search-toggle
+          aria-label="{{ s.search_label | escape }}"
+          aria-expanded="false"
+        >
+          {{- et_search -}}
+        </button>
+      {%- endif -%}
+    </div>
+
+    <a class="eth__logo" href="{{ routes.root_url }}" aria-label="{{ shop.name | escape }}">
+      {{- et_logo -}}
+    </a>
+
+    {%- if s.show_pill and s.pill_label != blank -%}
+      <a class="eth__pill" href="{{ s.pill_url | default: routes.root_url }}">{{ s.pill_label }}</a>
+    {%- endif -%}
+
+    {%- if s.show_menu and menu != blank and menu.links.size > 0 -%}
+      <nav class="eth__nav" aria-label="{{ s.menu_label | escape }}">
+        <ul class="eth__nav-list">
+          {%- for link in menu.links -%}
+            <li class="eth__nav-item" {% if link.links.size > 0 %}data-eth-item{% endif %}>
+              <a
+                class="eth__nav-link"
+                href="{{ link.url }}"
+                {% if link.current %}aria-current="page"{% endif %}
+                {% if link.links.size > 0 %}data-eth-trigger aria-expanded="false"{% endif %}
+              >
+                <span>{{ link.title }}</span>
+                {%- if link.links.size > 0 -%}{{ et_caret }}{%- endif -%}
+              </a>
+              {%- if link.links.size > 0 -%}
+                <div class="eth__sub" data-eth-sub>
+                  {%- for child in link.links -%}
+                    <a href="{{ child.url }}">{{ child.title }}</a>
+                  {%- endfor -%}
+                </div>
+              {%- endif -%}
+            </li>
+          {%- endfor -%}
+        </ul>
+      </nav>
+    {%- endif -%}
+
+    {%- if s.show_search -%}
+      <div class="eth__search">
+        <form class="eth__search-form" action="{{ routes.search_url }}" method="get" role="search">
+          {{ et_search }}
+          <input
+            type="search"
+            name="q"
+            placeholder="{{ s.search_placeholder | escape }}"
+            aria-label="{{ s.search_label | escape }}"
+          >
+        </form>
+      </div>
+    {%- endif -%}
+
+    <div class="eth__icons">
+      {%- if s.show_cart -%}
+        <a
+          class="eth__icon"
+          href="{{ routes.cart_url }}"
+          aria-label="{{ s.cart_label | escape }}"
+          {% if s.cart_drawer %}data-eth-cart{% endif %}
+        >
+          {{ et_cart }}
+          <span class="eth__bubble" data-eth-count {% if cart.item_count == 0 %}hidden{% endif %}>
+            {{- cart.item_count -}}
+          </span>
+        </a>
+      {%- endif -%}
+
+      {%- if s.show_flag and s.flag_image != blank -%}
+        {%- if s.flag_url != blank -%}
+          <a class="eth__flag" href="{{ s.flag_url }}" aria-label="{{ s.flag_label | escape }}">
+            {{ s.flag_image | image_url: width: 96 | image_tag: width: 48, height: 32, loading: 'lazy', alt: s.flag_label }}
+          </a>
+        {%- else -%}
+          <span class="eth__flag">
+            {{ s.flag_image | image_url: width: 96 | image_tag: width: 48, height: 32, loading: 'lazy', alt: s.flag_label }}
+          </span>
+        {%- endif -%}
+      {%- endif -%}
+
+      {%- if s.show_account -%}
+        <a class="eth__icon" href="{{ routes.account_url }}" aria-label="{{ s.account_label | escape }}">
+          {{- et_user -}}
+        </a>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- comment -%} La recherche mobile se déplie sous la barre. {%- endcomment -%}
+  {%- if s.show_search -%}
+    <div class="eth__searchbox" data-eth-searchbox>
+      <form class="eth__search-form" action="{{ routes.search_url }}" method="get" role="search">
+        {{ et_search }}
+        <input
+          type="search"
+          name="q"
+          placeholder="{{ s.search_placeholder | escape }}"
+          aria-label="{{ s.search_label | escape }}"
+          data-eth-search-input
+        >
+      </form>
+    </div>
+  {%- endif -%}
+
+  {%- comment -%} ---------- Tiroir de menu ---------- {%- endcomment -%}
+  {%- if s.show_menu and menu != blank and menu.links.size > 0 -%}
+    <div class="eth__drawer" data-eth-drawer hidden>
+      <div class="eth__drawer-scrim" data-eth-drawer-scrim></div>
+      <div
+        class="eth__drawer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="{{ s.menu_label | escape }}"
+        data-eth-drawer-panel
+      >
+        <div class="eth__drawer-head">
+          <span>{{ s.menu_label }}</span>
+          <button
+            type="button"
+            class="eth__drawer-close"
+            data-eth-drawer-close
+            aria-label="{{ s.close_label | escape }}"
+          >
+            {{- et_close -}}
+          </button>
+        </div>
+
+        <div class="eth__drawer-body">
+          {%- for link in menu.links -%}
+            {%- if link.links.size > 0 -%}
+              <button
+                type="button"
+                class="eth__drawer-link"
+                data-eth-acc="{{ forloop.index0 }}"
+                aria-expanded="false"
+                aria-controls="eth-acc-{{ section.id }}-{{ forloop.index0 }}"
+              >
+                <span>{{ link.title }}</span>
+                {{ et_caret }}
+              </button>
+              <div class="eth__drawer-sub" id="eth-acc-{{ section.id }}-{{ forloop.index0 }}" data-eth-acc-panel hidden>
+                <a href="{{ link.url }}">{{ s.all_label | replace: '[titre]', link.title }}</a>
+                {%- for child in link.links -%}
+                  <a href="{{ child.url }}">{{ child.title }}</a>
+                {%- endfor -%}
+              </div>
+            {%- else -%}
+              <a class="eth__drawer-link" href="{{ link.url }}">
+                <span>{{ link.title }}</span>
+              </a>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+
+        {%- if s.show_pill and s.pill_label != blank -%}
+          <div class="eth__drawer-foot">
+            <a class="eth__drawer-pill" href="{{ s.pill_url | default: routes.root_url }}">{{ s.pill_label }}</a>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  {%- endif -%}
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('eth-{{ section.id }}');
+    if (!root || root.dataset.ethReady === '1') return;
+    root.dataset.ethReady = '1';
+
+    function $(sel, scope) {
+      return (scope || root).querySelector(sel);
+    }
+    function $$(sel, scope) {
+      return Array.prototype.slice.call((scope || root).querySelectorAll(sel));
+    }
+
+    var fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+    /* ---------------- Menus déroulants ----------------
+       Au survol sur un appareil à souris, le lien parent reste cliquable ;
+       au tactile, le premier appui ouvre le menu au lieu de naviguer. */
+
+    $$('[data-eth-item]').forEach(function (item) {
+      var trigger = $('[data-eth-trigger]', item);
+      if (!trigger) return;
+
+      var setOpen = function (open) {
+        item.classList.toggle('is-open', open);
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+
+      item.addEventListener('mouseenter', function () {
+        if (fine.matches) setOpen(true);
+      });
+      item.addEventListener('mouseleave', function () {
+        if (fine.matches) setOpen(false);
+      });
+      item.addEventListener('focusin', function () {
+        setOpen(true);
+      });
+      item.addEventListener('focusout', function (event) {
+        if (!item.contains(event.relatedTarget)) setOpen(false);
+      });
+
+      trigger.addEventListener('click', function (event) {
+        if (fine.matches) return;
+        if (!item.classList.contains('is-open')) {
+          event.preventDefault();
+          setOpen(true);
+        }
+      });
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      $$('[data-eth-item].is-open').forEach(function (item) {
+        item.classList.remove('is-open');
+        var trigger = $('[data-eth-trigger]', item);
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    /* ---------------- Recherche mobile ---------------- */
+
+    var searchToggle = $('[data-eth-search-toggle]');
+    if (searchToggle) {
+      searchToggle.addEventListener('click', function () {
+        var open = root.classList.toggle('is-searching');
+        searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (open) {
+          var input = $('[data-eth-search-input]');
+          if (input) input.focus();
+        }
+      });
+    }
+
+    /* ---------------- Tiroir de menu ---------------- */
+
+    var drawer = $('[data-eth-drawer]');
+    if (drawer) {
+      var panel = $('[data-eth-drawer-panel]', drawer);
+      var burger = $('[data-eth-burger]');
+      var back = null;
+
+      var openDrawerMenu = function () {
+        back = document.activeElement;
+        drawer.hidden = false;
+        void drawer.offsetWidth;
+        drawer.classList.add('is-open');
+        document.documentElement.style.overflow = 'hidden';
+        if (burger) burger.setAttribute('aria-expanded', 'true');
+        var close = $('[data-eth-drawer-close]', drawer);
+        if (close) close.focus();
+      };
+
+      var closeDrawerMenu = function () {
+        if (!drawer.classList.contains('is-open')) return;
+        drawer.classList.remove('is-open');
+        document.documentElement.style.overflow = '';
+        if (burger) burger.setAttribute('aria-expanded', 'false');
+        window.setTimeout(function () {
+          if (!drawer.classList.contains('is-open')) drawer.hidden = true;
+        }, 360);
+        if (back && typeof back.focus === 'function') back.focus();
+      };
+
+      if (burger) burger.addEventListener('click', openDrawerMenu);
+      $$('[data-eth-drawer-close], [data-eth-drawer-scrim]', drawer).forEach(function (el) {
+        el.addEventListener('click', closeDrawerMenu);
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (!drawer.classList.contains('is-open')) return;
+        if (event.key === 'Escape') {
+          closeDrawerMenu();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        var list = $$(
+          'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
+          panel
+        ).filter(function (el) {
+          return el.offsetParent !== null;
+        });
+        if (!list.length) return;
+        var first = list[0];
+        var last = list[list.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+
+      /* Accordéons : la hauteur est animée depuis la valeur mesurée, puis
+         relâchée en auto pour que le contenu puisse encore grandir. */
+      $$('[data-eth-acc]', drawer).forEach(function (button) {
+        var sub = document.getElementById(button.getAttribute('aria-controls'));
+        if (!sub) return;
+
+        button.addEventListener('click', function () {
+          var open = button.getAttribute('aria-expanded') === 'true';
+          button.setAttribute('aria-expanded', open ? 'false' : 'true');
+
+          if (open) {
+            sub.style.height = sub.scrollHeight + 'px';
+            void sub.offsetHeight;
+            sub.style.height = '0px';
+            window.setTimeout(function () {
+              if (button.getAttribute('aria-expanded') === 'false') {
+                sub.hidden = true;
+                sub.style.height = '';
+              }
+            }, 260);
+          } else {
+            sub.hidden = false;
+            sub.style.height = '0px';
+            void sub.offsetHeight;
+            sub.style.height = sub.scrollHeight + 'px';
+            window.setTimeout(function () {
+              if (button.getAttribute('aria-expanded') === 'true') sub.style.height = 'auto';
+            }, 260);
+          }
+        });
+      });
+    }
+
+    /* ---------------- Panier ---------------- */
+
+    var bubble = $('[data-eth-count]');
+    if (bubble) {
+      var refresh = function () {
+        fetch('{{ routes.cart_url }}.js', {
+          headers: { Accept: 'application/json' },
+          credentials: 'same-origin'
+        })
+          .then(function (r) {
+            return r.ok ? r.json() : null;
+          })
+          .then(function (cart) {
+            if (!cart) return;
+            bubble.textContent = cart.item_count;
+            bubble.hidden = cart.item_count === 0;
+          })
+          .catch(function () {});
+      };
+      document.addEventListener('hkf:cart-added', refresh);
+      document.addEventListener('pvp:cart-added', refresh);
+      document.addEventListener('pnc:updated', refresh);
+      document.addEventListener('pnc:opened', refresh);
+    }
+
+    /* L'icône panier ouvre le tiroir plutôt que la page, quand il y en a un.
+       Deux passes : le panier posé par le marchand d'abord, celui du thème
+       seulement ensuite — querySelectorAll rend les éléments dans l'ordre du
+       document, pas dans celui du sélecteur. */
+    var cartIcon = $('[data-eth-cart]');
+    if (cartIcon) {
+      cartIcon.addEventListener('click', function (event) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+        var ask = new CustomEvent('pnc:open', {
+          bubbles: true,
+          cancelable: true,
+          detail: { handled: false }
+        });
+        document.dispatchEvent(ask);
+        if (ask.detail && ask.detail.handled) {
+          event.preventDefault();
+          return;
+        }
+
+        var passes = ['[data-cart-drawer]', 'cart-drawer, #cart-drawer, .cart-drawer'];
+        for (var p = 0; p < passes.length; p += 1) {
+          var found = document.querySelectorAll(passes[p]);
+          for (var i = 0; i < found.length; i += 1) {
+            if (typeof found[i].open === 'function') {
+              event.preventDefault();
+              found[i].open();
+              return;
+            }
+          }
+        }
+        /* Personne n'a répondu : le lien mène à la page panier, tant mieux. */
+      });
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "En-tête",
+  "tag": "header",
+  "class": "entete-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Logo"
+    },
+    { "type": "image_picker", "id": "logo", "label": "Image du logo" },
+    { "type": "text", "id": "logo_text", "label": "Logo en texte", "info": "Utilisé si aucune image n'est choisie.", "default": "HIKE" },
+    { "type": "text", "id": "logo_sub", "label": "Ligne sous le logo texte", "default": "Footwear" },
+    { "type": "range", "id": "logo_width", "label": "Largeur du logo (bureau)", "min": 60, "max": 300, "step": 5, "unit": "px", "default": 150 },
+    { "type": "range", "id": "logo_width_mobile", "label": "Largeur du logo (mobile)", "min": 60, "max": 240, "step": 5, "unit": "px", "default": 120 },
+    { "type": "range", "id": "logo_text_size", "label": "Taille du logo texte (bureau)", "min": 16, "max": 48, "step": 1, "unit": "px", "default": 30 },
+    { "type": "range", "id": "logo_text_size_mobile", "label": "Taille du logo texte (mobile)", "min": 14, "max": 36, "step": 1, "unit": "px", "default": 22 },
+
+    {
+      "type": "header",
+      "content": "Bouton pilule"
+    },
+    { "type": "checkbox", "id": "show_pill", "label": "Afficher le bouton", "default": true },
+    { "type": "text", "id": "pill_label", "label": "Texte", "default": "Offre Spéciale Seniors" },
+    { "type": "url", "id": "pill_url", "label": "Lien" },
+
+    {
+      "type": "header",
+      "content": "Menu"
+    },
+    { "type": "checkbox", "id": "show_menu", "label": "Afficher le menu", "default": true },
+    { "type": "link_list", "id": "menu", "label": "Menu", "default": "main-menu" },
+    {
+      "type": "select",
+      "id": "nav_align",
+      "label": "Alignement",
+      "options": [
+        { "value": "center", "label": "Centré" },
+        { "value": "flex-start", "label": "À gauche" },
+        { "value": "flex-end", "label": "À droite" }
+      ],
+      "default": "center"
+    },
+    { "type": "range", "id": "nav_size", "label": "Taille du menu", "info": "Réduis-la si tes rubriques passent à la ligne.", "min": 11, "max": 18, "step": 1, "unit": "px", "default": 14 },
+    { "type": "text", "id": "menu_label", "label": "Titre du menu", "default": "Menu" },
+    { "type": "text", "id": "all_label", "label": "Lien « tout voir »", "info": "[titre] est remplacé par le nom de la rubrique.", "default": "Voir tout : [titre]" },
+    { "type": "text", "id": "close_label", "label": "Fermer (accessibilité)", "default": "Fermer le menu" },
+
+    {
+      "type": "header",
+      "content": "Recherche"
+    },
+    { "type": "checkbox", "id": "show_search", "label": "Afficher la recherche", "default": true },
+    { "type": "text", "id": "search_placeholder", "label": "Texte d'invite", "default": "Recherche" },
+    { "type": "text", "id": "search_label", "label": "Libellé (accessibilité)", "default": "Rechercher" },
+    { "type": "range", "id": "search_width", "label": "Largeur du champ", "min": 140, "max": 420, "step": 10, "unit": "px", "default": 220 },
+
+    {
+      "type": "header",
+      "content": "Icônes"
+    },
+    { "type": "checkbox", "id": "show_cart", "label": "Panier", "default": true },
+    {
+      "type": "checkbox",
+      "id": "cart_drawer",
+      "label": "Ouvrir le panier coulissant",
+      "info": "L'icône ouvre le tiroir au lieu d'aller sur la page panier. Sans tiroir dans le thème, le lien fonctionne normalement.",
+      "default": true
+    },
+    { "type": "text", "id": "cart_label", "label": "Panier (accessibilité)", "default": "Panier" },
+    { "type": "checkbox", "id": "show_account", "label": "Compte", "default": true },
+    { "type": "text", "id": "account_label", "label": "Compte (accessibilité)", "default": "Mon compte" },
+    { "type": "checkbox", "id": "show_flag", "label": "Drapeau", "default": true },
+    { "type": "image_picker", "id": "flag_image", "label": "Image du drapeau" },
+    { "type": "url", "id": "flag_url", "label": "Lien du drapeau" },
+    { "type": "text", "id": "flag_label", "label": "Drapeau (accessibilité)", "default": "Pays de livraison" },
+
+    {
+      "type": "header",
+      "content": "Mise en page"
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky",
+      "label": "Rester visible au défilement",
+      "info": "La barre garde sa place dans le flux : elle ne recouvre jamais le haut de la page.",
+      "default": true
+    },
+    { "type": "range", "id": "container_width", "label": "Largeur maximale", "min": 900, "max": 1800, "step": 20, "unit": "px", "default": 1500 },
+    { "type": "range", "id": "height", "label": "Hauteur (bureau)", "min": 56, "max": 130, "step": 2, "unit": "px", "default": 78 },
+    { "type": "range", "id": "height_mobile", "label": "Hauteur (mobile)", "min": 44, "max": 100, "step": 2, "unit": "px", "default": 58 },
+    { "type": "range", "id": "padding_side", "label": "Marge latérale (bureau)", "min": 8, "max": 60, "step": 2, "unit": "px", "default": 24 },
+    { "type": "range", "id": "padding_side_mobile", "label": "Marge latérale (mobile)", "min": 4, "max": 32, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "gap", "label": "Espacement des blocs", "min": 4, "max": 40, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "border_width", "label": "Trait sous la barre", "min": 0, "max": 4, "step": 1, "unit": "px", "default": 1 },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_ink", "label": "Texte", "default": "#16221B" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#7C8A81" },
+    { "type": "color", "id": "color_line", "label": "Traits", "default": "#E4E9E5" },
+    { "type": "color", "id": "color_soft", "label": "Fond doux", "default": "#F5F7F5" },
+    { "type": "color", "id": "color_accent", "label": "Accent", "default": "#3F7D3B" },
+    { "type": "color", "id": "color_pill_bg", "label": "Fond du bouton pilule", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_pill_ink", "label": "Texte du bouton pilule", "default": "#3F7D3B" },
+    { "type": "color", "id": "color_pill_line", "label": "Bordure du bouton pilule", "default": "#3F7D3B" },
+    { "type": "color", "id": "color_badge_bg", "label": "Fond de la pastille panier", "default": "#3F7D3B" },
+    { "type": "color", "id": "color_badge_ink", "label": "Texte de la pastille panier", "default": "#FFFFFF" }
+  ],
+  "presets": [
+    {
+      "name": "En-tête"
+    }
+  ]
+}
+{% endschema %}

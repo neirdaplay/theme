@@ -3267,13 +3267,19 @@
       document.dispatchEvent(event);
       if (event.detail && event.detail.handled) return true;
 
-      var candidates = document.querySelectorAll(
-        '[data-cart-drawer], cart-drawer, #cart-drawer, .cart-drawer, cart-notification'
-      );
-      for (var i = 0; i < candidates.length; i += 1) {
-        if (typeof candidates[i].open === 'function') {
-          candidates[i].open();
-          return true;
+      /* En deux passes, et dans cet ordre : le panier posé par le marchand
+         d'abord, celui du thème seulement ensuite. querySelectorAll rend les
+         éléments dans l'ordre du document, pas dans celui du sélecteur : sans
+         cette séparation, un <cart-drawer> de thème placé plus haut dans la
+         page l'emporterait sur le tiroir choisi. */
+      var passes = ['[data-cart-drawer]', 'cart-drawer, #cart-drawer, .cart-drawer, cart-notification'];
+      for (var p = 0; p < passes.length; p += 1) {
+        var candidates = document.querySelectorAll(passes[p]);
+        for (var i = 0; i < candidates.length; i += 1) {
+          if (typeof candidates[i].open === 'function') {
+            candidates[i].open();
+            return true;
+          }
         }
       }
       return false;
