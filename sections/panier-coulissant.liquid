@@ -1,0 +1,2051 @@
+{% comment %}
+  panier-coulissant.liquid
+  Cart drawer: slides in from the right on desktop, takes the whole screen on
+  mobile. Free-shipping goals on a horizontal track, cart lines with quantity
+  and variant swapping, a cross-sell row, then the totals and the checkout
+  button.
+
+  Every part has its own on/off switch.
+
+  Place it once, in a section group that renders on every page (the footer
+  group is the usual spot). It answers to:
+    - a click on any link to the cart page
+    - a product form submitted anywhere on the page
+    - the `hkf:cart-added` event fired by the HikeFoot product section
+    - `document.dispatchEvent(new CustomEvent('pnc:open'))` from your own code
+
+  Self-contained: styles and behaviour are both inlined, so this file is the
+  only thing that needs to exist in the theme.
+{% endcomment %}
+
+{% style %}
+/* ==========================================================================
+   Panier coulissant — scoped under .pnc so the rest of the theme is untouched.
+   ========================================================================== */
+
+.pnc {
+  --pn-white: #ffffff;
+  --pn-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  font-family: var(--pn-font);
+  color: var(--pn-ink);
+  -webkit-font-smoothing: antialiased;
+  pointer-events: none;
+}
+
+.pnc *,
+.pnc *::before,
+.pnc *::after {
+  box-sizing: border-box;
+}
+
+:where(.pnc) :where(p, h2, h3, ul, ol, li, figure) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(.pnc) :where(ul, ol) {
+  list-style: none;
+}
+
+:where(.pnc) :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(.pnc) :where(img) {
+  display: block;
+  max-width: 100%;
+}
+
+:where(.pnc) :where(a) {
+  color: inherit;
+}
+
+.pnc :focus-visible {
+  outline: 2px solid var(--pn-accent);
+  outline-offset: 2px;
+}
+
+.pnc[hidden] {
+  display: none;
+}
+
+/* Un display explicite l'emporte sur l'attribut hidden, qui ne tient que
+   d'une règle du navigateur. On le rétablit une fois pour toutes plutôt que
+   d'y penser règle par règle. */
+.pnc [hidden] {
+  display: none;
+}
+
+/* ---- Voile ---- */
+
+.pnc__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 22, 28, 0.42);
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+.pnc.is-open .pnc__scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---- Panneau ----
+   Il part de la droite et vient recouvrir l'écran ; sur mobile il prend
+   toute la largeur, ce qui en fait une page à part entière. */
+
+.pnc__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--pn-width), 100vw);
+  max-width: 100%;
+  height: 100%;
+  background: var(--pn-bg);
+  box-shadow: -18px 0 48px rgba(17, 22, 28, 0.16);
+  transform: translateX(100%);
+  transition: transform 0.36s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: auto;
+}
+
+.pnc.is-open .pnc__panel {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pnc__panel,
+  .pnc__scrim {
+    transition: none;
+  }
+}
+
+@media (max-width: 749px) {
+  .pnc__panel {
+    width: 100%;
+    box-shadow: none;
+  }
+}
+
+/* ---- En-tête ---- */
+
+.pnc__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 16px var(--pn-pad) 14px;
+  border-bottom: 1px solid var(--pn-line);
+  background: var(--pn-head-bg);
+}
+
+.pnc__head-icon {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  color: var(--pn-ink);
+}
+
+.pnc__head-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pnc__count {
+  position: absolute;
+  top: -4px;
+  left: -6px;
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--pn-accent);
+  color: var(--pn-white);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pnc__titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pnc__title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pnc__subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--pn-accent);
+}
+
+.pnc__close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--pn-muted);
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.pnc__close:hover {
+  background: var(--pn-soft);
+  color: var(--pn-ink);
+}
+
+.pnc__close svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* ---- Corps défilant ---- */
+
+.pnc__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--pn-pad);
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+/* ---- Bandeau livraison ---- */
+
+.pnc__ship {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: var(--pn-green-soft);
+  color: var(--pn-ink);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.pnc__ship-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pn-green);
+  color: var(--pn-white);
+}
+
+.pnc__ship-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pnc__ship b {
+  font-weight: 700;
+}
+
+/* ---- Objectifs ----
+   Une seule ligne horizontale : la barre se remplit, les paliers sont posés
+   dessus à leur position réelle, et le texte annonce le prochain. */
+
+.pnc__goals {
+  display: grid;
+  gap: 12px;
+}
+
+.pnc__goals-msg {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--pn-ink);
+}
+
+.pnc__goals-msg b {
+  font-weight: 700;
+  color: var(--pn-accent);
+}
+
+.pnc__goals-track {
+  position: relative;
+  height: 8px;
+  margin: 0 var(--pn-goal-edge) 44px;
+  border-radius: 999px;
+  background: var(--pn-line);
+}
+
+.pnc__goals-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--pn-green);
+  transition: width 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pnc__goals-fill {
+    transition: none;
+  }
+}
+
+.pnc__goal {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.pnc__goal-dot {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--pn-line);
+  background: var(--pn-bg);
+  color: var(--pn-muted);
+  transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease;
+}
+
+.pnc__goal-dot svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pnc__goal-label {
+  position: absolute;
+  top: calc(100% + 5px);
+  width: max-content;
+  max-width: 84px;
+  font-size: 10.5px;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--pn-muted);
+  transition: color 0.3s ease;
+}
+
+.pnc__goal.is-reached .pnc__goal-dot {
+  border-color: var(--pn-green);
+  background: var(--pn-green);
+  color: var(--pn-white);
+}
+
+.pnc__goal.is-reached .pnc__goal-label {
+  color: var(--pn-green);
+  font-weight: 700;
+}
+
+/* ---- Lignes du panier ---- */
+
+.pnc__lines {
+  display: grid;
+  gap: 12px;
+}
+
+.pnc__line {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--pn-line);
+  border-radius: var(--pn-card-radius);
+  background: var(--pn-card);
+}
+
+.pnc__line-img {
+  flex: 0 0 auto;
+  width: 82px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--pn-soft);
+}
+
+.pnc__line-img img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.pnc__line-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  align-content: start;
+}
+
+.pnc__line-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.pnc__line-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pnc__line-remove {
+  flex: 0 0 auto;
+  padding: 2px;
+  border: 0;
+  background: none;
+  color: var(--pn-muted);
+  transition: color 0.16s ease;
+}
+
+.pnc__line-remove:hover {
+  color: var(--pn-red);
+}
+
+.pnc__line-remove svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pnc__line-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pnc__pill {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--pn-soft);
+  font-size: 10.5px;
+  color: var(--pn-muted);
+}
+
+.pnc__line-note {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pn-green);
+}
+
+.pnc__line-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pnc__qty {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--pn-line);
+  border-radius: 999px;
+  background: var(--pn-bg);
+}
+
+.pnc__qty button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--pn-ink);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.pnc__qty button:disabled {
+  color: var(--pn-line);
+  cursor: default;
+}
+
+.pnc__qty span {
+  min-width: 26px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.pnc__line-prices {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pnc__line-was {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--pn-muted);
+  text-decoration: line-through;
+}
+
+.pnc__line-was[hidden] {
+  display: none;
+}
+
+/* ---- Changement de variante ---- */
+
+.pnc__swap-open {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pn-accent);
+  font-size: 11.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pnc__swap {
+  display: grid;
+  gap: 7px;
+  margin-top: 2px;
+}
+
+.pnc__swap[hidden] {
+  display: none;
+}
+
+.pnc__swap label {
+  display: grid;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--pn-muted);
+}
+
+.pnc__swap select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--pn-line);
+  border-radius: 8px;
+  background: var(--pn-bg);
+  color: var(--pn-ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+/* ---- Panier vide ---- */
+
+.pnc__empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 40px 12px;
+  text-align: center;
+}
+
+.pnc__empty svg {
+  width: 42px;
+  height: 42px;
+  color: var(--pn-line);
+}
+
+.pnc__empty-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.pnc__empty-text {
+  font-size: 12.5px;
+  color: var(--pn-muted);
+}
+
+.pnc__empty-cta {
+  margin-top: 6px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: var(--pn-ink);
+  color: var(--pn-white);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* ---- Combinaison parfaite ---- */
+
+.pnc__cross {
+  display: grid;
+  gap: 10px;
+}
+
+.pnc__cross-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pnc__cross-title svg {
+  width: 17px;
+  height: 17px;
+  color: var(--pn-green);
+}
+
+.pnc__cross-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--pn-line);
+  border-radius: var(--pn-card-radius);
+  background: var(--pn-card);
+}
+
+.pnc__cross-img {
+  flex: 0 0 auto;
+  width: 62px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--pn-soft);
+}
+
+.pnc__cross-img img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.pnc__cross-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.pnc__cross-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-decoration: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pnc__cross-stars {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--pn-muted);
+}
+
+.pnc__stars {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  color: var(--pn-line);
+}
+
+.pnc__stars svg {
+  width: 11px;
+  height: 11px;
+}
+
+.pnc__stars-on {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--pn-star);
+}
+
+.pnc__cross-prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pnc__cross-was {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pn-muted);
+  text-decoration: line-through;
+}
+
+.pnc__cross-save {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--pn-green-soft);
+  color: var(--pn-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.pnc__cross-add {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border: 1px solid var(--pn-green);
+  border-radius: 8px;
+  background: var(--pn-bg);
+  color: var(--pn-green);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.pnc__cross-add:hover {
+  background: var(--pn-green);
+  color: var(--pn-white);
+}
+
+.pnc__cross-add.is-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.pnc__cross-add.is-done {
+  background: var(--pn-green);
+  color: var(--pn-white);
+}
+
+/* Sur un panneau étroit, le bouton passe sous le produit. */
+@media (max-width: 419px) {
+  .pnc__cross-item {
+    flex-wrap: wrap;
+  }
+
+  .pnc__cross-add {
+    width: 100%;
+  }
+}
+
+/* ---- Pied ---- */
+
+.pnc__foot {
+  flex: 0 0 auto;
+  padding: 14px var(--pn-pad) calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--pn-line);
+  background: var(--pn-head-bg);
+  display: grid;
+  gap: 10px;
+}
+
+.pnc__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--pn-muted);
+}
+
+.pnc__row--total {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--pn-ink);
+}
+
+.pnc__row--total .pnc__row-value {
+  font-size: 19px;
+}
+
+.pnc__row-value {
+  font-weight: 700;
+  color: var(--pn-ink);
+}
+
+.pnc__note {
+  font-size: 11px;
+  color: var(--pn-muted);
+  text-align: center;
+}
+
+/* Le bouton reprend exactement le traitement de l'ajout au panier : cadenas,
+   libellé et flèche centrés d'un seul bloc. */
+.pnc__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7em;
+  width: 100%;
+  min-height: 54px;
+  padding: 12px clamp(12px, 3vw, 20px);
+  border: 0;
+  border-radius: var(--pn-cta-radius);
+  background: var(--pn-green);
+  color: var(--pn-white);
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: center;
+  text-decoration: none;
+  transition: transform 0.16s ease, filter 0.16s ease;
+}
+
+.pnc__cta:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.pnc__cta:active {
+  transform: scale(0.985);
+}
+
+.pnc__cta svg {
+  flex: 0 0 auto;
+  width: 1.05em;
+  height: 1.05em;
+}
+
+.pnc__cta-label {
+  white-space: nowrap;
+}
+
+.pnc__pay {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pnc__pay svg,
+.pnc__pay img {
+  width: 34px;
+  height: 22px;
+  border-radius: 3px;
+}
+
+/* ---- Chargement ---- */
+
+.pnc__panel.is-busy .pnc__body {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.pnc__error {
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--pn-red-soft);
+  color: var(--pn-red);
+  font-size: 12px;
+}
+
+.pnc__error[hidden] {
+  display: none;
+}
+{% endstyle %}
+
+{%- liquid
+  assign s = section.settings
+  assign tiers = section.blocks | where: 'type', 'tier'
+  assign crosses = section.blocks | where: 'type', 'cross'
+
+  comment
+    Les paliers sont saisis en euros : on passe en centimes une bonne fois
+    pour toutes, et on retient le plus haut, qui fixe l'échelle de la barre.
+  endcomment
+  assign goal_max = 0
+  for block in tiers
+    assign raw = block.settings.amount | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
+    assign cents = raw | times: 100 | round
+    if cents > goal_max
+      assign goal_max = cents
+    endif
+  endfor
+-%}
+
+{%- capture pn_close -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>{%- endcapture -%}
+{%- capture pn_bag -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 4h2.2l2 11.4h10.4l1.9-8.1H6.4"/><circle cx="9.4" cy="19.2" r="1.5"/><circle cx="17" cy="19.2" r="1.5"/></svg>{%- endcapture -%}
+{%- capture pn_trash -%}<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.8 4.2h10.4M6.4 4.2V2.8h3.2v1.4M4.3 4.2l.6 9h6.2l.6-9M6.6 6.6v4.4M9.4 6.6v4.4"/></svg>{%- endcapture -%}
+{%- capture pn_truck -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2.6 6.4h11v10h-11zM13.6 9.8h3.9l2.9 3v3.6h-6.8"/><circle cx="6.6" cy="18.4" r="1.7"/><circle cx="16.9" cy="18.4" r="1.7"/></svg>{%- endcapture -%}
+{%- capture pn_gift -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.4 9.6h17.2v3.2H3.4zM4.8 12.8h14.4v7.6H4.8zM12 9.6v10.8"/><path d="M12 9.6S10.9 5 8.6 5a2 2 0 000 4.6zM12 9.6S13.1 5 15.4 5a2 2 0 010 4.6z"/></svg>{%- endcapture -%}
+{%- capture pn_percent -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 18L18 6"/><circle cx="7.8" cy="7.8" r="2.4"/><circle cx="16.2" cy="16.2" r="2.4"/></svg>{%- endcapture -%}
+{%- capture pn_star -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.5l2.6 5.3 5.8.85-4.2 4.1.99 5.8L10 14.8l-5.19 2.75.99-5.8-4.2-4.1 5.8-.85z"/></svg>{%- endcapture -%}
+{%- capture pn_box -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.8l8.4 4.2v10L12 21.2 3.6 17V7z"/><path d="M3.6 7L12 11.2 20.4 7M12 11.2v10"/></svg>{%- endcapture -%}
+{%- capture pn_lock -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.6" y="10.4" width="14.8" height="10.2" rx="2.2"/><path d="M8.2 10.4V7.6a3.8 3.8 0 017.6 0v2.8"/></svg>{%- endcapture -%}
+{%- capture pn_arrow -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.4 10h13M11.6 5.2L16.4 10l-4.8 4.8"/></svg>{%- endcapture -%}
+
+<div
+  class="pnc"
+  id="pnc-{{ section.id }}"
+  data-pnc-root
+  data-cart-drawer
+  hidden
+  style="
+    --pn-ink: {{ s.color_ink }};
+    --pn-muted: {{ s.color_muted }};
+    --pn-line: {{ s.color_line }};
+    --pn-soft: {{ s.color_soft }};
+    --pn-bg: {{ s.color_bg }};
+    --pn-card: {{ s.color_card }};
+    --pn-head-bg: {{ s.color_head_bg }};
+    --pn-accent: {{ s.color_accent }};
+    --pn-green: {{ s.color_green }};
+    --pn-green-soft: {{ s.color_green_soft }};
+    --pn-star: {{ s.color_star }};
+    --pn-red: {{ s.color_red }};
+    --pn-red-soft: {{ s.color_red_soft }};
+    --pn-width: {{ s.panel_width }}px;
+    --pn-pad: {{ s.panel_padding }}px;
+    --pn-card-radius: {{ s.card_radius }}px;
+    --pn-cta-radius: {{ s.cta_radius }}px;
+    --pn-goal-edge: {{ s.goal_edge }}px;
+  "
+>
+  <script type="application/json" data-pnc-config>
+    {
+      "cartUrl": {{ routes.cart_url | json }},
+      "cartAddUrl": {{ routes.cart_add_url | json }},
+      "cartChangeUrl": {{ routes.cart_change_url | json }},
+      "cartUpdateUrl": {{ routes.cart_update_url | json }},
+      "rootUrl": {{ routes.root_url | json }},
+      "moneyFormat": {{ shop.money_format | json }},
+      "openOnAdd": {{ s.open_on_add | json }},
+      "interceptForms": {{ s.intercept_forms | json }},
+      "interceptLinks": {{ s.intercept_links | json }},
+      "showSwap": {{ s.show_swap | json }},
+      "showLineCompare": {{ s.show_line_compare | json }},
+      "showQty": {{ s.show_qty | json }},
+      "showPills": {{ s.show_pills | json }},
+      "goalMax": {{ goal_max | json }},
+      "goals": [
+        {%- for block in tiers -%}
+          {%- liquid
+            assign b = block.settings
+            assign raw = b.amount | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
+            assign cents = raw | times: 100 | round
+          -%}
+          {
+            "amount": {{ cents | json }},
+            "label": {{ b.label | json }},
+            "reward": {{ b.reward | json }}
+          }{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ],
+      "crossIds": [
+        {%- for block in crosses -%}
+          {%- assign cp = block.settings.product -%}
+          {%- if cp != blank and cp.selected_or_first_available_variant != blank -%}
+            {{ cp.selected_or_first_available_variant.id | json }}{% unless forloop.last %},{% endunless %}
+          {%- endif -%}
+        {%- endfor -%}
+      ],
+      "strings": {
+        "subtitleOne": {{ s.subtitle_one | json }},
+        "subtitleMany": {{ s.subtitle_many | json }},
+        "goalsMessage": {{ s.goals_message | json }},
+        "goalsDone": {{ s.goals_done | json }},
+        "swapLabel": {{ s.swap_label | json }},
+        "error": {{ s.error_label | json }}
+      }
+    }
+  </script>
+
+  <div class="pnc__scrim" data-pnc-scrim></div>
+
+  <div
+    class="pnc__panel"
+    role="dialog"
+    aria-modal="true"
+    aria-label="{{ s.panel_title | escape }}"
+    data-pnc-panel
+  >
+    {%- comment -%} ---------- En-tête ---------- {%- endcomment -%}
+    <div class="pnc__head">
+      {%- if s.show_head_icon -%}
+        <span class="pnc__head-icon">
+          {{ pn_bag }}
+          <span class="pnc__count" data-pnc-count hidden>0</span>
+        </span>
+      {%- endif -%}
+      <div class="pnc__titles">
+        <h2 class="pnc__title">{{ s.panel_title }}</h2>
+        {%- if s.show_subtitle -%}
+          <p class="pnc__subtitle" data-pnc-subtitle></p>
+        {%- endif -%}
+      </div>
+      <button type="button" class="pnc__close" data-pnc-close aria-label="{{ s.close_label | escape }}">
+        {{ pn_close }}
+      </button>
+    </div>
+
+    {%- comment -%} ---------- Corps ---------- {%- endcomment -%}
+    <div class="pnc__body" data-pnc-body>
+      <p class="pnc__error" role="alert" data-pnc-error hidden></p>
+
+      {%- if s.show_ship_note and s.ship_note != blank -%}
+        <div class="pnc__ship">
+          <span class="pnc__ship-icon">{{ pn_truck }}</span>
+          <span>{{ s.ship_note }}</span>
+        </div>
+      {%- endif -%}
+
+      {%- if s.show_goals and tiers.size > 0 and goal_max > 0 -%}
+        <div class="pnc__goals" data-pnc-goals>
+          <p class="pnc__goals-msg" data-pnc-goals-msg></p>
+          <div class="pnc__goals-track">
+            <span class="pnc__goals-fill" data-pnc-goals-fill></span>
+            {%- for block in tiers -%}
+              {%- liquid
+                assign b = block.settings
+                assign raw = b.amount | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
+                assign cents = raw | times: 100 | round
+                assign pct = cents | times: 100.0 | divided_by: goal_max
+
+                case b.icon
+                  when 'gift'
+                    assign g_icon = pn_gift
+                  when 'percent'
+                    assign g_icon = pn_percent
+                  when 'box'
+                    assign g_icon = pn_box
+                  when 'star'
+                    assign g_icon = pn_star
+                  else
+                    assign g_icon = pn_truck
+                endcase
+              -%}
+              <span
+                class="pnc__goal"
+                data-pnc-goal="{{ cents }}"
+                style="left: {{ pct }}%;"
+                {{ block.shopify_attributes }}
+              >
+                <span class="pnc__goal-dot">{{ g_icon }}</span>
+                {%- if b.label != blank -%}
+                  <span class="pnc__goal-label">{{ b.label }}</span>
+                {%- endif -%}
+              </span>
+            {%- endfor -%}
+          </div>
+        </div>
+      {%- endif -%}
+
+      <ul class="pnc__lines" data-pnc-lines></ul>
+
+      {%- comment -%}
+        Le panier vide : il remplace les lignes, pas le panneau entier, pour
+        que la vente croisée reste visible si le marchand le souhaite.
+      {%- endcomment -%}
+      <div class="pnc__empty" data-pnc-empty hidden>
+        {{ pn_bag }}
+        {%- if s.empty_title != blank -%}
+          <p class="pnc__empty-title">{{ s.empty_title }}</p>
+        {%- endif -%}
+        {%- if s.empty_text != blank -%}
+          <p class="pnc__empty-text">{{ s.empty_text }}</p>
+        {%- endif -%}
+        {%- if s.empty_cta_label != blank -%}
+          <a class="pnc__empty-cta" href="{{ s.empty_cta_url | default: routes.all_products_collection_url }}">
+            {{ s.empty_cta_label }}
+          </a>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} ---------- Combinaison parfaite ---------- {%- endcomment -%}
+      {%- if s.show_cross and crosses.size > 0 -%}
+        <div class="pnc__cross" data-pnc-cross>
+          {%- if s.cross_title != blank -%}
+            <h3 class="pnc__cross-title">{{ pn_box }}<span>{{ s.cross_title }}</span></h3>
+          {%- endif -%}
+
+          {%- for block in crosses -%}
+            {%- liquid
+              assign b = block.settings
+              assign cp = b.product
+              assign cv = cp.selected_or_first_available_variant
+              assign rating = b.rating | plus: 0.0
+              assign star_pct = rating | divided_by: 5.0 | times: 100
+
+              comment
+                times: 100.0 force le calcul en virgule flottante : avec deux
+                entiers, Liquid ferait une division entière et le pourcentage
+                dépendrait du moteur. On arrondit ensuite explicitement.
+              endcomment
+              assign save_pct = 0
+              if cv.compare_at_price > cv.price
+                assign diff = cv.compare_at_price | minus: cv.price
+                assign save_pct = diff | times: 100.0 | divided_by: cv.compare_at_price | round
+              endif
+            -%}
+            {%- if cp != blank and cv != blank -%}
+              <div class="pnc__cross-item" data-pnc-cross-item data-variant="{{ cv.id }}" {{ block.shopify_attributes }}>
+                <a class="pnc__cross-img" href="{{ cp.url }}" tabindex="-1" aria-hidden="true">
+                  {%- if cp.featured_image != blank -%}
+                    {{ cp.featured_image | image_url: width: 180 | image_tag: width: 90, height: 90, loading: 'lazy', alt: '' }}
+                  {%- else -%}
+                    {{ 'product-1' | placeholder_svg_tag }}
+                  {%- endif -%}
+                </a>
+                <div class="pnc__cross-body">
+                  <a class="pnc__cross-name" href="{{ cp.url }}">{{ b.title | default: cp.title }}</a>
+
+                  {%- if s.show_cross_rating and b.rating_count != blank -%}
+                    <span class="pnc__cross-stars">
+                      <span class="pnc__stars" role="img" aria-label="{{ rating }}/5">
+                        {{ pn_star }}{{ pn_star }}{{ pn_star }}{{ pn_star }}{{ pn_star }}
+                        <span class="pnc__stars-on" style="width: {{ star_pct }}%;" aria-hidden="true">
+                          {{ pn_star }}{{ pn_star }}{{ pn_star }}{{ pn_star }}{{ pn_star }}
+                        </span>
+                      </span>
+                      <span>{{ rating }} ({{ b.rating_count }})</span>
+                    </span>
+                  {%- endif -%}
+
+                  <span class="pnc__cross-prices">
+                    <span>{{ cv.price | money }}</span>
+                    {%- if cv.compare_at_price > cv.price -%}
+                      <s class="pnc__cross-was">{{ cv.compare_at_price | money }}</s>
+                      {%- if save_pct > 0 -%}
+                        <span class="pnc__cross-save">
+                          {{- s.cross_save_label | replace: '[x]', save_pct -}}
+                        </span>
+                      {%- endif -%}
+                    {%- endif -%}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="pnc__cross-add"
+                  data-pnc-cross-add="{{ cv.id }}"
+                  {% unless cv.available %}disabled{% endunless %}
+                >
+                  {{- s.cross_add_label -}}
+                </button>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%} ---------- Pied ---------- {%- endcomment -%}
+    <div class="pnc__foot">
+      {%- if s.show_subtotal -%}
+        <p class="pnc__row">
+          <span data-pnc-subtotal-label>{{ s.subtotal_label }}</span>
+          <span class="pnc__row-value" data-pnc-subtotal></span>
+        </p>
+      {%- endif -%}
+
+      <p class="pnc__row pnc__row--total">
+        <span>{{ s.total_label }}</span>
+        <span class="pnc__row-value" data-pnc-total></span>
+      </p>
+
+      <a class="pnc__cta" href="{{ routes.cart_url }}" data-pnc-cta>
+        {%- if s.show_lock -%}{{ pn_lock }}{%- endif -%}
+        <span class="pnc__cta-label">{{ s.cta_label }}</span>
+        {%- if s.show_cta_arrow -%}{{ pn_arrow }}{%- endif -%}
+      </a>
+
+      {%- if s.show_payment and shop.enabled_payment_types.size > 0 -%}
+        <div class="pnc__pay">
+          {%- for type in shop.enabled_payment_types -%}
+            {{ type | payment_type_svg_tag: class: 'pnc__pay-icon' }}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- if s.foot_note != blank -%}
+        <p class="pnc__note">{{ s.foot_note }}</p>
+      {%- endif -%}
+    </div>
+  </div>
+
+  {%- comment -%}
+    Le gabarit d'une ligne. Les lignes viennent de /cart.js, donc elles sont
+    clonées ici plutôt que rendues par Liquid : le panier change sans que la
+    page soit rechargée.
+  {%- endcomment -%}
+  <template data-pnc-row>
+    <li class="pnc__line" data-pnc-line>
+      <a class="pnc__line-img" data-pnc-line-link tabindex="-1" aria-hidden="true">
+        <img data-pnc-line-img alt="" loading="lazy" width="164" height="164">
+      </a>
+      <div class="pnc__line-body">
+        <div class="pnc__line-top">
+          <a class="pnc__line-title" data-pnc-line-title></a>
+          <button type="button" class="pnc__line-remove" data-pnc-line-remove aria-label="{{ s.remove_label | escape }}">
+            {{- pn_trash -}}
+          </button>
+        </div>
+        <div class="pnc__line-opts" data-pnc-line-opts></div>
+        <p class="pnc__line-note" data-pnc-line-note hidden></p>
+        <div class="pnc__line-bottom">
+          <span class="pnc__qty" data-pnc-qty-box>
+            <button type="button" data-pnc-qty-minus aria-label="{{ s.qty_minus_label | escape }}">&minus;</button>
+            <span data-pnc-qty>1</span>
+            <button type="button" data-pnc-qty-plus aria-label="{{ s.qty_plus_label | escape }}">+</button>
+          </span>
+          <span class="pnc__line-prices">
+            <s class="pnc__line-was" data-pnc-line-was hidden></s>
+            <span data-pnc-line-price></span>
+          </span>
+        </div>
+        <button type="button" class="pnc__swap-open" data-pnc-swap-open hidden></button>
+        <div class="pnc__swap" data-pnc-swap hidden></div>
+      </div>
+    </li>
+  </template>
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('pnc-{{ section.id }}');
+    if (!root || root.dataset.pncReady === '1') return;
+    root.dataset.pncReady = '1';
+
+    var config = JSON.parse(root.querySelector('[data-pnc-config]').textContent);
+
+    function $(sel, scope) {
+      return (scope || root).querySelector(sel);
+    }
+    function $$(sel, scope) {
+      return Array.prototype.slice.call((scope || root).querySelectorAll(sel));
+    }
+
+    var panel = $('[data-pnc-panel]');
+    var scrim = $('[data-pnc-scrim]');
+    var linesBox = $('[data-pnc-lines]');
+    var emptyBox = $('[data-pnc-empty]');
+    var rowTemplate = $('[data-pnc-row]');
+    var countEl = $('[data-pnc-count]');
+    var subtitleEl = $('[data-pnc-subtitle]');
+    var subtotalEl = $('[data-pnc-subtotal]');
+    var totalEl = $('[data-pnc-total]');
+    var errorBox = $('[data-pnc-error]');
+    var goalsBox = $('[data-pnc-goals]');
+    var goalsFill = $('[data-pnc-goals-fill]');
+    var goalsMsg = $('[data-pnc-goals-msg]');
+    var crossBox = $('[data-pnc-cross]');
+
+    var lastFocus = null;
+    var cart = null;
+    var productCache = {};
+
+    /* ---------------- Monnaie ----------------
+       Le motif est construit par concaténation : écrire les accolades
+       telles quelles dans ce fichier ferait croire à Liquid qu'il s'agit
+       d'une de ses balises. */
+    var MONEY_TOKEN = new RegExp('\\{\\{\\s*(\\w+)\\s*\\}\\}');
+
+    function formatMoney(cents) {
+      var format = config.moneyFormat;
+      if (!format) return (cents / 100).toFixed(2);
+      var match = format.match(MONEY_TOKEN);
+      if (!match) return format;
+
+      var name = match[1];
+      var noDecimals = name.indexOf('no_decimals') > -1;
+      var commaSeparator = name.indexOf('comma_separator') > -1;
+      var value = (cents / 100).toFixed(noDecimals ? 0 : 2);
+      var parts = value.split('.');
+      var whole = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, commaSeparator ? '.' : ',');
+      var out = whole + (parts[1] ? (commaSeparator ? ',' : '.') + parts[1] : '');
+      return format.replace(MONEY_TOKEN, out);
+    }
+
+    function fill(text, values) {
+      var out = String(text || '');
+      Object.keys(values).forEach(function (key) {
+        out = out.split('[' + key + ']').join(values[key]);
+      });
+      return out;
+    }
+
+    function showError(message) {
+      if (!errorBox) return;
+      errorBox.textContent = message || config.strings.error;
+      errorBox.hidden = false;
+    }
+
+    function clearError() {
+      if (errorBox) errorBox.hidden = true;
+    }
+
+    /* ---------------- Ouverture et fermeture ---------------- */
+
+    function focusables() {
+      return $$(
+        'a[href], button:not([disabled]), select, input, [tabindex]:not([tabindex="-1"])',
+        panel
+      ).filter(function (el) {
+        return el.offsetParent !== null;
+      });
+    }
+
+    function open() {
+      if (root.classList.contains('is-open')) return;
+      lastFocus = document.activeElement;
+      root.hidden = false;
+      /* Un reflow entre l'affichage et la classe, sans quoi le navigateur
+         saute la transition et le panneau apparaît d'un bloc. */
+      void root.offsetWidth;
+      root.classList.add('is-open');
+      document.documentElement.style.overflow = 'hidden';
+      refresh();
+      var first = $('[data-pnc-close]');
+      if (first) first.focus();
+      document.dispatchEvent(new CustomEvent('pnc:opened', { bubbles: true }));
+    }
+
+    function close() {
+      if (!root.classList.contains('is-open')) return;
+      root.classList.remove('is-open');
+      document.documentElement.style.overflow = '';
+      window.setTimeout(function () {
+        if (!root.classList.contains('is-open')) root.hidden = true;
+      }, 380);
+      if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+      document.dispatchEvent(new CustomEvent('pnc:closed', { bubbles: true }));
+    }
+
+    /* L'API que les autres sections appellent : la section produit HikeFoot
+       cherche `cart-drawer, [data-cart-drawer]` puis invoque open(). */
+    root.open = open;
+    root.close = close;
+
+    if (scrim) scrim.addEventListener('click', close);
+    $$('[data-pnc-close]').forEach(function (btn) {
+      btn.addEventListener('click', close);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (!root.classList.contains('is-open')) return;
+      if (event.key === 'Escape') {
+        close();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      var list = focusables();
+      if (!list.length) return;
+      var first = list[0];
+      var last = list[list.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+
+    /* ---------------- Lecture du panier ---------------- */
+
+    function busy(on) {
+      panel.classList.toggle('is-busy', !!on);
+    }
+
+    function readJson(response) {
+      return response.json().then(function (data) {
+        if (!response.ok) {
+          throw new Error(data.description || data.message || config.strings.error);
+        }
+        return data;
+      });
+    }
+
+    function refresh() {
+      busy(true);
+      return fetch(config.cartUrl + '.js', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin'
+      })
+        .then(readJson)
+        .then(function (data) {
+          cart = data;
+          render();
+        })
+        .catch(function (error) {
+          showError(error.message);
+        })
+        .then(function () {
+          busy(false);
+        });
+    }
+
+    /* ---------------- Rendu ---------------- */
+
+    function render() {
+      if (!cart) return;
+      clearError();
+
+      var count = cart.item_count || 0;
+      if (countEl) {
+        countEl.textContent = count;
+        countEl.hidden = count === 0;
+      }
+      if (subtitleEl) {
+        subtitleEl.textContent = fill(
+          count === 1 ? config.strings.subtitleOne : config.strings.subtitleMany,
+          { n: count }
+        );
+      }
+
+      linesBox.innerHTML = '';
+      (cart.items || []).forEach(function (item, index) {
+        linesBox.appendChild(buildLine(item, index + 1));
+      });
+      linesBox.hidden = count === 0;
+      if (emptyBox) emptyBox.hidden = count !== 0;
+
+      var subtotal = cart.items_subtotal_price != null ? cart.items_subtotal_price : cart.total_price;
+      if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal);
+      if (totalEl) totalEl.textContent = formatMoney(cart.total_price || 0);
+
+      renderGoals(cart.total_price || 0);
+      renderCross();
+    }
+
+    function buildLine(item, line) {
+      var frag = rowTemplate.content.cloneNode(true);
+      var row = frag.querySelector('[data-pnc-line]');
+      row.setAttribute('data-line', line);
+      row.setAttribute('data-key', item.key);
+      row.setAttribute('data-variant', item.variant_id);
+
+      var link = frag.querySelector('[data-pnc-line-link]');
+      var img = frag.querySelector('[data-pnc-line-img]');
+      var title = frag.querySelector('[data-pnc-line-title]');
+
+      if (link) link.href = item.url;
+      if (img) {
+        if (item.image) {
+          img.src = item.image.replace(/(\.[a-z]+)(\?|$)/i, '_164x164$1$2');
+          img.alt = '';
+        } else {
+          img.remove();
+        }
+      }
+      if (title) {
+        title.textContent = item.product_title || item.title;
+        title.href = item.url;
+      }
+
+      var opts = frag.querySelector('[data-pnc-line-opts]');
+      if (opts) {
+        if (config.showPills && item.options_with_values) {
+          item.options_with_values.forEach(function (opt) {
+            if (!opt.value || opt.value === 'Default Title') return;
+            var pill = document.createElement('span');
+            pill.className = 'pnc__pill';
+            pill.textContent = opt.value;
+            opts.appendChild(pill);
+          });
+        }
+        if (!opts.childNodes.length) opts.remove();
+      }
+
+      var qtyBox = frag.querySelector('[data-pnc-qty-box]');
+      if (!config.showQty && qtyBox) {
+        qtyBox.remove();
+      } else if (qtyBox) {
+        frag.querySelector('[data-pnc-qty]').textContent = item.quantity;
+        frag.querySelector('[data-pnc-qty-minus]').disabled = item.quantity <= 1;
+      }
+
+      frag.querySelector('[data-pnc-line-price]').textContent = formatMoney(item.final_line_price);
+
+      var was = frag.querySelector('[data-pnc-line-was]');
+      if (was) {
+        var full = item.original_line_price;
+        if (config.showLineCompare && full > item.final_line_price) {
+          was.textContent = formatMoney(full);
+          was.hidden = false;
+        } else {
+          was.hidden = true;
+        }
+      }
+
+      /* Le changement de variante n'a de sens que si le produit en a
+         plusieurs : inutile de proposer un menu à un seul choix. */
+      var swapOpen = frag.querySelector('[data-pnc-swap-open]');
+      if (swapOpen) {
+        if (config.showSwap && !item.product_has_only_default_variant) {
+          swapOpen.textContent = config.strings.swapLabel;
+          swapOpen.hidden = false;
+          swapOpen.setAttribute('data-handle', item.handle);
+        } else {
+          swapOpen.remove();
+          var swapBox = frag.querySelector('[data-pnc-swap]');
+          if (swapBox) swapBox.remove();
+        }
+      }
+
+      return frag;
+    }
+
+    function renderGoals(total) {
+      if (!goalsBox) return;
+      var max = config.goalMax || 0;
+      if (!max) return;
+
+      var pct = Math.min(100, (total / max) * 100);
+      if (goalsFill) goalsFill.style.width = pct + '%';
+
+      $$('[data-pnc-goal]', goalsBox).forEach(function (marker) {
+        var amount = Number(marker.getAttribute('data-pnc-goal')) || 0;
+        marker.classList.toggle('is-reached', total >= amount);
+      });
+
+      /* Le message vise toujours le prochain palier non atteint ; une fois
+         tous franchis, il félicite au lieu de rester muet. */
+      var next = null;
+      config.goals
+        .slice()
+        .sort(function (a, b) {
+          return a.amount - b.amount;
+        })
+        .forEach(function (goal) {
+          if (!next && total < goal.amount) next = goal;
+        });
+
+      if (goalsMsg) {
+        if (next) {
+          goalsMsg.innerHTML = fill(config.strings.goalsMessage, {
+            montant: '<b>' + formatMoney(next.amount - total) + '</b>',
+            objectif: '<b>' + escapeHtml(next.reward || next.label || '') + '</b>'
+          });
+        } else {
+          goalsMsg.textContent = config.strings.goalsDone;
+        }
+      }
+    }
+
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    /* Un produit déjà dans le panier n'est plus une suggestion. */
+    function renderCross() {
+      if (!crossBox || !cart) return;
+      var inCart = {};
+      (cart.items || []).forEach(function (item) {
+        inCart[item.variant_id] = true;
+      });
+
+      var visible = 0;
+      $$('[data-pnc-cross-item]', crossBox).forEach(function (item) {
+        var id = Number(item.getAttribute('data-variant'));
+        var hide = !!inCart[id];
+        item.hidden = hide;
+        if (!hide) visible += 1;
+      });
+      crossBox.hidden = visible === 0;
+    }
+
+    /* ---------------- Modifications ---------------- */
+
+    function changeLine(line, quantity) {
+      busy(true);
+      clearError();
+      return fetch(config.cartChangeUrl + '.js', {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ line: line, quantity: quantity })
+      })
+        .then(readJson)
+        .then(function (data) {
+          cart = data;
+          render();
+          document.dispatchEvent(new CustomEvent('pnc:updated', { bubbles: true, detail: data }));
+        })
+        .catch(function (error) {
+          showError(error.message);
+        })
+        .then(function () {
+          busy(false);
+        });
+    }
+
+    /* Shopify ne sait pas changer la variante d'une ligne : on retire
+       l'ancienne et on pose la nouvelle dans le même appel. */
+    function swapVariant(oldId, newId, quantity) {
+      var updates = {};
+      updates[oldId] = 0;
+      updates[newId] = quantity;
+
+      busy(true);
+      clearError();
+      return fetch(config.cartUpdateUrl + '.js', {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ updates: updates })
+      })
+        .then(readJson)
+        .then(function (data) {
+          cart = data;
+          render();
+        })
+        .catch(function (error) {
+          showError(error.message);
+        })
+        .then(function () {
+          busy(false);
+        });
+    }
+
+    function addVariant(id, quantity) {
+      busy(true);
+      clearError();
+      return fetch(config.cartAddUrl + '.js', {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ items: [{ id: id, quantity: quantity || 1 }] })
+      })
+        .then(readJson)
+        .then(function () {
+          return refresh();
+        })
+        .catch(function (error) {
+          showError(error.message);
+          busy(false);
+        });
+    }
+
+    linesBox.addEventListener('click', function (event) {
+      var row = event.target.closest('[data-pnc-line]');
+      if (!row) return;
+      var line = Number(row.getAttribute('data-line'));
+      var qtyEl = $('[data-pnc-qty]', row);
+      var quantity = qtyEl ? Number(qtyEl.textContent) || 1 : 1;
+
+      if (event.target.closest('[data-pnc-line-remove]')) {
+        changeLine(line, 0);
+        return;
+      }
+      if (event.target.closest('[data-pnc-qty-minus]')) {
+        if (quantity > 1) changeLine(line, quantity - 1);
+        return;
+      }
+      if (event.target.closest('[data-pnc-qty-plus]')) {
+        changeLine(line, quantity + 1);
+        return;
+      }
+
+      var swapBtn = event.target.closest('[data-pnc-swap-open]');
+      if (swapBtn) {
+        openSwap(row, swapBtn);
+      }
+    });
+
+    function openSwap(row, button) {
+      var box = $('[data-pnc-swap]', row);
+      if (!box) return;
+      if (!box.hidden) {
+        box.hidden = true;
+        return;
+      }
+
+      var handle = button.getAttribute('data-handle');
+      loadProduct(handle)
+        .then(function (product) {
+          buildSwap(box, row, product);
+          box.hidden = false;
+        })
+        .catch(function (error) {
+          showError(error.message);
+        });
+    }
+
+    function loadProduct(handle) {
+      if (productCache[handle]) return Promise.resolve(productCache[handle]);
+      var base = config.rootUrl.replace(/\/$/, '');
+      return fetch(base + '/products/' + handle + '.js', {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin'
+      })
+        .then(readJson)
+        .then(function (product) {
+          productCache[handle] = product;
+          return product;
+        });
+    }
+
+    function buildSwap(box, row, product) {
+      box.innerHTML = '';
+      var currentId = Number(row.getAttribute('data-variant'));
+      var current = null;
+      product.variants.forEach(function (v) {
+        if (v.id === currentId) current = v;
+      });
+      if (!current) current = product.variants[0];
+
+      var chosen = current.options.slice();
+
+      product.options.forEach(function (option, index) {
+        var name = typeof option === 'string' ? option : option.name;
+        var values = typeof option === 'string' ? optionValues(product, index) : option.values;
+
+        var label = document.createElement('label');
+        var span = document.createElement('span');
+        span.textContent = name;
+        var select = document.createElement('select');
+
+        values.forEach(function (value) {
+          var opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = value;
+          if (chosen[index] === value) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        select.addEventListener('change', function () {
+          chosen[index] = select.value;
+          var match = null;
+          product.variants.forEach(function (v) {
+            var same = true;
+            chosen.forEach(function (value, i) {
+              if (v.options[i] !== value) same = false;
+            });
+            if (same && !match) match = v;
+          });
+          if (!match || !match.available || match.id === currentId) return;
+          var qtyEl = $('[data-pnc-qty]', row);
+          swapVariant(currentId, match.id, qtyEl ? Number(qtyEl.textContent) || 1 : 1);
+        });
+
+        label.appendChild(span);
+        label.appendChild(select);
+        box.appendChild(label);
+      });
+    }
+
+    /** Les anciennes réponses ne donnent que les noms d'options. */
+    function optionValues(product, index) {
+      var seen = [];
+      product.variants.forEach(function (v) {
+        var value = v.options[index];
+        if (value && seen.indexOf(value) === -1) seen.push(value);
+      });
+      return seen;
+    }
+
+    if (crossBox) {
+      crossBox.addEventListener('click', function (event) {
+        var btn = event.target.closest('[data-pnc-cross-add]');
+        if (!btn || btn.classList.contains('is-loading')) return;
+        btn.classList.add('is-loading');
+        addVariant(Number(btn.getAttribute('data-pnc-cross-add')), 1).then(function () {
+          btn.classList.remove('is-loading');
+          btn.classList.add('is-done');
+        });
+      });
+    }
+
+    /* ---------------- Points d'entrée ---------------- */
+
+    document.addEventListener('pnc:open', open);
+    document.addEventListener('pnc:refresh', function () {
+      refresh();
+    });
+
+    /* La section produit annonce ses ajouts : on se resynchronise, et on
+       s'ouvre si le marchand l'a demandé. */
+    document.addEventListener('hkf:cart-added', function () {
+      if (config.openOnAdd) open();
+      else refresh();
+    });
+
+    if (config.interceptLinks) {
+      document.addEventListener('click', function (event) {
+        var link = event.target.closest('a[href]');
+        if (!link) return;
+        var href = link.getAttribute('href') || '';
+        if (href.indexOf(config.cartUrl) !== 0) return;
+        /* /cart/add et /cart/change ne sont pas la page panier. */
+        if (href.indexOf(config.cartUrl + '/') === 0) return;
+        if (link.hasAttribute('data-pnc-ignore')) return;
+        event.preventDefault();
+        open();
+      });
+    }
+
+    if (config.interceptForms) {
+      document.addEventListener('submit', function (event) {
+        var form = event.target;
+        if (!form || form.tagName !== 'FORM') return;
+        var action = form.getAttribute('action') || '';
+        if (action.indexOf('/cart/add') === -1) return;
+        if (form.hasAttribute('data-pnc-ignore')) return;
+
+        event.preventDefault();
+        var data = new FormData(form);
+        busy(true);
+        fetch(config.cartAddUrl + '.js', {
+          method: 'POST',
+          headers: { Accept: 'application/javascript' },
+          credentials: 'same-origin',
+          body: data
+        })
+          .then(readJson)
+          .then(function () {
+            if (config.openOnAdd) open();
+            else refresh();
+          })
+          .catch(function (error) {
+            showError(error.message);
+          })
+          .then(function () {
+            busy(false);
+          });
+      });
+    }
+
+    /* Dans l'éditeur de thème, le panneau doit se montrer dès qu'on le
+       sélectionne, sans quoi il serait impossible de le régler. */
+    if (window.Shopify && window.Shopify.designMode) {
+      document.addEventListener('shopify:section:select', function (event) {
+        if (event.detail && event.target && event.target.contains(root)) open();
+      });
+      document.addEventListener('shopify:section:deselect', function (event) {
+        if (event.target && event.target.contains(root)) close();
+      });
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Panier coulissant",
+  "tag": "section",
+  "class": "panier-coulissant-section",
+  "max_blocks": 20,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Ouverture"
+    },
+    { "type": "checkbox", "id": "open_on_add", "label": "Ouvrir à chaque ajout au panier", "default": true },
+    {
+      "type": "checkbox",
+      "id": "intercept_forms",
+      "label": "Intercepter les formulaires d'ajout",
+      "info": "Les boutons d'ajout des autres sections ouvrent le panneau au lieu de recharger la page. Ajoute data-pnc-ignore sur un formulaire pour l'exclure.",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "intercept_links",
+      "label": "Intercepter les liens vers le panier",
+      "info": "L'icône panier de l'en-tête ouvre le panneau au lieu d'aller sur la page panier.",
+      "default": true
+    },
+
+    {
+      "type": "header",
+      "content": "Panneau"
+    },
+    { "type": "range", "id": "panel_width", "label": "Largeur (bureau)", "min": 320, "max": 620, "step": 10, "unit": "px", "default": 440 },
+    { "type": "range", "id": "panel_padding", "label": "Marge intérieure", "min": 10, "max": 32, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "card_radius", "label": "Arrondi des cartes", "min": 0, "max": 24, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "cta_radius", "label": "Arrondi du bouton", "min": 0, "max": 30, "step": 2, "unit": "px", "default": 8 },
+    { "type": "checkbox", "id": "show_head_icon", "label": "Afficher l'icône panier", "default": true },
+    { "type": "text", "id": "panel_title", "label": "Titre", "default": "Votre panier" },
+    { "type": "checkbox", "id": "show_subtitle", "label": "Afficher le compte d'articles", "default": true },
+    { "type": "text", "id": "subtitle_one", "label": "Compte au singulier", "info": "[n] est remplacé par le nombre.", "default": "[n] article dans le panier" },
+    { "type": "text", "id": "subtitle_many", "label": "Compte au pluriel", "default": "[n] articles dans le panier" },
+    { "type": "text", "id": "close_label", "label": "Fermer (accessibilité)", "default": "Fermer le panier" },
+
+    {
+      "type": "header",
+      "content": "Bandeau livraison"
+    },
+    { "type": "checkbox", "id": "show_ship_note", "label": "Afficher le bandeau", "default": true },
+    { "type": "text", "id": "ship_note", "label": "Texte", "default": "Livraison GRATUITE incluse" },
+
+    {
+      "type": "header",
+      "content": "Objectifs"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_goals",
+      "label": "Afficher la barre d'objectifs",
+      "info": "Ajoute un bloc « Palier » par récompense. La barre est à l'échelle du palier le plus élevé.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "goals_message",
+      "label": "Message",
+      "info": "[montant] et [objectif] sont remplacés.",
+      "default": "Plus que [montant] pour avoir [objectif]"
+    },
+    { "type": "text", "id": "goals_done", "label": "Tous les paliers atteints", "default": "Bravo, toutes les récompenses sont débloquées !" },
+    { "type": "range", "id": "goal_edge", "label": "Marge des extrémités", "info": "De l'espace de chaque côté pour que les étiquettes ne soient pas coupées.", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 52 },
+
+    {
+      "type": "header",
+      "content": "Articles"
+    },
+    { "type": "checkbox", "id": "show_qty", "label": "Afficher les quantités", "default": true },
+    { "type": "checkbox", "id": "show_pills", "label": "Afficher les variantes en pastilles", "default": true },
+    { "type": "checkbox", "id": "show_line_compare", "label": "Afficher le prix barré", "default": true },
+    { "type": "checkbox", "id": "show_swap", "label": "Permettre de changer de variante", "default": true },
+    { "type": "text", "id": "swap_label", "label": "Lien de changement", "default": "Changer de couleur ou de taille" },
+    { "type": "text", "id": "remove_label", "label": "Retirer (accessibilité)", "default": "Retirer cet article" },
+    { "type": "text", "id": "qty_minus_label", "label": "Diminuer (accessibilité)", "default": "Diminuer la quantité" },
+    { "type": "text", "id": "qty_plus_label", "label": "Augmenter (accessibilité)", "default": "Augmenter la quantité" },
+
+    {
+      "type": "header",
+      "content": "Panier vide"
+    },
+    { "type": "text", "id": "empty_title", "label": "Titre", "default": "Votre panier est vide" },
+    { "type": "text", "id": "empty_text", "label": "Texte", "default": "Découvre nos chaussures et repars du bon pied." },
+    { "type": "text", "id": "empty_cta_label", "label": "Bouton", "default": "Voir la boutique" },
+    { "type": "url", "id": "empty_cta_url", "label": "Lien du bouton" },
+
+    {
+      "type": "header",
+      "content": "Combinaison parfaite"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cross",
+      "label": "Afficher les produits complémentaires",
+      "info": "Ajoute un bloc « Produit complémentaire » par suggestion. Un produit déjà au panier disparaît de la liste.",
+      "default": true
+    },
+    { "type": "text", "id": "cross_title", "label": "Titre", "default": "La combinaison parfaite :" },
+    { "type": "checkbox", "id": "show_cross_rating", "label": "Afficher les étoiles", "default": true },
+    { "type": "text", "id": "cross_add_label", "label": "Bouton d'ajout", "default": "Ajouter" },
+    { "type": "text", "id": "cross_save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage.", "default": "Économisez [x] %" },
+
+    {
+      "type": "header",
+      "content": "Total et paiement"
+    },
+    { "type": "checkbox", "id": "show_subtotal", "label": "Afficher le sous-total", "default": true },
+    { "type": "text", "id": "subtotal_label", "label": "Libellé du sous-total", "default": "Sous-total" },
+    { "type": "text", "id": "total_label", "label": "Libellé du total", "default": "Total" },
+    { "type": "text", "id": "cta_label", "label": "Texte du bouton", "default": "Finaliser ma commande" },
+    { "type": "checkbox", "id": "show_lock", "label": "Cadenas devant le texte", "default": true },
+    { "type": "checkbox", "id": "show_cta_arrow", "label": "Flèche après le texte", "default": true },
+    { "type": "checkbox", "id": "show_payment", "label": "Afficher les moyens de paiement", "default": true },
+    { "type": "text", "id": "foot_note", "label": "Mention sous le bouton", "default": "Taxes et livraison calculées au paiement." },
+    { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Une erreur est survenue. Réessaie dans un instant." },
+
+    {
+      "type": "header",
+      "content": "Couleurs"
+    },
+    { "type": "color", "id": "color_bg", "label": "Fond du panneau", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_head_bg", "label": "Fond de l'en-tête et du pied", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_card", "label": "Fond des cartes", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_ink", "label": "Texte", "default": "#16221B" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#7C8A81" },
+    { "type": "color", "id": "color_line", "label": "Traits et bordures", "default": "#E4E9E5" },
+    { "type": "color", "id": "color_soft", "label": "Fond doux", "default": "#F5F7F5" },
+    { "type": "color", "id": "color_accent", "label": "Accent", "default": "#C2703A" },
+    { "type": "color", "id": "color_green", "label": "Vert (bouton, jauge)", "default": "#3F7D3B" },
+    { "type": "color", "id": "color_green_soft", "label": "Vert clair", "default": "#EAF3E8" },
+    { "type": "color", "id": "color_star", "label": "Étoiles", "default": "#F5B32D" },
+    { "type": "color", "id": "color_red", "label": "Rouge", "default": "#D94A4A" },
+    { "type": "color", "id": "color_red_soft", "label": "Rouge pâle", "default": "#FDF0F0" }
+  ],
+  "blocks": [
+    {
+      "type": "tier",
+      "name": "Palier",
+      "settings": [
+        { "type": "text", "id": "amount", "label": "Montant à atteindre", "info": "En euros, par exemple 49,90.", "default": "60" },
+        { "type": "text", "id": "label", "label": "Étiquette sous la pastille", "default": "Livraison gratuite" },
+        { "type": "text", "id": "reward", "label": "Récompense dans le message", "info": "Reprend l'étiquette si vide.", "default": "la livraison gratuite" },
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "Icône",
+          "options": [
+            { "value": "truck", "label": "Livraison" },
+            { "value": "gift", "label": "Cadeau" },
+            { "value": "percent", "label": "Remise" },
+            { "value": "box", "label": "Colis" },
+            { "value": "star", "label": "Étoile" }
+          ],
+          "default": "truck"
+        }
+      ]
+    },
+    {
+      "type": "cross",
+      "name": "Produit complémentaire",
+      "settings": [
+        { "type": "product", "id": "product", "label": "Produit" },
+        { "type": "text", "id": "title", "label": "Titre affiché", "info": "Reprend le nom du produit si vide." },
+        {
+          "type": "select",
+          "id": "rating",
+          "label": "Note",
+          "options": [
+            { "value": "5", "label": "5,0" },
+            { "value": "4.9", "label": "4,9" },
+            { "value": "4.8", "label": "4,8" },
+            { "value": "4.7", "label": "4,7" },
+            { "value": "4.5", "label": "4,5" },
+            { "value": "4", "label": "4,0" }
+          ],
+          "default": "4.9"
+        },
+        { "type": "text", "id": "rating_count", "label": "Nombre d'avis", "info": "Laisse vide pour masquer les étoiles.", "default": "3 827" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Panier coulissant",
+      "blocks": [
+        { "type": "tier" },
+        { "type": "tier" },
+        { "type": "cross" },
+        { "type": "cross" },
+        { "type": "cross" }
+      ]
+    }
+  ]
+}
+{% endschema %}
