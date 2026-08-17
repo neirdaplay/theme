@@ -462,29 +462,30 @@
 /* ---- Réductions ----
    Le ruban dit combien on gagne, les puces disent pourquoi : sans elles, le
    prix barré ne s'explique pas. */
-/* Le ruban occupe sa propre bande en haut de la carte : posé par-dessus, il
-   recouvrait le début du titre. */
-.pnc__line.has-ribbon {
-  padding-top: 36px;
+/* La pastille de remise partage la rangée des variantes. display: contents
+   sur la liste des options fait remonter les pastilles au même niveau, si
+   bien que tout s'aligne sur une seule ligne. */
+.pnc__line-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.pnc__line-opts {
+  display: contents;
 }
 
 .pnc__ribbon {
-  position: absolute;
-  top: 9px;
-  left: 9px;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  max-width: calc(100% - 18px);
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 999px;
-  background: var(--pn-green);
-  color: var(--pn-white);
-  font-size: 10px;
+  background: var(--pn-green-soft);
+  color: var(--pn-green);
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -1462,7 +1463,6 @@
   {%- endcomment -%}
   <template data-pnc-row>
     <li class="pnc__line" data-pnc-line>
-      <span class="pnc__ribbon" data-pnc-ribbon hidden>{{ pn_tag }}<span data-pnc-ribbon-text></span></span>
       <a class="pnc__line-img" data-pnc-line-link tabindex="-1" aria-hidden="true">
         <img data-pnc-line-img alt="" loading="lazy" width="164" height="164">
       </a>
@@ -1473,7 +1473,10 @@
             {{- pn_trash -}}
           </button>
         </div>
-        <div class="pnc__line-opts" data-pnc-line-opts></div>
+        <div class="pnc__line-meta">
+          <span class="pnc__ribbon" data-pnc-ribbon hidden>{{ pn_tag }}<span data-pnc-ribbon-text></span></span>
+          <div class="pnc__line-opts" data-pnc-line-opts></div>
+        </div>
         {%- comment -%}
           Le détail des promotions appliquées à la ligne, tel que Shopify le
           renvoie : le prix barré s'explique alors de lui-même.
@@ -1764,10 +1767,8 @@
           .split('[x]')
           .join(pct);
         ribbon.hidden = false;
-        row.classList.add('has-ribbon');
       } else {
         ribbon.hidden = true;
-        row.classList.remove('has-ribbon');
       }
     }
 

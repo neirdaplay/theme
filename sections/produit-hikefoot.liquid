@@ -2476,11 +2476,53 @@
                 {%- liquid
                   assign b = block.settings
                   assign qty = b.pairs | at_least: 1
-                  assign unit = b.unit_price | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
-                  if unit <= 0
-                    assign unit = variant.price
+
+                  comment
+                    Le plein tarif de référence : le prix barré de la variante
+                    s'il existe, sinon son prix de vente.
+                  endcomment
+                  assign base = variant.price
+                  assign base_was = variant.compare_at_price
+                  if base_was <= base
+                    assign base_was = base
                   endif
-                  assign unit_was = b.unit_compare | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+
+                  assign disc_raw = b.discount_value | strip | replace: ' ', '' | replace: '%', '' | replace: '€', '' | replace: ',', '.'
+                  assign disc_num = disc_raw | plus: 0.0
+
+                  case b.discount_type
+                    when 'percent'
+                      assign cut = base | times: disc_num | divided_by: 100.0 | round
+                      assign unit = base | minus: cut
+                      assign unit_was = base_was
+                    when 'amount'
+                      assign cut = disc_num | times: 100 | round
+                      assign unit = base | minus: cut
+                      assign unit_was = base_was
+                    else
+                      comment
+                        Mode manuel : les deux prix sont saisis tels quels.
+                      endcomment
+                      assign unit = b.unit_price | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                      if unit <= 0
+                        assign unit = base
+                      endif
+                      assign unit_was = b.unit_compare | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  endcase
+
+                  if unit < 0
+                    assign unit = 0
+                  endif
+
+                  comment
+                    L'économie affichée est toujours calculée, jamais saisie :
+                    elle ne peut donc pas contredire les prix voisins.
+                  endcomment
+                  assign offer_pct = 0
+                  if unit_was > unit
+                    assign offer_gap = unit_was | minus: unit
+                    assign offer_pct = offer_gap | times: 100.0 | divided_by: unit_was | round
+                  endif
 
                   comment
                     Une taille d'image propre à la carte, laissée à zéro pour
@@ -2518,6 +2560,12 @@
                   data-qty="{{ qty }}"
                   data-unit="{{ unit }}"
                   data-unit-was="{{ unit_was }}"
+                  {%- comment -%}
+                    La remise est portée par la carte, pas seulement calculée :
+                    le prix doit suivre quand le client change de variante.
+                  {%- endcomment -%}
+                  data-disc-type="{{ b.discount_type }}"
+                  data-disc-value="{{ disc_num }}"
                   data-code="{{ b.discount_code | strip | escape }}"
                   {{ block.shopify_attributes }}
                 >
@@ -2537,8 +2585,10 @@
                   {%- endif -%}
                   <span class="hkf__offer-title">{{ b.title }}</span>
                   <span class="hkf__offer-price">
-                    {%- if unit_was > unit -%}<s class="hkf__offer-was">{{ unit_was | money }}</s>{%- endif -%}
-                    <span class="hkf__offer-now">{{ unit | money }}</span>
+                    <s class="hkf__offer-was" data-hkf-offer-was {% unless unit_was > unit %}hidden{% endunless %}>
+                      {{- unit_was | money -}}
+                    </s>
+                    <span class="hkf__offer-now" data-hkf-offer-now>{{ unit | money }}</span>
                     {%- if s.per_pair_label != blank or s.per_pair_short != blank -%}
                       {%- comment -%}
                         Les deux formulations coexistent dans le balisage ; la
@@ -2552,7 +2602,13 @@
                       ></span>
                     {%- endif -%}
                   </span>
-                  <span class="hkf__offer-save" {% if b.save_label == blank %}hidden{% endif %}>{{ b.save_label }}</span>
+                  <span
+                    class="hkf__offer-save"
+                    data-hkf-offer-save="{{ b.save_label | escape }}"
+                    {% if b.save_label == blank or offer_pct <= 0 %}hidden{% endif %}
+                  >
+                    {{- b.save_label | replace: '[x]', offer_pct -}}
+                  </span>
                 </button>
               {%- endfor -%}
             </div>
@@ -3090,6 +3146,45 @@
       return o ? Number(o.getAttribute('data-qty')) || 1 : 1;
     }
 
+    /**
+     * Recalcule les prix des cartes d'offre à partir de la variante choisie.
+     * Une remise saisie en pourcentage ou en montant doit suivre le prix réel
+     * du produit : la figer au rendu la rendrait fausse dès que le client
+     * change de couleur ou de pointure.
+     */
+    function repriceOffers() {
+      if (!current) return;
+      offers.forEach(function (offer) {
+        var type = offer.getAttribute('data-disc-type');
+        if (type !== 'percent' && type !== 'amount') return;
+
+        var value = Number(offer.getAttribute('data-disc-value')) || 0;
+        var base = current.price;
+        var was = current.compareAt > base ? current.compareAt : base;
+        var cut = type === 'percent' ? Math.round((base * value) / 100) : Math.round(value * 100);
+        var unit = Math.max(0, base - cut);
+
+        offer.setAttribute('data-unit', unit);
+        offer.setAttribute('data-unit-was', was);
+
+        var nowEl = offer.querySelector('[data-hkf-offer-now]');
+        var wasEl = offer.querySelector('[data-hkf-offer-was]');
+        var saveEl = offer.querySelector('[data-hkf-offer-save]');
+
+        if (nowEl) nowEl.textContent = formatMoney(unit);
+        if (wasEl) {
+          wasEl.textContent = formatMoney(was);
+          wasEl.hidden = !(was > unit);
+        }
+        if (saveEl) {
+          var label = saveEl.getAttribute('data-hkf-offer-save') || '';
+          var pct = was > unit ? Math.round(((was - unit) / was) * 100) : 0;
+          saveEl.hidden = !label || pct <= 0;
+          if (!saveEl.hidden) saveEl.textContent = label.split('[x]').join(pct);
+        }
+      });
+    }
+
     function offerUnit() {
       var o = currentOffer();
       var unit = o ? Number(o.getAttribute('data-unit')) : 0;
@@ -3199,6 +3294,7 @@
     }
 
     function renderTotals() {
+      repriceOffers();
       var qty = pairsBox && !pairsBox.hidden ? pairRows().length : offerQty();
       if (qty < 1) qty = 1;
 
@@ -3861,7 +3957,13 @@
       "type": "header",
       "content": "Offres groupées"
     },
-    { "type": "checkbox", "id": "show_bundle", "label": "Afficher les offres", "default": true },
+    {
+      "type": "checkbox",
+      "id": "show_bundle",
+      "label": "Afficher les offres",
+      "info": "Un thème ne peut pas créer de remise dans Shopify. Règle la remise par article sur chaque bloc pour l'affichage, puis crée la remise correspondante dans Shopify → Réductions : une remise automatique s'applique sans code, un code se saisit dans le bloc.",
+      "default": true
+    },
     { "type": "text", "id": "bundle_note", "label": "Mention au-dessus", "default": "La promotion groupée est valable jusqu'à 23 h 59" },
     { "type": "text", "id": "bundle_aria_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de l'offre" },
     { "type": "text", "id": "per_pair_label", "label": "Mention après le prix (bureau)", "default": "par paire" },
@@ -4009,14 +4111,41 @@
           "unit": "px",
           "default": 0
         },
-        { "type": "text", "id": "unit_price", "label": "Prix par paire", "default": "56,66" },
+        {
+          "type": "select",
+          "id": "discount_type",
+          "label": "Remise par article",
+          "info": "Les prix de la carte sont alors calculés depuis le prix Shopify du produit : plus rien à saisir à la main, et plus de risque d'écart.",
+          "options": [
+            { "value": "percent", "label": "En pourcentage" },
+            { "value": "amount", "label": "Montant fixe" },
+            { "value": "none", "label": "Prix saisis à la main" }
+          ],
+          "default": "percent"
+        },
+        {
+          "type": "text",
+          "id": "discount_value",
+          "label": "Valeur de la remise",
+          "info": "Par article. Par exemple 10 pour 10 %, ou 6,30 pour 6,30 € de moins par paire.",
+          "default": "10"
+        },
+        { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage calculé.", "default": "Économisez [x] %" },
+        {
+          "type": "header",
+          "content": "Prix saisis à la main"
+        },
+        { "type": "text", "id": "unit_price", "label": "Prix par paire", "info": "Utilisé seulement en mode « Prix saisis à la main ».", "default": "56,66" },
         { "type": "text", "id": "unit_compare", "label": "Prix barré par paire", "default": "99,90" },
-        { "type": "text", "id": "save_label", "label": "Mention d'économie", "default": "Économisez 43 %" },
+        {
+          "type": "header",
+          "content": "Application de la remise"
+        },
         {
           "type": "text",
           "id": "discount_code",
           "label": "Code de réduction",
-          "info": "Appliqué automatiquement au passage en caisse. Crée-le dans Shopify avec les mêmes conditions, sinon le panier ne correspondra pas au prix affiché."
+          "info": "À laisser vide si tu utilises une remise automatique Shopify, qui s'applique sans code. Sinon, saisis ici le code créé dans Shopify : il est posé au passage en caisse."
         }
       ]
     },
