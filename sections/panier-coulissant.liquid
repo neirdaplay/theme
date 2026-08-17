@@ -940,6 +940,7 @@
       "openOnAdd": {{ s.open_on_add | json }},
       "interceptForms": {{ s.intercept_forms | json }},
       "interceptLinks": {{ s.intercept_links | json }},
+      "replaceThemeDrawer": {{ s.replace_theme_drawer | json }},
       "showSwap": {{ s.show_swap | json }},
       "showLineCompare": {{ s.show_line_compare | json }},
       "showQty": {{ s.show_qty | json }},
@@ -1793,6 +1794,51 @@
        fouiller le DOM, qu'un panier coulissant est en place. */
     document.documentElement.setAttribute('data-pnc-drawer', '1');
 
+    /* ---------------- Reprendre la main sur le panier du thème ----------------
+       Beaucoup de thèmes — Horizon, Dawn et leurs dérivés — embarquent leur
+       propre tiroir, câblé à leur icône panier et à leurs formulaires. Placer
+       celui-ci ne le fait pas disparaître : les deux répondraient, et c'est
+       souvent celui du thème qui gagne puisqu'il est déclaré plus haut dans
+       la page. On le neutralise donc, en gardant l'élément en place pour ne
+       rien casser de ce qui pourrait encore le référencer. */
+    if (config.replaceThemeDrawer) {
+      var takeOver = function () {
+        var others = document.querySelectorAll(
+          'cart-drawer, #cart-drawer, .cart-drawer, cart-notification, [data-cart-drawer]'
+        );
+        [].forEach.call(others, function (el) {
+          if (el === root || root.contains(el) || el.contains(root)) return;
+          if (el.dataset.pncTakenOver === '1') return;
+          el.dataset.pncTakenOver = '1';
+
+          /* Sa méthode d'ouverture devient la nôtre : tout ce qui pensait
+             ouvrir le tiroir du thème ouvre celui-ci. */
+          ['open', 'show', 'openDrawer'].forEach(function (name) {
+            if (typeof el[name] === 'function') {
+              el[name] = function () {
+                open();
+              };
+            }
+          });
+
+          /* Et il ne doit plus rien peindre, même si le thème lui pose une
+             classe « ouvert » de son côté. */
+          el.setAttribute('hidden', '');
+          el.style.setProperty('display', 'none', 'important');
+        });
+      };
+
+      takeOver();
+      /* Les thèmes qui montent leur tiroir après coup, ou le remontent via
+         l'API de rendu de sections, sont rattrapés au vol. */
+      if (window.MutationObserver) {
+        new MutationObserver(takeOver).observe(document.documentElement, {
+          childList: true,
+          subtree: true
+        });
+      }
+    }
+
     /* La section produit annonce ses ajouts : on se resynchronise, et on
        s'ouvre si le marchand l'a demandé. */
     document.addEventListener('hkf:cart-added', function () {
@@ -1886,6 +1932,13 @@
       "content": "Ouverture"
     },
     { "type": "checkbox", "id": "open_on_add", "label": "Ouvrir à chaque ajout au panier", "default": true },
+    {
+      "type": "checkbox",
+      "id": "replace_theme_drawer",
+      "label": "Remplacer le panier du thème",
+      "info": "La plupart des thèmes embarquent leur propre panier coulissant. Coché, celui du thème est neutralisé et tout ce qui l'ouvrait ouvre celui-ci.",
+      "default": true
+    },
     {
       "type": "checkbox",
       "id": "intercept_forms",

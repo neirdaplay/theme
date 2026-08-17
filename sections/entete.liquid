@@ -98,6 +98,15 @@
   align-items: center;
 }
 
+/* L'écart entre le logo et le bouton pilule se règle à part : c'est le seul
+   endroit de la rangée où l'on veut souvent respirer davantage. */
+@media (min-width: 990px) {
+  .eth__logo + .eth__pill,
+  .eth__logo + .eth__nav {
+    margin-left: var(--et-logo-gap);
+  }
+}
+
 .eth__logo img {
   width: auto;
   max-width: var(--et-logo);
@@ -343,7 +352,7 @@
 /* Entre 990 et 1400 px, logo + pilule + six rubriques + recherche ne tiennent
    plus au format large : on resserre le champ et le menu plutôt que de passer
    à la ligne. */
-@media (min-width: 990px) and (max-width: 1399px) {
+@media (min-width: 990px) and (max-width: 1499px) {
   .eth__search {
     flex-basis: 150px;
   }
@@ -360,6 +369,13 @@
 
   .eth__bar {
     gap: calc(var(--et-gap) * 0.6);
+  }
+
+  /* L'espace après le logo se réduit d'autant : c'est du confort, pas une
+     raison de renvoyer une rubrique à la ligne. */
+  .eth__logo + .eth__pill,
+  .eth__logo + .eth__nav {
+    margin-left: calc(var(--et-logo-gap) * 0.4);
   }
 }
 
@@ -660,6 +676,7 @@
     --et-pad: {{ s.padding_side }}px;
     --et-pad-m: {{ s.padding_side_mobile }}px;
     --et-gap: {{ s.gap }}px;
+    --et-logo-gap: {{ s.logo_gap }}px;
     --et-logo: {{ s.logo_width }}px;
     --et-logo-m: {{ s.logo_width_mobile }}px;
     --et-logo-size: {{ s.logo_text_size }}px;
@@ -1183,6 +1200,7 @@
     { "type": "range", "id": "padding_side", "label": "Marge latérale (bureau)", "min": 8, "max": 60, "step": 2, "unit": "px", "default": 24 },
     { "type": "range", "id": "padding_side_mobile", "label": "Marge latérale (mobile)", "min": 4, "max": 32, "step": 2, "unit": "px", "default": 12 },
     { "type": "range", "id": "gap", "label": "Espacement des blocs", "min": 4, "max": 40, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "logo_gap", "label": "Espace après le logo", "info": "Écart entre le logo et le bouton pilule, sur bureau.", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 20 },
     { "type": "range", "id": "border_width", "label": "Trait sous la barre", "min": 0, "max": 4, "step": 1, "unit": "px", "default": 1 },
 
     {

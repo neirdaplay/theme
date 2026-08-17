@@ -325,12 +325,17 @@
   font-weight: 700;
 }
 
+/* Prix, prix barré et pastille sur une même ligne : empilés, ils mangeaient
+   de la hauteur pour rien. Le retour à la ligne reste possible si la place
+   vient réellement à manquer. */
 .hkf__prices {
   flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  line-height: 1.1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 3px 8px;
+  line-height: 1.15;
 }
 
 .hkf__price {
@@ -344,6 +349,23 @@
   color: var(--hk-muted);
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.hkf__save {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--hk-save-bg);
+  color: var(--hk-save-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hkf__save[hidden] {
+  display: none;
 }
 
 .hkf__was[hidden] {
@@ -358,7 +380,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: var(--hk-rating-gap, 4px);
 }
 
 .hkf__stars {
@@ -1790,7 +1812,7 @@
   }
 
   .hkf__prices {
-    align-items: flex-start;
+    justify-content: flex-start;
   }
 
   .hkf__pair-body {
@@ -1873,6 +1895,9 @@
     --hk-red-soft: {{ s.color_red_soft }};
     --hk-flag-bg: {{ s.color_flag_bg }};
     --hk-flag-ink: {{ s.color_flag_ink }};
+    --hk-save-bg: {{ s.color_save_bg }};
+    --hk-save-ink: {{ s.color_save_ink }};
+    --hk-rating-gap: {{ s.rating_gap }}px;
     --hk-max: {{ s.container_width }}px;
     --hk-radius: {{ s.gallery_radius }}px;
     --hk-thumb-set: {{ s.thumb_size }}px;
@@ -1922,7 +1947,8 @@
       "strings": {
         "error": {{ s.error_label | json }},
         "soldOut": {{ s.sold_out_label | json }},
-        "buy": {{ s.buy_label | json }}
+        "buy": {{ s.buy_label | json }},
+        "save": {{ s.save_label | json }}
       }
     }
   </script>
@@ -2042,11 +2068,32 @@
             <h1 class="hkf__title">{{ product.title | escape }}</h1>
           {%- endif -%}
           {%- if s.show_price -%}
+            {%- liquid
+              comment
+                times: 100.0 force le calcul en virgule flottante : avec deux
+                entiers, Liquid ferait une division entière et le pourcentage
+                dépendrait du moteur.
+              endcomment
+              assign save_pct = 0
+              if variant.compare_at_price > variant.price
+                assign save_gap = variant.compare_at_price | minus: variant.price
+                assign save_pct = save_gap | times: 100.0 | divided_by: variant.compare_at_price | round
+              endif
+            -%}
             <span class="hkf__prices">
               <span class="hkf__price" data-hkf-price>{{ variant.price | money }}</span>
               <s class="hkf__was" data-hkf-was {% unless variant.compare_at_price > variant.price %}hidden{% endunless %}>
                 {{- variant.compare_at_price | money -}}
               </s>
+              {%- if s.show_save -%}
+                <span
+                  class="hkf__save"
+                  data-hkf-save
+                  {% unless variant.compare_at_price > variant.price %}hidden{% endunless %}
+                >
+                  {{- s.save_label | replace: '[x]', save_pct -}}
+                </span>
+              {%- endif -%}
             </span>
           {%- endif -%}
         </div>
@@ -2924,6 +2971,7 @@
 
     var priceEl = $('[data-hkf-price]');
     var wasEl = $('[data-hkf-was]');
+    var saveEl = $('[data-hkf-save]');
     var buyTotal = $('[data-hkf-buy-total]');
     var buyWas = $('[data-hkf-buy-was]');
     var buyLabel = $('[data-hkf-buy-label]');
@@ -3070,6 +3118,14 @@
       if (wasEl && current) {
         wasEl.textContent = formatMoney(current.compareAt);
         wasEl.hidden = !(current.compareAt > current.price);
+      }
+      if (saveEl && current) {
+        var discounted = current.compareAt > current.price;
+        saveEl.hidden = !discounted;
+        if (discounted) {
+          var pct = Math.round(((current.compareAt - current.price) / current.compareAt) * 100);
+          saveEl.textContent = config.strings.save.split('[x]').join(pct);
+        }
       }
       if (pairAdd) {
         pairAdd.hidden = !(pairsBox && !pairsBox.hidden) || pairRows().length >= config.pairsMax;
@@ -3597,6 +3653,9 @@
     { "type": "image_picker", "id": "bought_face_3", "label": "Photo de client 3" },
     { "type": "range", "id": "bought_face_size", "label": "Taille des photos", "min": 18, "max": 44, "step": 2, "unit": "px", "default": 26 },
     { "type": "checkbox", "id": "show_price", "label": "Afficher le prix en haut", "default": true },
+    { "type": "checkbox", "id": "show_save", "label": "Pastille d'économie à côté du prix", "default": true },
+    { "type": "text", "id": "save_label", "label": "Texte de la pastille", "info": "[x] est remplacé par le pourcentage calculé.", "default": "Économisez [x] %" },
+    { "type": "range", "id": "rating_gap", "label": "Espace entre le titre et les étoiles", "min": 0, "max": 24, "step": 1, "unit": "px", "default": 4 },
 
     {
       "type": "header",
@@ -3759,6 +3818,8 @@
     { "type": "color", "id": "color_accent", "label": "Focus clavier", "default": "#2563EB" },
     { "type": "color", "id": "color_green", "label": "Vert (bouton, coches)", "default": "#3F7D3B" },
     { "type": "color", "id": "color_green_soft", "label": "Vert clair", "default": "#EAF3E8" },
+    { "type": "color", "id": "color_save_bg", "label": "Fond de la pastille d'économie", "default": "#EAF3E8" },
+    { "type": "color", "id": "color_save_ink", "label": "Texte de la pastille d'économie", "default": "#2E6A2B" },
     { "type": "color", "id": "color_added", "label": "Vert de confirmation", "default": "#2E6A2B" },
     { "type": "color", "id": "color_price", "label": "Prix", "default": "#C0392B" },
     { "type": "color", "id": "color_star", "label": "Étoiles", "default": "#F5A623" },
