@@ -895,34 +895,85 @@
 }
 
 .hkf__offer-img {
-  width: 74px;
+  width: var(--hk-offer-img);
   margin-inline: auto;
 }
 
+/* Le titre occupe sa propre ligne, en plus gros : c'est lui qu'on lit en
+   premier pour choisir une offre. */
 .hkf__offer-title {
-  margin-top: 4px;
-  font-size: 15px;
+  display: block;
+  margin-top: 6px;
+  font-size: var(--hk-offer-title);
   font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
+/* Puis une seule ligne pour les prix : barré, remisé, mention. La remise est
+   plus grosse que le prix barré, et rien ne passe à la ligne. */
 .hkf__offer-price {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
   margin-top: 4px;
-  font-size: 15px;
+  font-size: var(--hk-offer-price);
   font-weight: 700;
   color: var(--hk-price);
+  white-space: nowrap;
 }
 
 .hkf__offer-was {
-  margin-inline: 4px;
+  flex: 0 0 auto;
   color: var(--hk-muted);
-  font-size: 11.5px;
+  font-size: calc(var(--hk-offer-price) * 0.66);
   font-weight: 500;
 }
 
 .hkf__offer-unit {
-  font-size: 10.5px;
+  flex: 0 0 auto;
+  font-size: calc(var(--hk-offer-price) * 0.62);
   font-weight: 500;
   color: var(--hk-muted);
+}
+
+.hkf__offer-unit-short {
+  display: none;
+}
+
+/* Sur mobile la carte est deux fois moins large : on rétrécit et « par paire »
+   devient « /paire » pour que la ligne de prix tienne d'un seul tenant. */
+@media (max-width: 899px) {
+  .hkf__offer-title {
+    font-size: var(--hk-offer-title-m);
+  }
+
+  .hkf__offer-price {
+    gap: 3px;
+    font-size: var(--hk-offer-price-m);
+  }
+
+  .hkf__offer-was {
+    font-size: calc(var(--hk-offer-price-m) * 0.6);
+  }
+
+  .hkf__offer-unit {
+    font-size: calc(var(--hk-offer-price-m) * 0.6);
+  }
+
+  .hkf__offer-img {
+    width: var(--hk-offer-img-m);
+  }
+
+  .hkf__offer-unit-long {
+    display: none;
+  }
+
+  .hkf__offer-unit-short {
+    display: inline;
+  }
 }
 
 .hkf__offer-save {
@@ -1897,6 +1948,12 @@
     --hk-flag-ink: {{ s.color_flag_ink }};
     --hk-save-bg: {{ s.color_save_bg }};
     --hk-save-ink: {{ s.color_save_ink }};
+    --hk-offer-img: {{ s.offer_img_size }}px;
+    --hk-offer-img-m: {{ s.offer_img_size_mobile }}px;
+    --hk-offer-title: {{ s.offer_title_size }}px;
+    --hk-offer-title-m: {{ s.offer_title_size_mobile }}px;
+    --hk-offer-price: {{ s.offer_price_size }}px;
+    --hk-offer-price-m: {{ s.offer_price_size_mobile }}px;
     --hk-rating-gap: {{ s.rating_gap }}px;
     --hk-max: {{ s.container_width }}px;
     --hk-radius: {{ s.gallery_radius }}px;
@@ -2441,14 +2498,25 @@
                   <span class="hkf__offer-flag" {% if flag_style != blank %}style="{{ flag_style }}"{% endif %} {% if b.flag == blank %}hidden{% endif %}>{{ b.flag }}</span>
                   {%- if b.image != blank -%}
                     <span class="hkf__offer-img">
-                      {{ b.image | image_url: width: 200 | image_tag: width: 100, height: 70, loading: 'lazy', alt: '' }}
+                      {{ b.image | image_url: width: 400 | image_tag: widths: '100, 200, 400', loading: 'lazy', alt: '' }}
                     </span>
                   {%- endif -%}
                   <span class="hkf__offer-title">{{ b.title }}</span>
                   <span class="hkf__offer-price">
                     {%- if unit_was > unit -%}<s class="hkf__offer-was">{{ unit_was | money }}</s>{%- endif -%}
-                    {{ unit | money }}
-                    <span class="hkf__offer-unit">{{ s.per_pair_label }}</span>
+                    <span class="hkf__offer-now">{{ unit | money }}</span>
+                    {%- if s.per_pair_label != blank or s.per_pair_short != blank -%}
+                      {%- comment -%}
+                        Les deux formulations coexistent dans le balisage ; la
+                        requête média choisit celle qui tient. Aucune espace
+                        entre elles, sinon la version masquée en laisserait une
+                        derrière elle.
+                      {%- endcomment -%}
+                      <span class="hkf__offer-unit"
+                        ><span class="hkf__offer-unit-long">{{ s.per_pair_label }}</span
+                        ><span class="hkf__offer-unit-short">{{ s.per_pair_short }}</span
+                      ></span>
+                    {%- endif -%}
                   </span>
                   <span class="hkf__offer-save" {% if b.save_label == blank %}hidden{% endif %}>{{ b.save_label }}</span>
                 </button>
@@ -3395,11 +3463,25 @@
         if (errorBox) errorBox.hidden = true;
         addButton.classList.add('is-loading');
 
+        /* Les paires sont regroupées par variante avant l'envoi. Deux lignes
+           portant le même identifiant ne doivent pas partir en deux entrées
+           de quantité 1 : Shopify n'en retient alors qu'une, et le client
+           payait deux paires pour n'en recevoir qu'une. */
         var items = [];
         if (pairsBox && !pairsBox.hidden) {
+          var byVariant = {};
+          var seen = [];
           pairRows().forEach(function (row) {
             var v = rowVariant(row);
-            if (v) items.push({ id: v.id, quantity: 1 });
+            if (!v) return;
+            if (byVariant[v.id] === undefined) {
+              byVariant[v.id] = 0;
+              seen.push(v.id);
+            }
+            byVariant[v.id] += 1;
+          });
+          seen.forEach(function (id) {
+            items.push({ id: Number(id), quantity: byVariant[id] });
           });
         }
         if (!items.length && current) items.push({ id: current.id, quantity: 1 });
@@ -3748,7 +3830,14 @@
     { "type": "checkbox", "id": "show_bundle", "label": "Afficher les offres", "default": true },
     { "type": "text", "id": "bundle_note", "label": "Mention au-dessus", "default": "La promotion groupée est valable jusqu'à 23 h 59" },
     { "type": "text", "id": "bundle_aria_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de l'offre" },
-    { "type": "text", "id": "per_pair_label", "label": "Mention sous le prix", "default": "par paire" },
+    { "type": "text", "id": "per_pair_label", "label": "Mention après le prix (bureau)", "default": "par paire" },
+    { "type": "text", "id": "per_pair_short", "label": "Mention après le prix (mobile)", "info": "Version courte, pour que la ligne de prix tienne sur mobile.", "default": "/paire" },
+    { "type": "range", "id": "offer_img_size", "label": "Taille des images (bureau)", "min": 40, "max": 200, "step": 4, "unit": "px", "default": 92 },
+    { "type": "range", "id": "offer_img_size_mobile", "label": "Taille des images (mobile)", "min": 32, "max": 160, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "offer_title_size", "label": "Taille du titre (bureau)", "min": 12, "max": 30, "step": 1, "unit": "px", "default": 19 },
+    { "type": "range", "id": "offer_title_size_mobile", "label": "Taille du titre (mobile)", "min": 11, "max": 24, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "offer_price_size", "label": "Taille du prix (bureau)", "min": 11, "max": 26, "step": 1, "unit": "px", "default": 17 },
+    { "type": "range", "id": "offer_price_size_mobile", "label": "Taille du prix (mobile)", "min": 9, "max": 20, "step": 1, "unit": "px", "default": 13 },
     { "type": "text", "id": "pairs_title", "label": "Titre du choix des paires", "default": "Choisissez vos couleurs" },
     { "type": "text", "id": "pair_label", "label": "Libellé d'une paire", "info": "[n] est remplacé par le numéro.", "default": "Paire n°[n]" },
     { "type": "text", "id": "in_stock_label", "label": "Mention « en stock »", "default": "En stock" },

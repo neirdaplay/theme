@@ -280,6 +280,7 @@
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--pn-ink);
+  text-align: center;
 }
 
 .pnc__goals-msg b {
@@ -369,6 +370,7 @@
 }
 
 .pnc__line {
+  position: relative;
   display: flex;
   gap: 12px;
   padding: 12px;
@@ -455,6 +457,62 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--pn-green);
+}
+
+/* ---- Réductions ----
+   Le ruban dit combien on gagne, les puces disent pourquoi : sans elles, le
+   prix barré ne s'explique pas. */
+/* Le ruban occupe sa propre bande en haut de la carte : posé par-dessus, il
+   recouvrait le début du titre. */
+.pnc__line.has-ribbon {
+  padding-top: 36px;
+}
+
+.pnc__ribbon {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 18px);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--pn-green);
+  color: var(--pn-white);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pnc__ribbon svg {
+  width: 11px;
+  height: 11px;
+}
+
+.pnc__deals {
+  display: grid;
+  gap: 4px;
+}
+
+.pnc__deal {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--pn-green);
+}
+
+.pnc__deal svg {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  transform: translateY(1px);
 }
 
 .pnc__line-bottom {
@@ -790,6 +848,140 @@
   color: var(--pn-ink);
 }
 
+/* La ligne de réduction se détache sur son propre fond : c'est la seule du
+   pied qui annonce un gain. */
+.pnc__row--discount {
+  align-items: center;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: var(--pn-green-soft);
+  color: var(--pn-green);
+  font-weight: 700;
+}
+
+.pnc__row--discount .pnc__row-value {
+  color: var(--pn-green);
+}
+
+.pnc__row--discount[hidden] {
+  display: none;
+}
+
+.pnc__row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pnc__row-label svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---- Assurance transport ---- */
+
+.pnc__ins {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--pn-line);
+  border-radius: var(--pn-card-radius);
+  background: var(--pn-soft);
+}
+
+.pnc__ins[hidden] {
+  display: none;
+}
+
+.pnc__ins-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.pnc__ins-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pnc__ins-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pnc__ins-price {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pnc__ins-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--pn-muted);
+}
+
+.pnc__ins-text svg {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  color: var(--pn-green);
+}
+
+/* L'interrupteur : une piste et une pastille qui glisse. */
+.pnc__switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 44px;
+  height: 25px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pn-line);
+  transition: background 0.2s ease;
+}
+
+.pnc__switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--pn-white);
+  box-shadow: 0 1px 3px rgba(17, 22, 28, 0.28);
+  transition: transform 0.2s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pnc__switch[aria-checked="true"] {
+  background: var(--pn-green);
+}
+
+.pnc__switch[aria-checked="true"]::after {
+  transform: translateX(19px);
+}
+
+.pnc__switch[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pnc__switch,
+  .pnc__switch::after {
+    transition: none;
+  }
+}
+
 .pnc__note {
   font-size: 11px;
   color: var(--pn-muted);
@@ -899,6 +1091,8 @@
 {%- capture pn_percent -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 18L18 6"/><circle cx="7.8" cy="7.8" r="2.4"/><circle cx="16.2" cy="16.2" r="2.4"/></svg>{%- endcapture -%}
 {%- capture pn_star -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.5l2.6 5.3 5.8.85-4.2 4.1.99 5.8L10 14.8l-5.19 2.75.99-5.8-4.2-4.1 5.8-.85z"/></svg>{%- endcapture -%}
 {%- capture pn_box -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.8l8.4 4.2v10L12 21.2 3.6 17V7z"/><path d="M3.6 7L12 11.2 20.4 7M12 11.2v10"/></svg>{%- endcapture -%}
+{%- capture pn_tag -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12.6 2.9H20a1.1 1.1 0 011.1 1.1v7.4L11.4 21.2a1.6 1.6 0 01-2.3 0L2.8 14.9a1.6 1.6 0 010-2.3z"/><circle cx="16.6" cy="7.4" r="1.5"/></svg>{%- endcapture -%}
+{%- capture pn_shield -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.9l7.4 2.9v6c0 4.3-3.1 8.2-7.4 9.3-4.3-1.1-7.4-5-7.4-9.3v-6z"/><path d="M8.9 12.1l2.2 2.2 4-4.4"/></svg>{%- endcapture -%}
 {%- capture pn_lock -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.6" y="10.4" width="14.8" height="10.2" rx="2.2"/><path d="M8.2 10.4V7.6a3.8 3.8 0 017.6 0v2.8"/></svg>{%- endcapture -%}
 {%- capture pn_arrow -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.4 10h13M11.6 5.2L16.4 10l-4.8 4.8"/></svg>{%- endcapture -%}
 
@@ -946,6 +1140,10 @@
       "showQty": {{ s.show_qty | json }},
       "showPills": {{ s.show_pills | json }},
       "goalMax": {{ goal_max | json }},
+      "insuranceId": {{ s.insurance_product.selected_or_first_available_variant.id | default: 0 | json }},
+      "insuranceAuto": {{ s.insurance_auto | json }},
+      "showRibbon": {{ s.show_ribbon | json }},
+      "showDeals": {{ s.show_deals | json }},
       "goals": [
         {%- for block in tiers -%}
           {%- liquid
@@ -969,6 +1167,7 @@
         {%- endfor -%}
       ],
       "strings": {
+        "ribbon": {{ s.ribbon_label | json }},
         "subtitleOne": {{ s.subtitle_one | json }},
         "subtitleMany": {{ s.subtitle_many | json }},
         "goalsMessage": {{ s.goals_message | json }},
@@ -1166,16 +1365,65 @@
         </p>
       {%- endif -%}
 
+      {%- if s.show_discount_row -%}
+        <p class="pnc__row pnc__row--discount" data-pnc-discount-row hidden>
+          <span class="pnc__row-label">{{ pn_tag }}<span>{{ s.discount_label }}</span></span>
+          <span class="pnc__row-value" data-pnc-discount></span>
+        </p>
+      {%- endif -%}
+
       <p class="pnc__row pnc__row--total">
         <span>{{ s.total_label }}</span>
         <span class="pnc__row-value" data-pnc-total></span>
       </p>
 
-      <a class="pnc__cta" href="{{ routes.cart_url }}" data-pnc-cta>
-        {%- if s.show_lock -%}{{ pn_lock }}{%- endif -%}
-        <span class="pnc__cta-label">{{ s.cta_label }}</span>
-        {%- if s.show_cta_arrow -%}{{ pn_arrow }}{%- endif -%}
-      </a>
+      {%- comment -%}
+        ---------- Assurance transport ----------
+        Une variante réelle, donc un vrai article de commande : le prix vient
+        du produit choisi, jamais d'un nombre saisi ici qui pourrait mentir.
+      {%- endcomment -%}
+      {%- liquid
+        assign ins_product = s.insurance_product
+        assign ins_variant = ins_product.selected_or_first_available_variant
+      -%}
+      {%- if s.show_insurance and ins_variant != blank -%}
+        <div class="pnc__ins" data-pnc-ins data-variant="{{ ins_variant.id }}">
+          <div class="pnc__ins-body">
+            <div class="pnc__ins-top">
+              <span class="pnc__ins-title">{{ s.insurance_title | default: ins_product.title }}</span>
+              <span class="pnc__ins-price">{{ ins_variant.price | money }}</span>
+            </div>
+            {%- if s.insurance_text != blank -%}
+              <span class="pnc__ins-text">
+                {{ pn_shield }}<span>{{ s.insurance_text }}</span>
+              </span>
+            {%- endif -%}
+          </div>
+          <button
+            type="button"
+            class="pnc__switch"
+            role="switch"
+            aria-checked="false"
+            data-pnc-ins-toggle
+            aria-label="{{ s.insurance_title | default: ins_product.title | escape }}"
+          ></button>
+        </div>
+      {%- endif -%}
+
+      {%- comment -%}
+        Un envoi de formulaire vers /cart avec le nom « checkout » : c'est la
+        façon dont Shopify attend qu'on passe au paiement, et elle emporte le
+        panier, la langue et le jeton. Un simple lien vers cette même adresse
+        se faisait intercepter par le panneau, qui se contentait de se
+        rouvrir — d'où le bouton qui semblait ne rien faire.
+      {%- endcomment -%}
+      <form action="{{ routes.cart_url }}" method="post" novalidate data-pnc-ignore>
+        <button type="submit" name="checkout" class="pnc__cta" data-pnc-cta>
+          {%- if s.show_lock -%}{{ pn_lock }}{%- endif -%}
+          <span class="pnc__cta-label">{{ s.cta_label }}</span>
+          {%- if s.show_cta_arrow -%}{{ pn_arrow }}{%- endif -%}
+        </button>
+      </form>
 
       {%- if s.show_payment and shop.enabled_payment_types.size > 0 -%}
         <div class="pnc__pay">
@@ -1198,6 +1446,7 @@
   {%- endcomment -%}
   <template data-pnc-row>
     <li class="pnc__line" data-pnc-line>
+      <span class="pnc__ribbon" data-pnc-ribbon hidden>{{ pn_tag }}<span data-pnc-ribbon-text></span></span>
       <a class="pnc__line-img" data-pnc-line-link tabindex="-1" aria-hidden="true">
         <img data-pnc-line-img alt="" loading="lazy" width="164" height="164">
       </a>
@@ -1209,6 +1458,11 @@
           </button>
         </div>
         <div class="pnc__line-opts" data-pnc-line-opts></div>
+        {%- comment -%}
+          Le détail des promotions appliquées à la ligne, tel que Shopify le
+          renvoie : le prix barré s'explique alors de lui-même.
+        {%- endcomment -%}
+        <div class="pnc__deals" data-pnc-deals hidden></div>
         <p class="pnc__line-note" data-pnc-line-note hidden></p>
         <div class="pnc__line-bottom">
           <span class="pnc__qty" data-pnc-qty-box>
@@ -1257,6 +1511,15 @@
     var goalsFill = $('[data-pnc-goals-fill]');
     var goalsMsg = $('[data-pnc-goals-msg]');
     var crossBox = $('[data-pnc-cross]');
+    var discountRow = $('[data-pnc-discount-row]');
+    var discountEl = $('[data-pnc-discount]');
+    var insBox = $('[data-pnc-ins]');
+    var insToggle = $('[data-pnc-ins-toggle]');
+    var insId = Number(config.insuranceId) || 0;
+    /* Une fois l'assurance retirée à la main, on ne la repose plus : la
+       proposer automatiquement est une chose, l'imposer une autre. */
+    var insDeclined = false;
+    var insBusy = false;
 
     var lastFocus = null;
     var cart = null;
@@ -1409,7 +1672,14 @@
       if (!cart) return;
       clearError();
 
-      var count = cart.item_count || 0;
+      /* L'assurance n'est pas un article du panier aux yeux du client : elle
+         ne compte donc pas dans le nombre affiché. */
+      var count = 0;
+      (cart.items || []).forEach(function (item) {
+        if (insId && item.variant_id === insId) return;
+        count += item.quantity;
+      });
+
       if (countEl) {
         countEl.textContent = count;
         countEl.hidden = count === 0;
@@ -1421,19 +1691,34 @@
         );
       }
 
+      /* L'assurance a sa propre rangée dans le pied : elle n'a rien à faire
+         une seconde fois dans la liste des articles. */
       linesBox.innerHTML = '';
+      var shownItems = 0;
       (cart.items || []).forEach(function (item, index) {
+        if (insId && item.variant_id === insId) return;
         linesBox.appendChild(buildLine(item, index + 1));
+        shownItems += 1;
       });
-      linesBox.hidden = count === 0;
-      if (emptyBox) emptyBox.hidden = count !== 0;
+      linesBox.hidden = shownItems === 0;
+      if (emptyBox) emptyBox.hidden = shownItems !== 0;
 
       var subtotal = cart.items_subtotal_price != null ? cart.items_subtotal_price : cart.total_price;
       if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal);
       if (totalEl) totalEl.textContent = formatMoney(cart.total_price || 0);
 
+      /* La remise est la différence entre le prix plein et le prix payé :
+         cart.total_discount ne couvre pas les remises de ligne sur toutes les
+         versions, alors qu'un écart de sous-total, si. */
+      if (discountRow) {
+        var saved = Math.max(0, subtotal - (cart.total_price || 0));
+        discountRow.hidden = saved <= 0;
+        if (discountEl) discountEl.textContent = '−' + formatMoney(saved);
+      }
+
       renderGoals(cart.total_price || 0);
       renderCross();
+      renderInsurance();
     }
 
     function buildLine(item, line) {
@@ -1485,15 +1770,55 @@
 
       frag.querySelector('[data-pnc-line-price]').textContent = formatMoney(item.final_line_price);
 
+      var full = item.original_line_price;
+      var saved = full - item.final_line_price;
+
       var was = frag.querySelector('[data-pnc-line-was]');
       if (was) {
-        var full = item.original_line_price;
-        if (config.showLineCompare && full > item.final_line_price) {
+        if (config.showLineCompare && saved > 0) {
           was.textContent = formatMoney(full);
           was.hidden = false;
         } else {
           was.hidden = true;
         }
+      }
+
+      /* Le ruban : le pourcentage réellement gagné sur cette ligne. */
+      var ribbon = frag.querySelector('[data-pnc-ribbon]');
+      if (ribbon) {
+        if (config.showRibbon && saved > 0 && full > 0) {
+          var pct = Math.round((saved / full) * 100);
+          ribbon.querySelector('[data-pnc-ribbon-text]').textContent = config.strings.ribbon
+            .split('[x]')
+            .join(pct);
+          ribbon.hidden = false;
+          row.classList.add('has-ribbon');
+        } else {
+          ribbon.remove();
+        }
+      }
+
+      /* Les promotions nommées, telles que Shopify les a appliquées. */
+      var deals = frag.querySelector('[data-pnc-deals]');
+      if (deals) {
+        var allocations = item.line_level_discount_allocations || item.discounts || [];
+        if (config.showDeals && allocations.length) {
+          allocations.forEach(function (allocation) {
+            var app = allocation.discount_application || {};
+            var title = app.title || allocation.title || '';
+            if (!title) return;
+            var row = document.createElement('span');
+            row.className = 'pnc__deal';
+            row.innerHTML = TAG_ICON;
+            var text = document.createElement('span');
+            text.textContent =
+              title + (allocation.amount ? ' (−' + formatMoney(allocation.amount) + ')' : '');
+            row.appendChild(text);
+            deals.appendChild(row);
+          });
+        }
+        if (!deals.childNodes.length) deals.remove();
+        else deals.hidden = false;
       }
 
       /* Le changement de variante n'a de sens que si le produit en a
@@ -1555,6 +1880,87 @@
       var div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    /* L'étiquette des promotions, reprise du gabarit plutôt que recopiée en
+       JavaScript. Le contenu d'un <template> est un fragment à part : il faut
+       l'interroger par rowTemplate.content, pas depuis la racine. */
+    var TAG_ICON = (function () {
+      var source =
+        (rowTemplate && rowTemplate.content.querySelector('[data-pnc-ribbon] svg')) ||
+        $('.pnc__row-label svg');
+      return source ? source.outerHTML : '';
+    })();
+
+    /* ---------------- Assurance transport ---------------- */
+
+    /* L'état « occupé » et l'état du bouton vont de pair : les séparer laissait
+       l'interrupteur désactivé pour de bon, puisque rien ne redessinait la
+       carte une fois l'ajout terminé. */
+    function setInsBusy(on) {
+      insBusy = on;
+      if (insToggle) insToggle.disabled = on;
+    }
+
+    function insuranceLine() {
+      if (!insId || !cart) return null;
+      var found = null;
+      (cart.items || []).forEach(function (item, index) {
+        if (item.variant_id === insId) found = { item: item, line: index + 1 };
+      });
+      return found;
+    }
+
+    function renderInsurance() {
+      if (!insBox || !insToggle) return;
+      var line = insuranceLine();
+      var on = !!line;
+      insToggle.setAttribute('aria-checked', on ? 'true' : 'false');
+
+      /* Rien à assurer dans un panier vide. */
+      var hasGoods = (cart.items || []).some(function (item) {
+        return item.variant_id !== insId;
+      });
+      insBox.hidden = !hasGoods;
+
+      if (insBusy) return;
+
+      /* Un panier qui ne contiendrait que l'assurance n'a aucun sens : on la
+         retire avec le dernier article, sinon le client verrait un total de
+         2 € sur un panier annoncé vide. */
+      if (!hasGoods && line) {
+        setInsBusy(true);
+        changeLine(line.line, 0).then(function () {
+          setInsBusy(false);
+        });
+        return;
+      }
+
+      /* Cochée d'office au premier passage, si le client ne l'a pas refusée. */
+      if (config.insuranceAuto && hasGoods && !on && !insDeclined) {
+        setInsBusy(true);
+        addVariant(insId, 1).then(function () {
+          setInsBusy(false);
+        });
+      }
+    }
+
+    if (insToggle) {
+      insToggle.addEventListener('click', function () {
+        if (insBusy) return;
+        var line = insuranceLine();
+        setInsBusy(true);
+        var done = function () {
+          setInsBusy(false);
+        };
+        if (line) {
+          insDeclined = true;
+          changeLine(line.line, 0).then(done);
+        } else {
+          insDeclined = false;
+          addVariant(insId, 1).then(done);
+        }
+      });
     }
 
     /* Un produit déjà dans le panier n'est plus une suggestion. */
@@ -2004,6 +2410,15 @@
     { "type": "checkbox", "id": "show_qty", "label": "Afficher les quantités", "default": true },
     { "type": "checkbox", "id": "show_pills", "label": "Afficher les variantes en pastilles", "default": true },
     { "type": "checkbox", "id": "show_line_compare", "label": "Afficher le prix barré", "default": true },
+    { "type": "checkbox", "id": "show_ribbon", "label": "Ruban d'économie sur l'article", "default": true },
+    { "type": "text", "id": "ribbon_label", "label": "Texte du ruban", "info": "[x] est remplacé par le pourcentage calculé.", "default": "Économisez [x] %" },
+    {
+      "type": "checkbox",
+      "id": "show_deals",
+      "label": "Détailler les promotions appliquées",
+      "info": "Reprend le nom des réductions Shopify sur l'article, avec le montant gagné.",
+      "default": true
+    },
     { "type": "checkbox", "id": "show_swap", "label": "Permettre de changer de variante", "default": true },
     { "type": "text", "id": "swap_label", "label": "Lien de changement", "default": "Changer de couleur ou de taille" },
     { "type": "text", "id": "remove_label", "label": "Retirer (accessibilité)", "default": "Retirer cet article" },
@@ -2041,7 +2456,31 @@
     },
     { "type": "checkbox", "id": "show_subtotal", "label": "Afficher le sous-total", "default": true },
     { "type": "text", "id": "subtotal_label", "label": "Libellé du sous-total", "default": "Sous-total" },
+    { "type": "checkbox", "id": "show_discount_row", "label": "Afficher la ligne de réduction", "info": "N'apparaît que s'il y a vraiment une remise.", "default": true },
+    { "type": "text", "id": "discount_label", "label": "Libellé de la réduction", "default": "Réductions appliquées" },
     { "type": "text", "id": "total_label", "label": "Libellé du total", "default": "Total" },
+
+    {
+      "type": "header",
+      "content": "Assurance transport"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_insurance",
+      "label": "Proposer l'assurance",
+      "info": "Choisis un produit ci-dessous : son prix Shopify est celui affiché et facturé.",
+      "default": true
+    },
+    { "type": "product", "id": "insurance_product", "label": "Produit d'assurance" },
+    { "type": "text", "id": "insurance_title", "label": "Titre affiché", "info": "Reprend le nom du produit si vide.", "default": "Assurance transport" },
+    { "type": "text", "id": "insurance_text", "label": "Texte", "default": "Protéger votre colis contre dommages, perte ou vol." },
+    {
+      "type": "checkbox",
+      "id": "insurance_auto",
+      "label": "Cochée d'office",
+      "info": "Ajoutée automatiquement au panier. Le client peut la retirer, et elle ne revient pas ensuite.",
+      "default": true
+    },
     { "type": "text", "id": "cta_label", "label": "Texte du bouton", "default": "Finaliser ma commande" },
     { "type": "checkbox", "id": "show_lock", "label": "Cadenas devant le texte", "default": true },
     { "type": "checkbox", "id": "show_cta_arrow", "label": "Flèche après le texte", "default": true },
