@@ -29,6 +29,18 @@
   font-family: var(--hk-font);
   color: var(--hk-ink);
   -webkit-font-smoothing: antialiased;
+
+  /* Les marges vivent ici plutôt que dans l'attribut style : une règle en
+     ligne ne se laisse pas reprendre par une requête média. */
+  padding-top: var(--hk-pad-top);
+  padding-bottom: var(--hk-pad-bottom);
+}
+
+@media (max-width: 899px) {
+  .hkf {
+    padding-top: var(--hk-pad-top-m);
+    padding-bottom: var(--hk-pad-bottom-m);
+  }
 }
 
 .hkf *,
@@ -1044,14 +1056,19 @@
    réduire la seule taille de police suffit alors à faire tenir la rangée,
    ce dont se charge fitBuyRow(). Seul le rembourrage reste en px, pour que
    la largeur disponible ne bouge pas pendant l'ajustement. */
+/* La flèche sort du flux et se cale à droite ; les deux côtés réservent la
+   même largeur, si bien que le libellé et le prix restent vraiment centrés
+   au lieu d'être poussés à gauche par elle. La réserve est en px pour que la
+   largeur disponible ne bouge pas quand fitBuyRow() change la police. */
 .hkf__buy {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.85em;
   width: 100%;
   min-height: 54px;
-  padding: 12px clamp(12px, 3vw, 20px);
+  padding: 12px calc(clamp(12px, 3vw, 20px) + 26px);
   border: 0;
   border-radius: 8px;
   background: var(--hk-green);
@@ -1080,22 +1097,23 @@
   white-space: nowrap;
 }
 
-/* La flèche prend l'espace libre pour se coller à droite, comme sur la
-   référence ; quand il n'y en a plus, la rangée se recentre d'elle-même. */
 .hkf__buy > svg {
-  margin-left: auto;
+  position: absolute;
+  right: clamp(12px, 3vw, 20px);
+  top: 50%;
+  width: 15px;
+  height: 15px;
+  margin-top: -7.5px;
 }
 
-/* Sous 400 px on sacrifie la flèche, purement décorative : mieux vaut la
-   perdre que de rapetisser le libellé et le prix pour lui faire de la place. */
 @media (max-width: 399px) {
   .hkf__buy {
     gap: 0.6em;
-    padding-inline: 10px;
+    padding-inline: 36px;
   }
 
   .hkf__buy > svg {
-    display: none;
+    right: 10px;
   }
 }
 
@@ -1209,11 +1227,6 @@
 
 .hkf__buy-was[hidden] {
   display: none;
-}
-
-.hkf__buy svg {
-  width: 1.05em;
-  height: 1.05em;
 }
 
 .hkf__error {
@@ -1376,7 +1389,7 @@
   gap: 10px;
   width: auto;
   max-width: 100%;
-  padding: 7px 16px 7px 8px;
+  padding: 6px 14px;
   border: 0;
   border-radius: 999px;
   background: var(--hk-red-soft);
@@ -1397,11 +1410,11 @@
    c'est la seule façon d'obtenir un rgba() depuis un sélecteur de couleur. */
 .hkf__risk-dot {
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 0 5px rgba(var(--hk-red-rgb), 0.13);
+  box-shadow: 0 0 0 3px rgba(var(--hk-red-rgb), 0.16);
 }
 
 .hkf__risk-trigger svg {
@@ -1602,8 +1615,10 @@
     --hk-face: {{ s.bought_face_size }}px;
     --hk-bought-size: {{ s.bought_size }}px;
     background: {{ s.color_bg }};
-    padding-top: {{ s.padding_top }}px;
-    padding-bottom: {{ s.padding_bottom }}px;
+    --hk-pad-top: {{ s.padding_top }}px;
+    --hk-pad-bottom: {{ s.padding_bottom }}px;
+    --hk-pad-top-m: {{ s.padding_top_mobile }}px;
+    --hk-pad-bottom-m: {{ s.padding_bottom_mobile }}px;
   "
 >
   {%- comment -%}
@@ -1619,6 +1634,7 @@
       "moneyFormat": {{ shop.money_format | json }},
       "afterAdd": {{ s.after_add_action | json }},
       "addedDelay": {{ s.added_delay | json }},
+      "pairsMax": {{ s.pairs_max | json }},
       "optionNames": {{ product.options | json }},
       "variants": [
         {%- for v in product.variants -%}
@@ -2702,7 +2718,9 @@
         wasEl.textContent = formatMoney(current.compareAt);
         wasEl.hidden = !(current.compareAt > current.price);
       }
-      if (pairAdd) pairAdd.hidden = !(pairsBox && !pairsBox.hidden) || pairRows().length >= 6;
+      if (pairAdd) {
+        pairAdd.hidden = !(pairsBox && !pairsBox.hidden) || pairRows().length >= config.pairsMax;
+      }
       fitBuyRow();
     }
 
@@ -2723,7 +2741,10 @@
       var need = 0;
       var shown = 0;
       [].forEach.call(addButton.children, function (child) {
-        if (window.getComputedStyle(child).display === 'none') return;
+        var ccs = window.getComputedStyle(child);
+        /* La flèche est hors flux : sa place est déjà réservée par le
+           rembourrage, la compter une seconde fois fausserait le calcul. */
+        if (ccs.display === 'none' || ccs.position === 'absolute') return;
         need += child.getBoundingClientRect().width;
         shown += 1;
       });
@@ -2737,18 +2758,55 @@
       }
     }
 
+    /** Coche une carte (ou aucune, avec -1) sans toucher aux lignes. */
+    function markOffer(i) {
+      offerIndex = i;
+      offers.forEach(function (other, j) {
+        var on = j === i;
+        other.setAttribute('aria-checked', on ? 'true' : 'false');
+        other.tabIndex = on || (i < 0 && j === 0) ? 0 : -1;
+      });
+    }
+
+    /** La meilleure carte pour n paires : la plus grosse qui tienne dedans.
+        Au-delà de la dernière, on reste sur elle et les paires
+        supplémentaires gardent son tarif. */
+    function offerForCount(n) {
+      var best = -1;
+      var bestQty = 0;
+      offers.forEach(function (o, i) {
+        var q = Number(o.getAttribute('data-qty')) || 1;
+        if (q >= 2 && q <= n && q > bestQty) {
+          best = i;
+          bestQty = q;
+        }
+      });
+      return best;
+    }
+
     /** Accorde les cartes, le dépliant et les totaux sur offerIndex. */
     function syncOffers() {
-      offers.forEach(function (other, j) {
-        var on = j === offerIndex;
-        other.setAttribute('aria-checked', on ? 'true' : 'false');
-        other.tabIndex = on || (offerIndex < 0 && j === 0) ? 0 : -1;
-      });
+      markOffer(offerIndex);
       var qty = offerQty();
       /* Une seule paire n'a rien à demander : le sélecteur du haut a déjà
          dit laquelle. Le dépliant ne sert qu'à partir de deux. */
       if (pairsBox) pairsBox.hidden = qty < 2;
       setRowCount(qty < 2 ? 0 : qty);
+      renderTotals();
+    }
+
+    /** Le nombre de lignes a changé de lui-même : on recale la carte cochée
+        dessus, pour que le tarif suive au lieu de rester sur l'ancienne. */
+    function applyPairCount(n) {
+      if (n < 2) {
+        markOffer(-1);
+        if (pairsBox) pairsBox.hidden = true;
+        setRowCount(0);
+      } else {
+        if (pairsBox) pairsBox.hidden = false;
+        setRowCount(n);
+        markOffer(offerForCount(n));
+      }
       renderTotals();
     }
 
@@ -2763,8 +2821,7 @@
 
     if (pairAdd) {
       pairAdd.addEventListener('click', function () {
-        setRowCount(pairRows().length + 1);
-        renderTotals();
+        applyPairCount(pairRows().length + 1);
       });
     }
 
@@ -2773,11 +2830,12 @@
         var btn = event.target.closest('[data-hkf-pair-remove]');
         if (!btn) return;
         var row = btn.closest('[data-hkf-pair]');
-        if (row && pairRows().length > 1) {
-          row.remove();
-          syncRemoveButtons();
-          renderTotals();
-        }
+        if (!row || pairRows().length <= 1) return;
+        row.remove();
+        syncRemoveButtons();
+        /* Redescendre sous le palier d'une offre doit aussi lui reprendre sa
+           remise, sans quoi on paierait trois paires au prix de deux. */
+        applyPairCount(pairRows().length);
       });
     }
 
@@ -3155,6 +3213,16 @@
     { "type": "text", "id": "pair_label", "label": "Libellé d'une paire", "info": "[n] est remplacé par le numéro.", "default": "Paire n°[n]" },
     { "type": "text", "id": "in_stock_label", "label": "Mention « en stock »", "default": "En stock" },
     { "type": "text", "id": "pair_remove_label", "label": "Retirer une paire (accessibilité)", "default": "Retirer cette paire" },
+    {
+      "type": "range",
+      "id": "pairs_max",
+      "label": "Nombre de paires maximum",
+      "info": "Au-delà du palier le plus élevé, les paires ajoutées gardent le tarif de ce palier.",
+      "min": 2,
+      "max": 20,
+      "step": 1,
+      "default": 10
+    },
     { "type": "text", "id": "pair_add_label", "label": "Bouton « ajouter une paire »", "default": "+ Ajouter une autre paire" },
     { "type": "text", "id": "pair_add_note", "label": "Mention du bouton", "default": "Économisez 15 % sur toute autre paire ajoutée" },
 
@@ -3223,8 +3291,10 @@
     },
     { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 900, "max": 1400, "step": 20, "unit": "px", "default": 1120 },
     { "type": "range", "id": "stack_gap", "label": "Espace galerie / infos sur mobile", "min": 4, "max": 48, "step": 2, "unit": "px", "default": 18 },
-    { "type": "range", "id": "padding_top", "label": "Marge haute", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 24 },
-    { "type": "range", "id": "padding_bottom", "label": "Marge basse", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 }
+    { "type": "range", "id": "padding_top", "label": "Marge haute (bureau)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 24 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse (bureau)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "padding_top_mobile", "label": "Marge haute (mobile)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 16 },
+    { "type": "range", "id": "padding_bottom_mobile", "label": "Marge basse (mobile)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 32 }
   ],
   "blocks": [
     {
