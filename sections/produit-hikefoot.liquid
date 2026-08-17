@@ -3248,6 +3248,37 @@
       );
     }
 
+    /**
+     * Ouvre le panier coulissant, quel qu'il soit. Renvoie false si aucun
+     * tiroir n'a répondu, auquel cas il faut bien aller quelque part.
+     *
+     * Deux voies, dans cet ordre : l'événement, que la section « Panier
+     * coulissant » écoute et marque comme traité ; puis les éléments connus.
+     * On les passe tous en revue plutôt que de prendre le premier venu :
+     * beaucoup de thèmes posent un <cart-drawer> sans méthode open(), et
+     * s'arrêter dessus renverrait le client sur la page panier.
+     */
+    function openDrawer() {
+      var event = new CustomEvent('pnc:open', {
+        bubbles: true,
+        cancelable: true,
+        detail: { handled: false }
+      });
+      document.dispatchEvent(event);
+      if (event.detail && event.detail.handled) return true;
+
+      var candidates = document.querySelectorAll(
+        '[data-cart-drawer], cart-drawer, #cart-drawer, .cart-drawer, cart-notification'
+      );
+      for (var i = 0; i < candidates.length; i += 1) {
+        if (typeof candidates[i].open === 'function') {
+          candidates[i].open();
+          return true;
+        }
+      }
+      return false;
+    }
+
     /** Où va le client une fois l'ajout confirmé. */
     function goAfterAdd(code) {
       var mode = config.afterAdd;
@@ -3259,12 +3290,10 @@
       }
 
       if (mode === 'drawer') {
-        var drawer = document.querySelector('cart-drawer, [data-cart-drawer]');
-        if (drawer && typeof drawer.open === 'function') {
+        if (openDrawer()) {
           /* Le tiroir ne recharge pas la page : la remise groupée doit donc
              être posée à part, sans quoi elle n'existerait qu'au paiement. */
           if (code) applyDiscountInBackground(code);
-          drawer.open();
           resetBuy();
           return;
         }

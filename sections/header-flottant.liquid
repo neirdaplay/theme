@@ -819,7 +819,12 @@
       {%- endif -%}
 
       {%- if s.show_cart -%}
-        <a class="khdr__icon" href="{{ routes.cart_url }}" aria-label="{{ s.cart_label }}">
+        <a
+          class="khdr__icon"
+          href="{{ routes.cart_url }}"
+          aria-label="{{ s.cart_label }}"
+          {% if s.cart_drawer %}data-khdr-cart{% endif %}
+        >
           {{ kh_bag }}
           <span class="khdr__bubble" data-khdr-count {% if cart.item_count == 0 %}hidden{% endif %}>
             {{- cart.item_count -}}
@@ -1101,6 +1106,45 @@
       /* The product section announces its own adds; anything else that
          reloads the page updates the count on its own. */
       document.addEventListener('pvp:cart-added', refresh);
+      document.addEventListener('hkf:cart-added', refresh);
+      document.addEventListener('pnc:updated', refresh);
+    }
+
+    /* ---------------- Cart drawer ----------------
+       L'icône panier ouvre le tiroir plutôt que la page, quand il y en a un.
+       L'événement est marqué comme traité par celui qui répond ; sans
+       réponse, on laisse le lien faire son travail habituel. */
+
+    var cartIcon = $('[data-khdr-cart]', root);
+    if (cartIcon) {
+      cartIcon.addEventListener('click', function (event) {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+        var ask = new CustomEvent('pnc:open', {
+          bubbles: true,
+          cancelable: true,
+          detail: { handled: false }
+        });
+        document.dispatchEvent(ask);
+        if (ask.detail && ask.detail.handled) {
+          event.preventDefault();
+          return;
+        }
+
+        /* Beaucoup de thèmes posent un <cart-drawer> sans méthode open() :
+           on parcourt les candidats au lieu de s'arrêter au premier. */
+        var candidates = document.querySelectorAll(
+          '[data-cart-drawer], cart-drawer, #cart-drawer, .cart-drawer'
+        );
+        for (var i = 0; i < candidates.length; i += 1) {
+          if (typeof candidates[i].open === 'function') {
+            event.preventDefault();
+            candidates[i].open();
+            return;
+          }
+        }
+        /* Personne n'a répondu : le lien mène à la page panier, tant mieux. */
+      });
     }
   })();
 </script>
@@ -1149,6 +1193,13 @@
     { "type": "checkbox", "id": "show_search", "label": "Recherche", "default": true },
     { "type": "checkbox", "id": "show_account", "label": "Compte client", "default": true },
     { "type": "checkbox", "id": "show_cart", "label": "Panier", "default": true },
+    {
+      "type": "checkbox",
+      "id": "cart_drawer",
+      "label": "Ouvrir le panier coulissant",
+      "info": "L'icône panier ouvre le tiroir au lieu d'aller sur la page panier. Sans tiroir dans le thème, le lien fonctionne normalement.",
+      "default": true
+    },
     { "type": "text", "id": "search_placeholder", "label": "Champ de recherche", "default": "Que cherches-tu ?" },
     { "type": "text", "id": "search_submit", "label": "Bouton de recherche", "default": "Rechercher" },
 

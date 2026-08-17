@@ -1778,10 +1778,20 @@
 
     /* ---------------- Points d'entrée ---------------- */
 
-    document.addEventListener('pnc:open', open);
+    /* Le drapeau dit à l'appelant que quelqu'un a pris la main : sans lui,
+       la section produit croirait qu'aucun tiroir n'existe et enverrait le
+       client sur la page panier. */
+    document.addEventListener('pnc:open', function (event) {
+      if (event && event.detail) event.detail.handled = true;
+      open();
+    });
     document.addEventListener('pnc:refresh', function () {
       refresh();
     });
+
+    /* Une marque sur <html> pour que les autres sections sachent, sans
+       fouiller le DOM, qu'un panier coulissant est en place. */
+    document.documentElement.setAttribute('data-pnc-drawer', '1');
 
     /* La section produit annonce ses ajouts : on se resynchronise, et on
        s'ouvre si le marchand l'a demandé. */
@@ -1791,14 +1801,30 @@
     });
 
     if (config.interceptLinks) {
+      var cartPath = config.cartUrl.replace(/\/+$/, '');
+
       document.addEventListener('click', function (event) {
+        if (event.defaultPrevented || event.button !== 0) return;
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
         var link = event.target.closest('a[href]');
-        if (!link) return;
-        var href = link.getAttribute('href') || '';
-        if (href.indexOf(config.cartUrl) !== 0) return;
-        /* /cart/add et /cart/change ne sont pas la page panier. */
-        if (href.indexOf(config.cartUrl + '/') === 0) return;
-        if (link.hasAttribute('data-pnc-ignore')) return;
+        if (!link || link.hasAttribute('data-pnc-ignore')) return;
+        if (link.target && link.target !== '_self') return;
+
+        /* On compare des chemins, pas des chaînes brutes : l'en-tête d'un
+           thème écrit souvent l'URL complète, et « https://.../cart » ne
+           commence pas par « /cart ». */
+        var url;
+        try {
+          url = new URL(link.href, window.location.href);
+        } catch (e) {
+          return;
+        }
+        if (url.origin !== window.location.origin) return;
+
+        /* Égalité stricte : /cart/add et /cart/change ne sont pas la page. */
+        if (url.pathname.replace(/\/+$/, '') !== cartPath) return;
+
         event.preventDefault();
         open();
       });
