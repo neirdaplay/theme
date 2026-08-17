@@ -749,9 +749,29 @@
   color: var(--hk-muted);
 }
 
-.hkf__chosen a {
+.hkf__chosen a,
+.hkf__guide-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* Une paire « libellé : valeur » par option, la valeur en gras : « Bleu / 36 »
+   ne disait pas ce que chaque moitié désignait. */
+.hkf__chosen-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.hkf__chosen-item b {
+  margin-left: 4px;
+  color: var(--hk-ink);
+  font-weight: 700;
 }
 
 .hkf__finder {
@@ -1367,6 +1387,219 @@
    Sell-out risk
    -------------------------------------------------------------------------- */
 
+/* --------------------------------------------------------------------------
+   Guide des tailles — panneau par-dessus la page
+   -------------------------------------------------------------------------- */
+
+.hkf__guide {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.hkf__guide[hidden] {
+  display: none;
+}
+
+.hkf__guide-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 22, 28, 0.42);
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+.hkf__guide.is-open .hkf__guide-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hkf__guide-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--hk-guide-width, 680px), 100vw);
+  max-width: 100%;
+  height: 100%;
+  background: var(--hk-white);
+  box-shadow: -18px 0 48px rgba(17, 22, 28, 0.16);
+  transform: translateX(100%);
+  transition: transform 0.36s cubic-bezier(0.22, 0.61, 0.36, 1);
+  pointer-events: auto;
+}
+
+.hkf__guide.is-open .hkf__guide-panel {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hkf__guide-panel,
+  .hkf__guide-scrim {
+    transition: none;
+  }
+}
+
+@media (max-width: 749px) {
+  .hkf__guide-panel {
+    width: 100%;
+    box-shadow: none;
+  }
+}
+
+.hkf__guide-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--hk-line);
+}
+
+.hkf__guide-title {
+  flex: 1 1 auto;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.hkf__guide-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--hk-ink);
+  transition: background 0.16s ease;
+}
+
+.hkf__guide-close:hover {
+  background: var(--hk-soft);
+}
+
+.hkf__guide-close svg {
+  width: 17px;
+  height: 17px;
+}
+
+.hkf__guide-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px 24px 40px;
+}
+
+.hkf__guide-body .hkf__finder {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+/* ---- Contenu venu de l'éditeur de page ----
+   Le marchand écrit sa page dans Shopify : on habille ici tout ce que
+   l'éditeur riche peut produire, titres, listes et tableaux compris. */
+.hkf__guide-content {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--hk-ink);
+}
+
+.hkf__guide-content > * + * {
+  margin-top: 14px;
+}
+
+.hkf__guide-content h1,
+.hkf__guide-content h2,
+.hkf__guide-content h3,
+.hkf__guide-content h4 {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.hkf__guide-content h1 {
+  font-size: 22px;
+}
+
+.hkf__guide-content h2 {
+  font-size: 18px;
+}
+
+.hkf__guide-content h3 {
+  font-size: 15.5px;
+}
+
+.hkf__guide-content h1,
+.hkf__guide-content h2,
+.hkf__guide-content h3 {
+  margin-top: 26px;
+}
+
+.hkf__guide-content p {
+  margin: 0;
+}
+
+.hkf__guide-content strong,
+.hkf__guide-content b {
+  font-weight: 700;
+}
+
+.hkf__guide-content ul,
+.hkf__guide-content ol {
+  margin: 0;
+  padding-left: 20px;
+  list-style: revert;
+}
+
+.hkf__guide-content li + li {
+  margin-top: 5px;
+}
+
+.hkf__guide-content a {
+  color: var(--hk-green);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.hkf__guide-content img {
+  height: auto;
+  border-radius: 10px;
+}
+
+/* Un tableau de pointures est large par nature : il défile dans sa propre
+   boîte plutôt que de pousser tout le panneau. */
+.hkf__guide-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hkf__guide-content table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.hkf__guide-content th,
+.hkf__guide-content td {
+  padding: 9px 10px;
+  border: 1px solid var(--hk-line);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hkf__guide-content thead th,
+.hkf__guide-content tr > *:first-child {
+  background: var(--hk-green-soft);
+  font-weight: 700;
+}
+
 .hkf__risk {
   margin-top: 16px;
 }
@@ -1585,6 +1818,12 @@
   assign reviews = section.blocks | where: 'type', 'review'
   assign ugcs = section.blocks | where: 'type', 'ugc'
 
+  comment
+    Le réglage « page » ne donne qu'une poignée : c'est ici qu'on récupère
+    la page elle-même, avec son titre et son contenu.
+  endcomment
+  assign guide_page = pages[s.sizeguide_page]
+
   assign rating_num = s.rating_value | plus: 0.0
   assign rating_pct = rating_num | divided_by: 5.0 | times: 100
 
@@ -1643,6 +1882,7 @@
     --hk-sticky-top: {{ s.sticky_top }}px;
     --hk-stack-gap: {{ s.stack_gap }}px;
     --hk-ugc: {{ s.ugc_width }}px;
+    --hk-guide-width: {{ s.guide_width }}px;
     --hk-face: {{ s.bought_face_size }}px;
     --hk-bought-size: {{ s.bought_size }}px;
     background: {{ s.color_bg }};
@@ -2026,12 +2266,47 @@
             {%- if s.show_chosen or s.show_sizeguide -%}
               <p class="hkf__chosen">
                 {%- if s.show_chosen -%}
-                  <span data-hkf-chosen>{{ variant.title }}</span>
+                  {%- comment -%}
+                    Une paire par option, le libellé venant du nom de l'option
+                    Shopify sauf si le marchand en a saisi un autre.
+                  {%- endcomment -%}
+                  <span class="hkf__chosen-list" data-hkf-chosen>
+                    {%- for option in product.options_with_values -%}
+                      {%- liquid
+                        assign opt_i = forloop.index0
+                        assign key = 'chosen_label_' | append: forloop.index
+                        assign custom = s[key]
+                        assign shown = custom | default: option.name
+                      -%}
+                      <span class="hkf__chosen-item">
+                        {{- shown }}&nbsp;:<b data-hkf-chosen-value="{{ opt_i }}">
+                          {{- variant.options[opt_i] -}}
+                        </b>
+                      </span>
+                    {%- endfor -%}
+                  </span>
                 {%- else -%}
                   <span></span>
                 {%- endif -%}
-                {%- if s.show_sizeguide and s.sizeguide_url != blank -%}
-                  <a href="{{ s.sizeguide_url }}">{{ s.sizeguide_label }}</a>
+
+                {%- if s.show_sizeguide and s.sizeguide_label != blank -%}
+                  {%- comment -%}
+                    Une page choisie s'ouvre par-dessus ; sans page, le lien
+                    reste un lien et emmène le client où il pointait.
+                  {%- endcomment -%}
+                  {%- if guide_page != blank -%}
+                    <button
+                      type="button"
+                      class="hkf__guide-open"
+                      data-hkf-guide-open
+                      aria-haspopup="dialog"
+                      aria-controls="hkf-guide-{{ section.id }}"
+                    >
+                      {{- s.sizeguide_label -}}
+                    </button>
+                  {%- elsif s.sizeguide_url != blank -%}
+                    <a href="{{ s.sizeguide_url }}">{{ s.sizeguide_label }}</a>
+                  {%- endif -%}
                 {%- endif -%}
               </p>
             {%- endif -%}
@@ -2251,6 +2526,45 @@
       </div>
     </div>
   </div>
+
+  {%- comment -%}
+    ---------- Guide des tailles ----------
+    Le contenu vient d'une page Shopify, rendue ici plutôt que chargée à la
+    demande : rien à attendre au clic, et la page reste éditable là où le
+    marchand a l'habitude de la modifier.
+  {%- endcomment -%}
+  {%- if s.show_sizeguide and guide_page != blank -%}
+    <div class="hkf__guide" id="hkf-guide-{{ section.id }}" data-hkf-guide hidden>
+      <div class="hkf__guide-scrim" data-hkf-guide-scrim></div>
+      <div
+        class="hkf__guide-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="{{ s.guide_title | default: guide_page.title | escape }}"
+        data-hkf-guide-panel
+      >
+        <div class="hkf__guide-head">
+          <h2 class="hkf__guide-title">{{ s.guide_title | default: guide_page.title }}</h2>
+          <button
+            type="button"
+            class="hkf__guide-close"
+            data-hkf-guide-close
+            aria-label="{{ s.close_label | escape }}"
+          >
+            {{- hk_close -}}
+          </button>
+        </div>
+        <div class="hkf__guide-body">
+          {%- if s.guide_show_finder and s.finder_label != blank -%}
+            <button type="button" class="hkf__finder" data-hkf-finder>{{ s.finder_label }}</button>
+          {%- endif -%}
+          <div class="hkf__guide-content" data-hkf-guide-content>
+            {{ guide_page.content }}
+          </div>
+        </div>
+      </div>
+    </div>
+  {%- endif -%}
 </div>
 
 <script>
@@ -2890,7 +3204,14 @@
         btn.tabIndex = on ? 0 : -1;
       });
 
-      if (chosenEl && current) chosenEl.textContent = current.options.join(' / ');
+      /* Chaque valeur a sa propre case, à côté de son libellé : on remplit
+         case par case au lieu de réécrire toute la ligne. */
+      if (chosenEl && current) {
+        $$('[data-hkf-chosen-value]', chosenEl).forEach(function (slot) {
+          var i = Number(slot.getAttribute('data-hkf-chosen-value'));
+          slot.textContent = current.options[i] || '';
+        });
+      }
       if (addButton) {
         var sold = current ? !current.available : true;
         addButton.setAttribute('aria-disabled', sold ? 'true' : 'false');
@@ -3040,6 +3361,77 @@
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(fitBuyRow).catch(function () {});
       }
+    }
+
+    /* ---------------- Guide des tailles ----------------
+       Un panneau par-dessus la page plutôt qu'une redirection : le client ne
+       perd pas sa configuration en allant vérifier sa pointure. */
+    var guide = $('[data-hkf-guide]');
+    if (guide) {
+      var guidePanel = $('[data-hkf-guide-panel]', guide);
+      var guideReturn = null;
+
+      /* Un tableau de pointures est plus large que le panneau : on lui donne
+         sa propre boîte défilante au lieu de laisser la page s'élargir. */
+      $$('table', guide).forEach(function (table) {
+        if (table.parentNode && table.parentNode.classList.contains('hkf__guide-scroll')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'hkf__guide-scroll';
+        table.parentNode.insertBefore(wrap, table);
+        wrap.appendChild(table);
+      });
+
+      var openGuide = function () {
+        guideReturn = document.activeElement;
+        guide.hidden = false;
+        void guide.offsetWidth;
+        guide.classList.add('is-open');
+        document.documentElement.style.overflow = 'hidden';
+        var closeBtn = $('[data-hkf-guide-close]', guide);
+        if (closeBtn) closeBtn.focus();
+      };
+
+      var closeGuide = function () {
+        if (!guide.classList.contains('is-open')) return;
+        guide.classList.remove('is-open');
+        document.documentElement.style.overflow = '';
+        window.setTimeout(function () {
+          if (!guide.classList.contains('is-open')) guide.hidden = true;
+        }, 380);
+        if (guideReturn && typeof guideReturn.focus === 'function') guideReturn.focus();
+      };
+
+      $$('[data-hkf-guide-open]').forEach(function (btn) {
+        btn.addEventListener('click', openGuide);
+      });
+      $$('[data-hkf-guide-close], [data-hkf-guide-scrim]', guide).forEach(function (el) {
+        el.addEventListener('click', closeGuide);
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (!guide.classList.contains('is-open')) return;
+        if (event.key === 'Escape') {
+          closeGuide();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        var list = $$(
+          'a[href], button:not([disabled]), select, input, [tabindex]:not([tabindex="-1"])',
+          guidePanel
+        ).filter(function (el) {
+          return el.offsetParent !== null;
+        });
+        if (!list.length) return;
+        var first = list[0];
+        var last = list[list.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
     }
 
     /* Premier rendu : on accorde tout sur l'offre désignée par Liquid, qui
@@ -3223,10 +3615,27 @@
       "content": "Couleurs et pointures"
     },
     { "type": "checkbox", "id": "show_picker", "label": "Afficher le sélecteur", "default": true },
-    { "type": "checkbox", "id": "show_chosen", "label": "Afficher la variante choisie", "info": "La ligne « Bleu clair / EU 38 » sous les pointures.", "default": true },
-    { "type": "checkbox", "id": "show_sizeguide", "label": "Afficher le lien guide des tailles", "default": true },
-    { "type": "url", "id": "sizeguide_url", "label": "Lien guide des tailles" },
+    { "type": "checkbox", "id": "show_chosen", "label": "Afficher la variante choisie", "info": "La ligne « Coloris : Bleu ciel   Pointure : EU 38 » sous les pointures.", "default": true },
+    { "type": "text", "id": "chosen_label_1", "label": "Libellé de la 1re option", "info": "Vide = le nom de l'option dans Shopify. Par exemple Coloris.", "default": "Coloris" },
+    { "type": "text", "id": "chosen_label_2", "label": "Libellé de la 2e option", "default": "Pointure" },
+    { "type": "text", "id": "chosen_label_3", "label": "Libellé de la 3e option" },
+
+    {
+      "type": "header",
+      "content": "Guide des tailles"
+    },
+    { "type": "checkbox", "id": "show_sizeguide", "label": "Afficher le lien", "default": true },
     { "type": "text", "id": "sizeguide_label", "label": "Texte du lien", "default": "Guide des tailles et de l'ajustement" },
+    {
+      "type": "page",
+      "id": "sizeguide_page",
+      "label": "Page à ouvrir par-dessus",
+      "info": "Crée la page dans Shopify puis choisis-la ici : elle s'ouvre dans un panneau sans quitter la fiche produit. Sans page choisie, le lien ci-dessous est utilisé à la place."
+    },
+    { "type": "url", "id": "sizeguide_url", "label": "Lien de repli", "info": "Utilisé seulement si aucune page n'est choisie." },
+    { "type": "text", "id": "guide_title", "label": "Titre du panneau", "info": "Vide = le titre de la page.", "default": "Guide des Tailles et de l'Ajustement" },
+    { "type": "checkbox", "id": "guide_show_finder", "label": "Bouton « trouver ma pointure » dans le panneau", "default": true },
+    { "type": "range", "id": "guide_width", "label": "Largeur du panneau (bureau)", "min": 380, "max": 900, "step": 20, "unit": "px", "default": 680 },
     { "type": "checkbox", "id": "show_finder", "label": "Bouton « trouver ma pointure »", "default": true },
     { "type": "text", "id": "finder_label", "label": "Texte du bouton", "default": "Trouver ma pointure idéale" },
 
