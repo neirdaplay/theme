@@ -224,12 +224,17 @@
 .pnc__body {
   flex: 1 1 auto;
   overflow-y: auto;
+  /* Rien ne justifie une barre de défilement horizontale dans un tiroir :
+     les étiquettes d'objectif qui dépassaient sont ramenées vers l'intérieur
+     ci-dessous, et ceci garantit qu'aucune autre ne la fera revenir. */
+  overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   padding: var(--pn-pad);
   display: grid;
   gap: 16px;
   align-content: start;
+  min-width: 0;
 }
 
 /* ---- Bandeau livraison ---- */
@@ -244,6 +249,9 @@
   background: var(--pn-green-soft);
   color: var(--pn-ink);
   font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   text-align: center;
 }
 
@@ -342,13 +350,30 @@
 .pnc__goal-label {
   position: absolute;
   top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
   width: max-content;
-  max-width: 84px;
+  max-width: 92px;
   font-size: 10.5px;
   line-height: 1.25;
   text-align: center;
   color: var(--pn-muted);
   transition: color 0.3s ease;
+}
+
+/* Aux deux extrémités, une étiquette centrée sur sa pastille sortirait du
+   panneau. Elle s'ancre donc vers l'intérieur. */
+.pnc__goal--start .pnc__goal-label {
+  left: 0;
+  transform: none;
+  text-align: left;
+}
+
+.pnc__goal--end .pnc__goal-label {
+  left: auto;
+  right: 0;
+  transform: none;
+  text-align: right;
 }
 
 .pnc__goal.is-reached .pnc__goal-dot {
@@ -457,6 +482,16 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--pn-green);
+}
+
+.pnc__sold {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pn-muted);
+}
+
+.pnc__sold[hidden] {
+  display: none;
 }
 
 /* ---- Réductions ----
@@ -907,20 +942,17 @@
   gap: 3px;
 }
 
-.pnc__ins-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
 .pnc__ins-title {
   font-size: 13px;
   font-weight: 700;
 }
 
+/* Le prix quitte la ligne du titre pour se caler au milieu, à droite, juste
+   avant l'interrupteur. */
 .pnc__ins-price {
-  font-size: 13px;
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1151,6 +1183,9 @@
       "showRibbon": {{ s.show_ribbon | json }},
       "showDeals": {{ s.show_deals | json }},
       "compareFromProduct": {{ s.compare_from_product | json }},
+      "showSold": {{ s.show_sold | json }},
+      "soldMin": {{ s.sold_min | json }},
+      "soldMax": {{ s.sold_max | json }},
       "goals": [
         {%- for block in tiers -%}
           {%- liquid
@@ -1175,6 +1210,7 @@
       ],
       "strings": {
         "ribbon": {{ s.ribbon_label | json }},
+        "sold": {{ s.sold_label | json }},
         "subtitleOne": {{ s.subtitle_one | json }},
         "subtitleMany": {{ s.subtitle_many | json }},
         "goalsMessage": {{ s.goals_message | json }},
@@ -1249,8 +1285,16 @@
                     assign g_icon = pn_truck
                 endcase
               -%}
+              {%- liquid
+                assign goal_edge_class = ''
+                if pct >= 99
+                  assign goal_edge_class = ' pnc__goal--end'
+                elsif pct <= 1
+                  assign goal_edge_class = ' pnc__goal--start'
+                endif
+              -%}
               <span
-                class="pnc__goal"
+                class="pnc__goal{{ goal_edge_class }}"
                 data-pnc-goal="{{ cents }}"
                 style="left: {{ pct }}%;"
                 {{ block.shopify_attributes }}
@@ -1396,16 +1440,14 @@
       {%- if s.show_insurance and ins_variant != blank -%}
         <div class="pnc__ins" data-pnc-ins data-variant="{{ ins_variant.id }}">
           <div class="pnc__ins-body">
-            <div class="pnc__ins-top">
-              <span class="pnc__ins-title">{{ s.insurance_title | default: ins_product.title }}</span>
-              <span class="pnc__ins-price">{{ ins_variant.price | money }}</span>
-            </div>
+            <span class="pnc__ins-title">{{ s.insurance_title | default: ins_product.title }}</span>
             {%- if s.insurance_text != blank -%}
               <span class="pnc__ins-text">
                 {{ pn_shield }}<span>{{ s.insurance_text }}</span>
               </span>
             {%- endif -%}
           </div>
+          <span class="pnc__ins-price">{{ ins_variant.price | money }}</span>
           <button
             type="button"
             class="pnc__switch"
@@ -1482,6 +1524,7 @@
           renvoie : le prix barré s'explique alors de lui-même.
         {%- endcomment -%}
         <div class="pnc__deals" data-pnc-deals hidden></div>
+        <p class="pnc__sold" data-pnc-sold hidden></p>
         <p class="pnc__line-note" data-pnc-line-note hidden></p>
         <div class="pnc__line-bottom">
           <span class="pnc__qty" data-pnc-qty-box>
@@ -1820,6 +1863,21 @@
       }
 
       frag.querySelector('[data-pnc-line-price]').textContent = formatMoney(item.final_line_price);
+
+      /* La mention « X achetés » : un nombre décoratif, tiré une fois pour
+         toutes depuis l'identifiant du produit, donc stable d'une visite à
+         l'autre et différent d'un article à l'autre. */
+      var sold = frag.querySelector('[data-pnc-sold]');
+      if (sold) {
+        if (config.showSold && config.strings.sold) {
+          var span = Math.max(0, config.soldMax - config.soldMin);
+          var seed = (item.product_id || item.variant_id || 0) % (span + 1);
+          sold.textContent = config.strings.sold.split('[n]').join(config.soldMin + seed);
+          sold.hidden = false;
+        } else {
+          sold.remove();
+        }
+      }
 
       paintSavings(row, item.original_line_price, item.final_line_price);
 
@@ -2466,6 +2524,16 @@
       "default": true
     },
     { "type": "text", "id": "ribbon_label", "label": "Texte du ruban", "info": "[x] est remplacé par le pourcentage calculé.", "default": "Économisez [x] %" },
+    {
+      "type": "checkbox",
+      "id": "show_sold",
+      "label": "Mention « X achetés dans les dernières 24 h »",
+      "info": "Nombre décoratif, tiré entre les deux bornes ci-dessous et stable pour un même produit. Ce n'est pas une donnée de vente réelle.",
+      "default": true
+    },
+    { "type": "text", "id": "sold_label", "label": "Texte de la mention", "info": "[n] est remplacé par le nombre.", "default": "[n]+ achetés dans les dernières 24 h" },
+    { "type": "range", "id": "sold_min", "label": "Nombre minimum", "min": 5, "max": 2000, "step": 5, "default": 120 },
+    { "type": "range", "id": "sold_max", "label": "Nombre maximum", "min": 5, "max": 2000, "step": 5, "default": 800 },
     {
       "type": "checkbox",
       "id": "show_deals",
