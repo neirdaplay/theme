@@ -1224,6 +1224,7 @@
       "strings": {
         "ribbon": {{ s.ribbon_label | json }},
         "sold": {{ s.sold_label | json }},
+        "discount": {{ s.discount_label | json }},
         "subtitleOne": {{ s.subtitle_one | json }},
         "subtitleMany": {{ s.subtitle_many | json }},
         "goalsMessage": {{ s.goals_message | json }},
@@ -1431,7 +1432,9 @@
 
       {%- if s.show_discount_row -%}
         <p class="pnc__row pnc__row--discount" data-pnc-discount-row hidden>
-          <span class="pnc__row-label">{{ pn_tag }}<span>{{ s.discount_label }}</span></span>
+          <span class="pnc__row-label">
+            {{ pn_tag }}<span data-pnc-discount-name>{{ s.discount_label }}</span>
+          </span>
           <span class="pnc__row-value" data-pnc-discount></span>
         </p>
       {%- endif -%}
@@ -1588,6 +1591,7 @@
     var crossBox = $('[data-pnc-cross]');
     var discountRow = $('[data-pnc-discount-row]');
     var discountEl = $('[data-pnc-discount]');
+    var discountNameEl = $('[data-pnc-discount-name]');
     var insBox = $('[data-pnc-ins]');
     var insToggle = $('[data-pnc-ins-toggle]');
     var insId = Number(config.insuranceId) || 0;
@@ -1778,17 +1782,34 @@
       linesBox.hidden = shownItems === 0;
       if (emptyBox) emptyBox.hidden = shownItems !== 0;
 
-      var subtotal = cart.items_subtotal_price != null ? cart.items_subtotal_price : cart.total_price;
-      if (subtotalEl) subtotalEl.textContent = formatMoney(subtotal);
-      if (totalEl) totalEl.textContent = formatMoney(cart.total_price || 0);
+      /* Trois montants, et il faut prendre le bon champ pour chacun.
+         items_subtotal_price est déjà net des remises d'article : s'en servir
+         de « prix avant réductions » masquait toute remise posée sur la
+         ligne, et la ligne de réduction disparaissait alors qu'il y en avait
+         bien une. original_total_price, lui, précède toutes les remises. */
+      var paid = cart.total_price || 0;
+      var full = cart.original_total_price;
+      if (full == null) {
+        full = cart.items_subtotal_price != null ? cart.items_subtotal_price : paid;
+      }
+      var saved = cart.total_discount != null ? cart.total_discount : Math.max(0, full - paid);
 
-      /* La remise est la différence entre le prix plein et le prix payé :
-         cart.total_discount ne couvre pas les remises de ligne sur toutes les
-         versions, alors qu'un écart de sous-total, si. */
+      if (subtotalEl) subtotalEl.textContent = formatMoney(full);
+      if (totalEl) totalEl.textContent = formatMoney(paid);
+
       if (discountRow) {
-        var saved = Math.max(0, subtotal - (cart.total_price || 0));
         discountRow.hidden = saved <= 0;
         if (discountEl) discountEl.textContent = '−' + formatMoney(saved);
+
+        /* Une remise posée sur la commande n'apparaît sur aucune ligne : c'est
+           ici qu'elle doit être nommée, sinon le client voit un montant tomber
+           sans savoir d'où il vient. */
+        if (discountNameEl) {
+          var orderNames = orderDiscountNames();
+          discountNameEl.textContent = orderNames.length
+            ? orderNames.join(', ')
+            : config.strings.discount;
+        }
       }
 
       renderGoals(cart.total_price || 0);
@@ -1801,6 +1822,17 @@
      * donné. Appelée deux fois : sur ce que /cart.js annonce, puis sur le
      * compare_at de la variante s'il dit mieux.
      */
+    /** Les noms des remises posées sur la commande entière. */
+    function orderDiscountNames() {
+      var orderWide = (cart && (cart.cart_level_discount_applications || cart.discount_applications)) || [];
+      var names = [];
+      orderWide.forEach(function (application) {
+        var name = application.title || application.code || '';
+        if (name && names.indexOf(name) === -1) names.push(name);
+      });
+      return names;
+    }
+
     /**
      * Le nom de la remise Shopify en cours. On regarde d'abord celles posées
      * sur l'article, puis celles posées sur la commande entière : une remise
@@ -1814,13 +1846,7 @@
         var title = app.title || allocations[i].title || '';
         if (title) return title;
       }
-
-      var orderWide = (cart && (cart.cart_level_discount_applications || cart.discount_applications)) || [];
-      for (var j = 0; j < orderWide.length; j += 1) {
-        var name = orderWide[j].title || orderWide[j].code || '';
-        if (name) return name;
-      }
-      return '';
+      return orderDiscountNames()[0] || '';
     }
 
     function paintSavings(row, full, paid, item) {
@@ -2644,9 +2670,9 @@
       "content": "Total et paiement"
     },
     { "type": "checkbox", "id": "show_subtotal", "label": "Afficher le sous-total", "default": true },
-    { "type": "text", "id": "subtotal_label", "label": "Libellé du sous-total", "default": "Sous-total" },
+    { "type": "text", "id": "subtotal_label", "label": "Libellé du sous-total", "info": "Montant avant réductions.", "default": "Sous-total" },
     { "type": "checkbox", "id": "show_discount_row", "label": "Afficher la ligne de réduction", "info": "N'apparaît que s'il y a vraiment une remise.", "default": true },
-    { "type": "text", "id": "discount_label", "label": "Libellé de la réduction", "default": "Réductions appliquées" },
+    { "type": "text", "id": "discount_label", "label": "Libellé de la réduction", "info": "Remplacé par le nom de la remise Shopify quand celle-ci porte sur la commande entière.", "default": "Réductions appliquées" },
     { "type": "text", "id": "total_label", "label": "Libellé du total", "default": "Total" },
 
     {
