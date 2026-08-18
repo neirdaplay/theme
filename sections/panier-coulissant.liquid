@@ -404,8 +404,13 @@
   background: var(--pn-card);
 }
 
+/* align-self est indispensable : sans lui la boîte s'étire sur toute la
+   hauteur de la carte — c'est le comportement par défaut d'un élément
+   flex — alors que l'image n'en occupe que le carré du haut, laissant du
+   fond gris en dessous. */
 .pnc__line-img {
   flex: 0 0 auto;
+  align-self: center;
   width: 82px;
   border-radius: 10px;
   overflow: hidden;
@@ -957,21 +962,27 @@
   white-space: nowrap;
 }
 
+/* L'icône sort du texte pour devenir la colonne de gauche de la carte,
+   calée au milieu de sa hauteur. */
+.pnc__ins-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  align-self: center;
+  width: var(--pn-ins-icon);
+  height: var(--pn-ins-icon);
+  color: var(--pn-green);
+}
+
+.pnc__ins-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .pnc__ins-text {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
   font-size: 11.5px;
   line-height: 1.4;
   color: var(--pn-muted);
-}
-
-.pnc__ins-text svg {
-  flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  margin-top: 1px;
-  color: var(--pn-green);
 }
 
 /* L'interrupteur : une piste et une pastille qui glisse. */
@@ -1159,6 +1170,7 @@
     --pn-card-radius: {{ s.card_radius }}px;
     --pn-cta-radius: {{ s.cta_radius }}px;
     --pn-goal-edge: {{ s.goal_edge }}px;
+    --pn-ins-icon: {{ s.insurance_icon_size }}px;
   "
 >
   <script type="application/json" data-pnc-config>
@@ -1181,6 +1193,7 @@
       "insuranceId": {{ s.insurance_product.selected_or_first_available_variant.id | default: 0 | json }},
       "insuranceAuto": {{ s.insurance_auto | json }},
       "showRibbon": {{ s.show_ribbon | json }},
+      "ribbonContent": {{ s.ribbon_content | json }},
       "showDeals": {{ s.show_deals | json }},
       "compareFromProduct": {{ s.compare_from_product | json }},
       "showSold": {{ s.show_sold | json }},
@@ -1439,12 +1452,13 @@
       -%}
       {%- if s.show_insurance and ins_variant != blank -%}
         <div class="pnc__ins" data-pnc-ins data-variant="{{ ins_variant.id }}">
+          {%- if s.insurance_icon_size > 0 -%}
+            <span class="pnc__ins-icon" aria-hidden="true">{{ pn_shield }}</span>
+          {%- endif -%}
           <div class="pnc__ins-body">
             <span class="pnc__ins-title">{{ s.insurance_title | default: ins_product.title }}</span>
             {%- if s.insurance_text != blank -%}
-              <span class="pnc__ins-text">
-                {{ pn_shield }}<span>{{ s.insurance_text }}</span>
-              </span>
+              <span class="pnc__ins-text">{{ s.insurance_text }}</span>
             {%- endif -%}
           </div>
           <span class="pnc__ins-price">{{ ins_variant.price | money }}</span>
@@ -1463,9 +1477,8 @@
           Dans l'éditeur, on le dit plutôt que de laisser un vide inexpliqué.
         {%- endcomment -%}
         <div class="pnc__ins pnc__ins--todo">
-          <span class="pnc__ins-text">
-            {{ pn_shield }}<span>{{ s.insurance_todo }}</span>
-          </span>
+          <span class="pnc__ins-icon" aria-hidden="true">{{ pn_shield }}</span>
+          <span class="pnc__ins-text">{{ s.insurance_todo }}</span>
         </div>
       {%- endif -%}
 
@@ -1788,7 +1801,18 @@
      * donné. Appelée deux fois : sur ce que /cart.js annonce, puis sur le
      * compare_at de la variante s'il dit mieux.
      */
-    function paintSavings(row, full, paid) {
+    /** Le nom de la première remise Shopify appliquée à la ligne, s'il y en a. */
+    function discountName(item) {
+      var allocations = (item && (item.line_level_discount_allocations || item.discounts)) || [];
+      for (var i = 0; i < allocations.length; i += 1) {
+        var app = allocations[i].discount_application || {};
+        var title = app.title || allocations[i].title || '';
+        if (title) return title;
+      }
+      return '';
+    }
+
+    function paintSavings(row, full, paid, item) {
       var saved = full - paid;
       var discounted = saved > 0 && full > 0;
 
@@ -1804,15 +1828,30 @@
 
       var ribbon = row.querySelector('[data-pnc-ribbon]');
       if (!ribbon) return;
-      if (config.showRibbon && discounted) {
-        var pct = Math.round((saved / full) * 100);
-        ribbon.querySelector('[data-pnc-ribbon-text]').textContent = config.strings.ribbon
-          .split('[x]')
-          .join(pct);
-        ribbon.hidden = false;
-      } else {
+      if (!config.showRibbon || !discounted) {
         ribbon.hidden = true;
+        return;
       }
+
+      /* La pastille dit soit ce qu'on économise, soit comment la remise
+         s'appelle dans Shopify.
+         En mode automatique on prend le nom, sauf quand la ligne du dessous
+         l'affiche déjà : répéter deux fois « Buy 2 Get 10 % » n'apprend rien
+         de plus, alors que le pourcentage, lui, ajoute une information. */
+      var pct = Math.round((saved / full) * 100);
+      var name = discountName(item);
+      var mode = config.ribbonContent;
+      var namedBelow = config.showDeals && name;
+      var text;
+
+      if (name && (mode === 'name' || (mode === 'name_or_percent' && !namedBelow))) {
+        text = name;
+      } else {
+        text = config.strings.ribbon.split('[x]').join(pct);
+      }
+
+      ribbon.querySelector('[data-pnc-ribbon-text]').textContent = text;
+      ribbon.hidden = false;
     }
 
     function buildLine(item, line) {
@@ -1879,7 +1918,7 @@
         }
       }
 
-      paintSavings(row, item.original_line_price, item.final_line_price);
+      paintSavings(row, item.original_line_price, item.final_line_price, item);
 
       /* Une remise de panier ne se voit que si Shopify en a appliqué une. Un
          simple prix barré sur la fiche produit n'en est pas une : il faut
@@ -1895,7 +1934,7 @@
             if (!match || !match.compare_at_price) return;
             var fullPrice = match.compare_at_price * item.quantity;
             if (fullPrice > item.final_line_price) {
-              paintSavings(row, fullPrice, item.final_line_price);
+              paintSavings(row, fullPrice, item.final_line_price, item);
             }
           })
           .catch(function () {
@@ -2523,7 +2562,19 @@
       "info": "Le panier de Shopify ne connaît que les remises qu'il a lui-même appliquées. Coché, un simple prix barré sur la fiche produit affiche quand même le ruban.",
       "default": true
     },
-    { "type": "text", "id": "ribbon_label", "label": "Texte du ruban", "info": "[x] est remplacé par le pourcentage calculé.", "default": "Économisez [x] %" },
+    {
+      "type": "select",
+      "id": "ribbon_content",
+      "label": "Contenu de la pastille",
+      "info": "Le nom vient de la réduction Shopify appliquée à l'article. Sans réduction nommée — un simple prix barré, par exemple — c'est le pourcentage qui s'affiche.",
+      "options": [
+        { "value": "name_or_percent", "label": "Automatique (évite de répéter le détail)" },
+        { "value": "name", "label": "Nom de la réduction" },
+        { "value": "percent", "label": "Pourcentage économisé" }
+      ],
+      "default": "name_or_percent"
+    },
+    { "type": "text", "id": "ribbon_label", "label": "Texte du ruban", "info": "Utilisé pour le pourcentage. [x] est remplacé par la valeur calculée.", "default": "Économisez [x] %" },
     {
       "type": "checkbox",
       "id": "show_sold",
@@ -2602,6 +2653,7 @@
     { "type": "text", "id": "insurance_todo", "label": "Rappel dans l'éditeur", "default": "Choisis un produit d'assurance dans les réglages pour afficher cette carte." },
     { "type": "text", "id": "insurance_title", "label": "Titre affiché", "info": "Reprend le nom du produit si vide.", "default": "Assurance transport" },
     { "type": "text", "id": "insurance_text", "label": "Texte", "default": "Protéger votre colis contre dommages, perte ou vol." },
+    { "type": "range", "id": "insurance_icon_size", "label": "Taille de l'icône", "info": "0 la masque.", "min": 0, "max": 64, "step": 2, "unit": "px", "default": 34 },
     {
       "type": "checkbox",
       "id": "insurance_auto",
