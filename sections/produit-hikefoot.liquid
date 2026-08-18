@@ -922,6 +922,20 @@
   white-space: nowrap;
 }
 
+/* Mention réservée à l'éditeur de thème : jamais rendue en boutique. */
+.hkf__offer-hint {
+  display: block;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #fff4d6;
+  color: #7a5a00;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: normal;
+}
+
 /* Puis une seule ligne pour les prix : barré, remisé, mention. La remise est
    plus grosse que le prix barré, et rien ne passe à la ligne. */
 .hkf__offer-price {
@@ -2491,15 +2505,28 @@
                     Laissés vides, ils suivent la variante — c'est le seul cas
                     où le thème décide quoi que ce soit, et JavaScript les
                     recalcule alors au changement de couleur ou de pointure.
+
+                    Les deux espaces insécables du nettoyage ci-dessous ne font
+                    pas double emploi avec l'espace ordinaire : un prix copié
+                    depuis Shopify ou saisi sur un clavier français en contient,
+                    et `times` rend alors zéro. La carte retombait sur le prix
+                    du produit, ce qui donnait l'impression que la saisie
+                    n'avait pas été enregistrée.
                   endcomment
-                  assign unit = b.unit_price | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  capture unit_raw
+                    echo b.unit_price | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
+                  endcapture
+                  assign unit = unit_raw | times: 100 | round
                   assign unit_fixed = true
                   if unit <= 0
                     assign unit = base
                     assign unit_fixed = false
                   endif
 
-                  assign unit_was = b.unit_compare | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  capture was_raw
+                    echo b.unit_compare | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
+                  endcapture
+                  assign unit_was = was_raw | times: 100 | round
                   assign was_fixed = true
                   if unit_was <= 0
                     assign unit_was = base_was
@@ -2593,6 +2620,15 @@
                       ></span>
                     {%- endif -%}
                   </span>
+                  {%- comment -%}
+                    Visible seulement dans l'éditeur. Un prix vide est un choix
+                    légitime, mais c'est aussi ce qu'on obtient quand Shopify
+                    n'a pas retenu la saisie : sans cette mention, la carte
+                    affiche le prix du produit et rien ne distingue les deux.
+                  {%- endcomment -%}
+                  {%- if request.design_mode and unit_fixed == false -%}
+                    <span class="hkf__offer-hint">Prix par paire vide : cette carte suit le prix du produit.</span>
+                  {%- endif -%}
                   <span
                     class="hkf__offer-save"
                     data-hkf-offer-save="{{ b.save_label | escape }}"
@@ -4085,15 +4121,13 @@
           "type": "text",
           "id": "unit_price",
           "label": "Prix par paire",
-          "info": "C'est ce prix qui s'affiche, qui multiplie le bouton d'ajout au panier et qui sert au total. Laisse vide pour suivre le prix du produit.",
-          "default": "56,66"
+          "info": "C'est ce prix qui s'affiche, qui multiplie le bouton d'ajout au panier et qui sert au total. Clique en dehors du champ avant d'enregistrer, sinon Shopify garde l'ancienne valeur. Laisse vide pour suivre le prix du produit."
         },
         {
           "type": "text",
           "id": "unit_compare",
           "label": "Prix barré par paire",
-          "info": "Laisse vide pour reprendre le prix barré du produit.",
-          "default": "99,90"
+          "info": "Clique en dehors du champ avant d'enregistrer. Laisse vide pour reprendre le prix barré du produit."
         },
         { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage, calculé depuis les deux prix ci-dessus.", "default": "Économisez [x] %" }
       ]
