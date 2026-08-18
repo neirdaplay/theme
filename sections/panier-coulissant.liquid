@@ -1196,8 +1196,8 @@
       "ribbonContent": {{ s.ribbon_content | json }},
       "showDeals": {{ s.show_deals | json }},
       "showSold": {{ s.show_sold | json }},
-      "soldMin": {{ s.sold_min | json }},
-      "soldMax": {{ s.sold_max | json }},
+      "soldMin": {{ s.sold_from | json }},
+      "soldMax": {{ s.sold_to | json }},
       "goals": [
         {%- for block in tiers -%}
           {%- liquid
@@ -2617,8 +2617,8 @@
       "default": true
     },
     { "type": "text", "id": "sold_label", "label": "Texte de la mention", "info": "[n] est remplacé par le nombre.", "default": "[n]+ achetés dans les dernières 24 h" },
-    { "type": "range", "id": "sold_min", "label": "Nombre minimum", "min": 0, "max": 2000, "step": 20, "default": 120 },
-    { "type": "range", "id": "sold_max", "label": "Nombre maximum", "min": 0, "max": 2000, "step": 20, "default": 800 },
+    { "type": "range", "id": "sold_from", "label": "Nombre minimum", "min": 0, "max": 2000, "step": 20, "default": 120 },
+    { "type": "range", "id": "sold_to", "label": "Nombre maximum", "min": 0, "max": 2000, "step": 20, "default": 800 },
     {
       "type": "checkbox",
       "id": "show_deals",

@@ -1974,8 +1974,8 @@
     --hk-flag-ink: {{ s.color_flag_ink }};
     --hk-save-bg: {{ s.color_save_bg }};
     --hk-save-ink: {{ s.color_save_ink }};
-    --hk-offer-img: {{ s.offer_img_size }}px;
-    --hk-offer-img-m: {{ s.offer_img_size_mobile }}px;
+    --hk-offer-img: {{ s.offer_img_w }}px;
+    --hk-offer-img-m: {{ s.offer_img_w_mobile }}px;
     --hk-offer-title: {{ s.offer_title_size }}px;
     --hk-offer-title-m: {{ s.offer_title_size_mobile }}px;
     --hk-offer-price: {{ s.offer_price_size }}px;
@@ -4015,8 +4015,8 @@
     { "type": "text", "id": "bundle_aria_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de l'offre" },
     { "type": "text", "id": "per_pair_label", "label": "Mention après le prix (bureau)", "default": "par paire" },
     { "type": "text", "id": "per_pair_short", "label": "Mention après le prix (mobile)", "info": "Version courte, pour que la ligne de prix tienne sur mobile.", "default": "/paire" },
-    { "type": "range", "id": "offer_img_size", "label": "Taille des images (bureau)", "info": "Valeur par défaut ; chaque bloc d'offre peut fixer la sienne.", "min": 10, "max": 500, "step": 5, "unit": "px", "default": 95 },
-    { "type": "range", "id": "offer_img_size_mobile", "label": "Taille des images (mobile)", "min": 10, "max": 500, "step": 5, "unit": "px", "default": 70 },
+    { "type": "range", "id": "offer_img_w", "label": "Taille des images (bureau)", "info": "Valeur par défaut ; chaque bloc d'offre peut fixer la sienne.", "min": 20, "max": 420, "step": 4, "unit": "px", "default": 92 },
+    { "type": "range", "id": "offer_img_w_mobile", "label": "Taille des images (mobile)", "min": 20, "max": 420, "step": 4, "unit": "px", "default": 72 },
     { "type": "range", "id": "offer_title_size", "label": "Taille du titre (bureau)", "min": 12, "max": 30, "step": 1, "unit": "px", "default": 19 },
     { "type": "range", "id": "offer_title_size_mobile", "label": "Taille du titre (mobile)", "min": 11, "max": 24, "step": 1, "unit": "px", "default": 16 },
     { "type": "range", "id": "offer_price_size", "label": "Taille du prix (bureau)", "min": 11, "max": 26, "step": 1, "unit": "px", "default": 17 },
