@@ -1,0 +1,773 @@
+{% comment %}
+  texte-video.liquid
+  Un bloc de texte à côté d'une vidéo (ou d'une image), avec une pastille de
+  collection, une ligne d'auteur et une petite carte flottante posée sur le
+  média.
+
+  Sur mobile, le média remonte entre le sous-titre et le corps de texte :
+  c'est l'ordre du DOM, et la grille de bureau le renvoie ensuite dans la
+  seconde colonne. Rien n'est dupliqué.
+
+  Fichier autonome : styles et comportement sont en ligne, il n'y a donc rien
+  d'autre à déposer dans le thème.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+
+  comment
+    Le média retenu, dans l'ordre : vidéo hébergée, lien externe, image.
+    Le premier réglage rempli l'emporte, ce qui évite un sélecteur de plus.
+  endcomment
+  assign media_kind = 'none'
+  if s.video != blank
+    assign media_kind = 'video'
+  elsif s.video_url != blank
+    assign media_kind = 'embed'
+  elsif s.image != blank
+    assign media_kind = 'image'
+  endif
+
+  comment
+    Les colonnes dépendent du côté choisi pour le média. Elles sont calculées
+    ici, avant la feuille de style : Liquid s'exécute de haut en bas, et une
+    variable assignée plus bas ne rendrait qu'une chaîne vide.
+  endcomment
+  if s.media_position == 'left'
+    assign text_col = 2
+    assign media_col = 1
+  else
+    assign text_col = 1
+    assign media_col = 2
+  endif
+-%}
+
+{% style %}
+/* ==========================================================================
+   Texte + vidéo — tout est porté par .txv, le reste du thème n'est pas touché.
+   ========================================================================== */
+
+#shopify-section-{{ section.id }} .txv {
+  /* Palette */
+  --txv-bg: {{ s.color_bg }};
+  --txv-badge-bg: {{ s.color_badge_bg }};
+  --txv-badge-ink: {{ s.color_badge_ink }};
+  --txv-title: {{ s.color_title }};
+  --txv-sub: {{ s.color_sub }};
+  --txv-body: {{ s.color_body }};
+  --txv-strong: {{ s.color_strong }};
+  --txv-author: {{ s.color_author }};
+  --txv-check: {{ s.color_check }};
+  --txv-card-bg: {{ s.color_card_bg }};
+  --txv-card-value: {{ s.color_card_value }};
+  --txv-card-label: {{ s.color_card_label }};
+  --txv-icon-bg: {{ s.color_icon_bg }};
+  --txv-icon-ink: {{ s.color_icon_ink }};
+
+  /* Formes */
+  --txv-max: {{ s.container_width }}px;
+  --txv-gap: {{ s.column_gap }}px;
+  --txv-media-share: {{ s.media_share }};
+  --txv-radius: {{ s.media_radius }}px;
+  --txv-card-radius: {{ s.card_radius }}px;
+  --txv-card-x: {{ s.card_offset_x }}px;
+  --txv-card-y: {{ s.card_offset_y }}px;
+  --txv-icon-size: {{ s.card_icon_size }}px;
+
+  /* Tailles de texte — bureau d'abord, la requête média règle le mobile */
+  --txv-title-size: {{ s.title_size }}px;
+  --txv-sub-size: {{ s.sub_size }}px;
+  --txv-body-size: {{ s.body_size }}px;
+
+  --txv-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  background: var(--txv-bg);
+  padding: {{ s.padding_top_mobile }}px var(--txv-pad-x, 20px) {{ s.padding_bottom_mobile }}px;
+  font-family: var(--txv-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+#shopify-section-{{ section.id }} .txv *,
+#shopify-section-{{ section.id }} .txv *::before,
+#shopify-section-{{ section.id }} .txv *::after {
+  box-sizing: border-box;
+}
+
+.txv__grid {
+  display: grid;
+  gap: 18px;
+  max-width: var(--txv-max);
+  margin-inline: auto;
+}
+
+/* Mobile : les enveloppes s'effacent, tout retombe dans l'ordre du DOM. */
+.txv__head,
+.txv__rest {
+  display: contents;
+}
+
+/* --------------------------------------------------------------------------
+   Pastille de collection
+   -------------------------------------------------------------------------- */
+
+.txv__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  justify-self: start;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--txv-badge-bg);
+  color: var(--txv-badge-ink);
+  font-size: {{ s.badge_size }}px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.txv__badge-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 1.35em;
+  height: 1.35em;
+}
+
+.txv__badge-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+/* --------------------------------------------------------------------------
+   Titres et corps de texte
+   -------------------------------------------------------------------------- */
+
+.txv__title {
+  margin: 0;
+  color: var(--txv-title);
+  font-size: var(--txv-title-size);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+}
+
+.txv__sub {
+  margin: 0;
+  color: var(--txv-sub);
+  font-size: var(--txv-sub-size);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.txv__body {
+  color: var(--txv-body);
+  font-size: var(--txv-body-size);
+  line-height: 1.62;
+}
+
+.txv__body > *:first-child { margin-top: 0; }
+.txv__body > *:last-child { margin-bottom: 0; }
+.txv__body p { margin: 0 0 1.05em; }
+
+.txv__body strong,
+.txv__body b {
+  color: var(--txv-strong);
+  font-weight: 700;
+}
+
+.txv__body a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Ligne d'auteur
+   -------------------------------------------------------------------------- */
+
+.txv__author {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  row-gap: 6px;
+  color: var(--txv-author);
+  font-size: {{ s.author_size }}px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.txv__avatar {
+  flex: 0 0 auto;
+  width: {{ s.author_avatar_size }}px;
+  height: {{ s.author_avatar_size }}px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--txv-badge-bg);
+}
+
+.txv__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Le nom ne doit pas se couper en deux : il passe à la ligne entier. */
+.txv__author-name,
+.txv__author-suffix {
+  white-space: nowrap;
+}
+
+.txv__check {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 1.15em;
+  height: 1.15em;
+  color: var(--txv-check);
+}
+
+.txv__check svg { width: 100%; height: 100%; fill: currentColor; }
+
+/* --------------------------------------------------------------------------
+   Média
+   -------------------------------------------------------------------------- */
+
+.txv__media {
+  /* Pas de découpe ici : la carte flottante doit pouvoir déborder. */
+  position: relative;
+}
+
+.txv__frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--txv-radius);
+  background: var(--txv-badge-bg);
+}
+
+{%- if s.media_ratio_mobile > 0 %}
+.txv__frame { aspect-ratio: 100 / {{ s.media_ratio_mobile }}; }
+{%- endif %}
+
+.txv__frame img,
+.txv__frame video,
+.txv__frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: {{ s.media_fit }};
+}
+
+{%- comment -%}
+  Sans rapport imposé, l'image garde sa hauteur naturelle : `height: 100%`
+  la réduirait alors à rien du tout.
+{%- endcomment -%}
+{%- if s.media_ratio_mobile == 0 %}
+.txv__frame img { height: auto; }
+{%- endif %}
+
+.txv__media-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  color: var(--txv-sub);
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Carte flottante posée sur le média
+   -------------------------------------------------------------------------- */
+
+.txv__card {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 10px;
+  border-radius: var(--txv-card-radius);
+  background: var(--txv-card-bg);
+  box-shadow: 0 8px 24px rgba(17, 34, 20, 0.12);
+}
+
+.txv__card--tr { top: var(--txv-card-y); right: var(--txv-card-x); }
+.txv__card--tl { top: var(--txv-card-y); left: var(--txv-card-x); }
+.txv__card--br { bottom: var(--txv-card-y); right: var(--txv-card-x); }
+.txv__card--bl { bottom: var(--txv-card-y); left: var(--txv-card-x); }
+
+.txv__card-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--txv-icon-size);
+  height: var(--txv-icon-size);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--txv-icon-bg);
+  color: var(--txv-icon-ink);
+  font-size: calc(var(--txv-icon-size) * 0.5);
+  line-height: 1;
+}
+
+.txv__card-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.txv__card-icon svg {
+  width: 58%;
+  height: 58%;
+  fill: currentColor;
+}
+
+.txv__card-text { display: grid; gap: 2px; }
+
+.txv__card-value {
+  color: var(--txv-card-value);
+  font-size: {{ s.card_value_size }}px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.txv__card-label {
+  color: var(--txv-card-label);
+  font-size: {{ s.card_label_size }}px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* --------------------------------------------------------------------------
+   Bureau : deux colonnes, le média occupe la seconde sur toute la hauteur.
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: {{ s.breakpoint }}px) {
+  #shopify-section-{{ section.id }} .txv {
+    padding-top: {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+    --txv-pad-x: 32px;
+    --txv-title-size: {{ s.title_size }}px;
+    --txv-sub-size: {{ s.sub_size }}px;
+    --txv-body-size: {{ s.body_size }}px;
+  }
+
+  .txv__grid {
+    grid-template-columns:
+      calc(100% - var(--txv-media-share) * 1% - var(--txv-gap))
+      calc(var(--txv-media-share) * 1%);
+    /* La seconde rangée absorbe ce qui dépasse : sans ce 1fr, la hauteur du
+       média se répartissait entre les rangées et écartait la pastille du
+       titre. */
+    grid-template-rows: auto 1fr;
+    column-gap: var(--txv-gap);
+    row-gap: 18px;
+  }
+
+  .txv__head,
+  .txv__rest {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    grid-column: {{ text_col }};
+  }
+
+  .txv__head { grid-row: 1; }
+  .txv__rest { grid-row: 2; align-self: start; }
+
+  .txv__media {
+    grid-column: {{ media_col }};
+    grid-row: 1 / span 2;
+    align-self: {{ s.media_align }};
+  }
+
+  {%- if s.media_ratio > 0 %}
+  .txv__frame { aspect-ratio: 100 / {{ s.media_ratio }}; }
+  {%- else %}
+  .txv__frame { aspect-ratio: auto; }
+  .txv__frame img { height: auto; }
+  {%- endif %}
+}
+
+/* Mobile : tout retombe dans l'ordre du DOM, le média entre les deux. */
+@media screen and (max-width: {{ s.breakpoint | minus: 1 }}px) {
+  #shopify-section-{{ section.id }} .txv {
+    --txv-title-size: {{ s.title_size_mobile }}px;
+    --txv-sub-size: {{ s.sub_size_mobile }}px;
+    --txv-body-size: {{ s.body_size_mobile }}px;
+  }
+
+  .txv__card {
+    padding: 8px 13px 8px 8px;
+    --txv-icon-size: {{ s.card_icon_size_mobile }}px;
+    /* Un décalage négatif fait déborder la carte hors du média, ce qui est
+       voulu sur bureau. Sur un écran étroit, cela déborde de la page : le
+       max() la ramène à l'intérieur sans réglage supplémentaire. */
+    --txv-card-x: max({{ s.card_offset_x }}px, 10px);
+    --txv-card-y: max({{ s.card_offset_y }}px, 10px);
+  }
+
+  .txv__media { margin: 6px 0 10px; }
+}
+{% endstyle %}
+
+{%- capture icon_sparkle -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9L12 2zm6.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z"/></svg>
+{%- endcapture -%}
+{%- capture icon_leaf -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 3s-9.5-.9-14 3.6C2.4 10.2 3 15.4 5.2 17.8L3 20l1.4 1.4 2.2-2.2c2.4 2.2 7.6 2.8 11.2-.8C22.9 12.5 20 3 20 3zM8 16c-1-1.9-.6-4.6 1.4-6.6C11.8 7 16 6.6 17.9 6.4c-.2 1.9-.6 6.1-3 8.5C12.9 16.7 10.2 17 8 16z"/></svg>
+{%- endcapture -%}
+{%- capture icon_star -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.8L12 2z"/></svg>
+{%- endcapture -%}
+{%- capture icon_shoe -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 15.5c0-.8.6-1.5 1.4-1.5h3.1c.6 0 1.1-.3 1.4-.8l1.6-2.6c.3-.5.9-.8 1.5-.7l1.4.2c.5.1.9.4 1.1.9l.6 1.4c.2.5.6.8 1.1.9l4.1.9c.9.2 1.6 1 1.6 2v1.3c0 .8-.7 1.5-1.5 1.5h-16C2.7 19 2 18.3 2 17.5v-2zM8.6 6.2c.4-.4 1-.4 1.4 0l1.2 1.2-1.4 1.4-1.2-1.2c-.4-.4-.4-1 0-1.4z"/></svg>
+{%- endcapture -%}
+{%- capture icon_check -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1.1 14.6l-4-4 1.5-1.5 2.5 2.5 5.2-5.2 1.5 1.5-6.7 6.7z"/></svg>
+{%- endcapture -%}
+
+{%- liquid
+  case s.badge_icon
+    when 'sparkle'
+      assign badge_svg = icon_sparkle
+    when 'leaf'
+      assign badge_svg = icon_leaf
+    when 'star'
+      assign badge_svg = icon_star
+    else
+      assign badge_svg = ''
+  endcase
+
+  case s.card_icon
+    when 'shoe'
+      assign card_svg = icon_shoe
+    when 'leaf'
+      assign card_svg = icon_leaf
+    when 'star'
+      assign card_svg = icon_star
+    when 'sparkle'
+      assign card_svg = icon_sparkle
+    else
+      assign card_svg = ''
+  endcase
+-%}
+
+<section class="txv" data-txv>
+  <div class="txv__grid">
+    {%- comment -%}
+      Le texte est coupé en deux enveloppes, et le média se glisse entre
+      elles. Sur mobile, `display: contents` les efface : les six éléments
+      retombent alors dans l'ordre du DOM, média compris. Sur bureau, les
+      deux enveloppes reprennent corps dans la première colonne.
+    {%- endcomment -%}
+    <div class="txv__head">
+    {%- if s.show_badge and s.badge_text != blank -%}
+      <span class="txv__badge">
+        {%- if s.badge_emoji != blank -%}
+          <span class="txv__badge-icon" aria-hidden="true">{{ s.badge_emoji }}</span>
+        {%- elsif badge_svg != blank -%}
+          <span class="txv__badge-icon">{{ badge_svg }}</span>
+        {%- endif -%}
+        {{ s.badge_text }}
+      </span>
+    {%- endif -%}
+
+    {%- if s.title != blank -%}
+      <h2 class="txv__title">{{ s.title }}</h2>
+    {%- endif -%}
+
+    {%- if s.subtitle != blank -%}
+      <p class="txv__sub">{{ s.subtitle }}</p>
+    {%- endif -%}
+
+    </div>
+
+    {%- if s.show_media -%}
+      <div class="txv__media">
+        <div class="txv__frame">
+          {%- case media_kind -%}
+            {%- when 'video' -%}
+              {{
+                s.video
+                | video_tag:
+                  image_size: '1200x',
+                  autoplay: s.video_autoplay,
+                  loop: s.video_loop,
+                  muted: s.video_muted,
+                  controls: s.video_controls,
+                  playsinline: true
+              }}
+            {%- when 'embed' -%}
+              {%- liquid
+                assign vu = s.video_url
+                assign flags = 'rel=0&playsinline=1'
+                if s.video_autoplay
+                  assign flags = flags | append: '&autoplay=1&mute=1'
+                endif
+                if s.video_loop
+                  assign flags = flags | append: '&loop=1&playlist=' | append: vu.id
+                endif
+                if s.video_controls == false
+                  assign flags = flags | append: '&controls=0'
+                endif
+              -%}
+              {%- if vu.type == 'youtube' -%}
+                <iframe
+                  src="https://www.youtube.com/embed/{{ vu.id }}?{{ flags }}"
+                  title="{{ s.title | escape }}"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              {%- elsif vu.type == 'vimeo' -%}
+                <iframe
+                  src="https://player.vimeo.com/video/{{ vu.id }}?{{ flags }}"
+                  title="{{ s.title | escape }}"
+                  loading="lazy"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              {%- endif -%}
+            {%- when 'image' -%}
+              {{
+                s.image
+                | image_url: width: 1400
+                | image_tag:
+                  widths: '400, 600, 800, 1000, 1200, 1400',
+                  sizes: '(min-width: 990px) 45vw, 92vw',
+                  loading: 'lazy',
+                  alt: s.image_alt
+              }}
+            {%- else -%}
+              {%- if request.design_mode -%}
+                <div class="txv__media-empty">
+                  Choisis une vidéo, un lien vidéo ou une image dans les réglages.
+                </div>
+              {%- endif -%}
+          {%- endcase -%}
+        </div>
+
+        {%- if s.show_card and s.card_value != blank or s.show_card and s.card_label != blank -%}
+          <div class="txv__card txv__card--{{ s.card_position }}">
+            {%- if s.card_image != blank -%}
+              <span class="txv__card-icon">
+                {{ s.card_image | image_url: width: 160 | image_tag: loading: 'lazy', alt: '' }}
+              </span>
+            {%- elsif s.card_emoji != blank -%}
+              <span class="txv__card-icon" aria-hidden="true">{{ s.card_emoji }}</span>
+            {%- elsif card_svg != blank -%}
+              <span class="txv__card-icon">{{ card_svg }}</span>
+            {%- endif -%}
+            <span class="txv__card-text">
+              {%- if s.card_value != blank -%}
+                <span class="txv__card-value">{{ s.card_value }}</span>
+              {%- endif -%}
+              {%- if s.card_label != blank -%}
+                <span class="txv__card-label">{{ s.card_label }}</span>
+              {%- endif -%}
+            </span>
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    <div class="txv__rest">
+    {%- if s.body != blank -%}
+      <div class="txv__body">{{ s.body }}</div>
+    {%- endif -%}
+
+    {%- if s.show_author -%}
+      <div class="txv__author">
+        {%- if s.author_image != blank -%}
+          <span class="txv__avatar">
+            {{ s.author_image | image_url: width: 120 | image_tag: loading: 'lazy', alt: '' }}
+          </span>
+        {%- endif -%}
+        {%- if s.author_name != blank -%}
+          <span class="txv__author-name">{{ s.author_name }}</span>
+        {%- endif -%}
+        {%- if s.show_check -%}
+          <span class="txv__check">{{ icon_check }}</span>
+        {%- endif -%}
+        {%- if s.author_suffix != blank -%}
+          <span class="txv__author-suffix">{{ s.author_suffix }}</span>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Texte et vidéo",
+  "tag": "section",
+  "class": "section-texte-video",
+  "settings": [
+    { "type": "header", "content": "Pastille" },
+    { "type": "checkbox", "id": "show_badge", "label": "Afficher la pastille", "default": true },
+    { "type": "text", "id": "badge_text", "label": "Texte", "default": "Nouvelle collection" },
+    {
+      "type": "select",
+      "id": "badge_icon",
+      "label": "Icône",
+      "options": [
+        { "value": "sparkle", "label": "Étincelle" },
+        { "value": "leaf", "label": "Feuille" },
+        { "value": "star", "label": "Étoile" },
+        { "value": "none", "label": "Aucune" }
+      ],
+      "default": "sparkle"
+    },
+    { "type": "text", "id": "badge_emoji", "label": "Emoji à la place de l'icône", "info": "Rempli, il remplace l'icône choisie." },
+    { "type": "range", "id": "badge_size", "label": "Taille du texte", "min": 8, "max": 18, "step": 1, "unit": "px", "default": 11 },
+
+    { "type": "header", "content": "Textes" },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Découvrez Rosé Sky" },
+    { "type": "text", "id": "subtitle", "label": "Sous-titre", "default": "Enfin une chaussure minimaliste aussi élégante que confortable" },
+    {
+      "type": "richtext",
+      "id": "body",
+      "label": "Paragraphes",
+      "info": "Mets en gras les phrases à faire ressortir.",
+      "default": "<p>Vos pieds vous font souffrir. Vos genoux sont douloureux après chaque promenade. Vous avez tout essayé : baskets amortissantes, des semelles coûteuses et des chaussures dites « de maintien » qui promettent le confort mais ne créent que des points de pression. Rien n'a fonctionné — parce que le problème, c'était la chaussure elle-même.</p><p>Rosé Sky repose sur les mêmes principes qui ont permis à plus d'un million de femmes de retrouver une marche sans douleur. <strong>Semelle zéro drop. Large boîte à orteils. Un véritable retour sensoriel.</strong></p><p>Le tout enveloppé dans une tige en maille de laine ultra-douce qui épouse votre pied comme une seconde peau. Enfilez-les. Sortez. Ressentez la différence avant même votre premier café.</p>"
+    },
+
+    { "type": "header", "content": "Ligne d'auteur" },
+    { "type": "checkbox", "id": "show_author", "label": "Afficher la ligne", "default": true },
+    { "type": "image_picker", "id": "author_image", "label": "Photo" },
+    { "type": "text", "id": "author_name", "label": "Nom", "default": "Dakota J." },
+    { "type": "checkbox", "id": "show_check", "label": "Afficher la coche de vérification", "default": true },
+    { "type": "text", "id": "author_suffix", "label": "Mention à droite", "default": "et 2 millions de clients satisfaits" },
+    { "type": "range", "id": "author_size", "label": "Taille du texte", "min": 8, "max": 18, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "author_avatar_size", "label": "Taille de la photo", "min": 16, "max": 56, "step": 2, "unit": "px", "default": 24 },
+
+    { "type": "header", "content": "Média" },
+    { "type": "checkbox", "id": "show_media", "label": "Afficher le média", "default": true },
+    { "type": "video", "id": "video", "label": "Vidéo hébergée par Shopify" },
+    { "type": "video_url", "id": "video_url", "label": "Lien YouTube ou Vimeo", "accept": ["youtube", "vimeo"], "info": "Utilisé si aucune vidéo hébergée n'est choisie." },
+    { "type": "image_picker", "id": "image", "label": "Image", "info": "Utilisée si aucune vidéo n'est choisie." },
+    { "type": "text", "id": "image_alt", "label": "Texte alternatif de l'image" },
+    { "type": "checkbox", "id": "video_autoplay", "label": "Lecture automatique", "default": true },
+    { "type": "checkbox", "id": "video_loop", "label": "Lecture en boucle", "default": true },
+    { "type": "checkbox", "id": "video_muted", "label": "Sans le son", "info": "Nécessaire pour que la lecture automatique fonctionne.", "default": true },
+    { "type": "checkbox", "id": "video_controls", "label": "Afficher les commandes", "default": false },
+    {
+      "type": "select",
+      "id": "media_fit",
+      "label": "Cadrage",
+      "options": [
+        { "value": "cover", "label": "Remplir le cadre" },
+        { "value": "contain", "label": "Afficher en entier" }
+      ],
+      "default": "cover"
+    },
+    { "type": "range", "id": "media_ratio", "label": "Hauteur du média (bureau)", "info": "En % de sa largeur. 0 garde la hauteur naturelle de l'image.", "min": 0, "max": 200, "step": 5, "unit": "%", "default": 100 },
+    { "type": "range", "id": "media_ratio_mobile", "label": "Hauteur du média (mobile)", "info": "En % de sa largeur. 0 garde la hauteur naturelle de l'image.", "min": 0, "max": 200, "step": 5, "unit": "%", "default": 100 },
+    { "type": "range", "id": "media_radius", "label": "Arrondi du média", "min": 0, "max": 48, "step": 2, "unit": "px", "default": 16 },
+
+    { "type": "header", "content": "Carte flottante" },
+    { "type": "checkbox", "id": "show_card", "label": "Afficher la carte", "default": true },
+    { "type": "text", "id": "card_value", "label": "Chiffre", "default": "100%" },
+    { "type": "text", "id": "card_label", "label": "Légende", "default": "mains libres" },
+    {
+      "type": "select",
+      "id": "card_icon",
+      "label": "Icône",
+      "options": [
+        { "value": "shoe", "label": "Chaussure" },
+        { "value": "leaf", "label": "Feuille" },
+        { "value": "star", "label": "Étoile" },
+        { "value": "sparkle", "label": "Étincelle" },
+        { "value": "none", "label": "Aucune" }
+      ],
+      "default": "shoe"
+    },
+    { "type": "text", "id": "card_emoji", "label": "Emoji à la place de l'icône", "info": "Rempli, il remplace l'icône choisie." },
+    { "type": "image_picker", "id": "card_image", "label": "Image à la place de l'icône", "info": "Prioritaire sur l'emoji et sur l'icône." },
+    {
+      "type": "select",
+      "id": "card_position",
+      "label": "Coin",
+      "options": [
+        { "value": "tr", "label": "En haut à droite" },
+        { "value": "tl", "label": "En haut à gauche" },
+        { "value": "br", "label": "En bas à droite" },
+        { "value": "bl", "label": "En bas à gauche" }
+      ],
+      "default": "tr"
+    },
+    { "type": "range", "id": "card_offset_x", "label": "Décalage horizontal", "info": "Négatif pour faire déborder la carte hors du média.", "min": -60, "max": 60, "step": 4, "unit": "px", "default": -16 },
+    { "type": "range", "id": "card_offset_y", "label": "Décalage vertical", "min": -60, "max": 60, "step": 4, "unit": "px", "default": -16 },
+    { "type": "range", "id": "card_icon_size", "label": "Taille de l'icône (bureau)", "min": 24, "max": 80, "step": 2, "unit": "px", "default": 40 },
+    { "type": "range", "id": "card_icon_size_mobile", "label": "Taille de l'icône (mobile)", "min": 20, "max": 72, "step": 2, "unit": "px", "default": 34 },
+    { "type": "range", "id": "card_value_size", "label": "Taille du chiffre", "min": 12, "max": 34, "step": 1, "unit": "px", "default": 19 },
+    { "type": "range", "id": "card_label_size", "label": "Taille de la légende", "min": 9, "max": 20, "step": 1, "unit": "px", "default": 12 },
+    { "type": "range", "id": "card_radius", "label": "Arrondi de la carte", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 14 },
+
+    { "type": "header", "content": "Mise en page" },
+    {
+      "type": "select",
+      "id": "media_position",
+      "label": "Côté du média (bureau)",
+      "options": [
+        { "value": "right", "label": "À droite" },
+        { "value": "left", "label": "À gauche" }
+      ],
+      "default": "right"
+    },
+    {
+      "type": "select",
+      "id": "media_align",
+      "label": "Alignement vertical du média",
+      "options": [
+        { "value": "start", "label": "En haut" },
+        { "value": "center", "label": "Au milieu" },
+        { "value": "stretch", "label": "Toute la hauteur" }
+      ],
+      "default": "start"
+    },
+    { "type": "range", "id": "media_share", "label": "Largeur du média", "info": "En % de la largeur du bloc.", "min": 25, "max": 70, "step": 1, "unit": "%", "default": 48 },
+    { "type": "range", "id": "column_gap", "label": "Espace entre les colonnes", "min": 16, "max": 140, "step": 4, "unit": "px", "default": 56 },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 800, "max": 1600, "step": 20, "unit": "px", "default": 1200 },
+    { "type": "range", "id": "breakpoint", "label": "Bascule mobile / bureau", "info": "Largeur d'écran à partir de laquelle les deux colonnes apparaissent.", "min": 600, "max": 1200, "step": 10, "unit": "px", "default": 900 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute (bureau)", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse (bureau)", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 72 },
+    { "type": "range", "id": "padding_top_mobile", "label": "Marge haute (mobile)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 40 },
+    { "type": "range", "id": "padding_bottom_mobile", "label": "Marge basse (mobile)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 40 },
+
+    { "type": "header", "content": "Tailles de texte" },
+    { "type": "range", "id": "title_size", "label": "Titre (bureau)", "min": 22, "max": 64, "step": 1, "unit": "px", "default": 40 },
+    { "type": "range", "id": "title_size_mobile", "label": "Titre (mobile)", "min": 18, "max": 44, "step": 1, "unit": "px", "default": 27 },
+    { "type": "range", "id": "sub_size", "label": "Sous-titre (bureau)", "min": 13, "max": 34, "step": 1, "unit": "px", "default": 20 },
+    { "type": "range", "id": "sub_size_mobile", "label": "Sous-titre (mobile)", "min": 12, "max": 28, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "body_size", "label": "Paragraphes (bureau)", "min": 12, "max": 24, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "body_size_mobile", "label": "Paragraphes (mobile)", "min": 11, "max": 22, "step": 1, "unit": "px", "default": 15 },
+
+    { "type": "header", "content": "Couleurs" },
+    { "type": "color", "id": "color_bg", "label": "Fond de la section", "default": "#F3F7F0" },
+    { "type": "color", "id": "color_badge_bg", "label": "Pastille — fond", "default": "#E1EDD8" },
+    { "type": "color", "id": "color_badge_ink", "label": "Pastille — texte", "default": "#3F6B34" },
+    { "type": "color", "id": "color_title", "label": "Titre", "default": "#1E2D1A" },
+    { "type": "color", "id": "color_sub", "label": "Sous-titre", "default": "#557059" },
+    { "type": "color", "id": "color_body", "label": "Paragraphes", "default": "#5F6F66" },
+    { "type": "color", "id": "color_strong", "label": "Texte en gras", "default": "#2C4028" },
+    { "type": "color", "id": "color_author", "label": "Ligne d'auteur", "default": "#3A4A3C" },
+    { "type": "color", "id": "color_check", "label": "Coche de vérification", "default": "#1D9BF0" },
+    { "type": "color", "id": "color_card_bg", "label": "Carte — fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_card_value", "label": "Carte — chiffre", "default": "#1E2D1A" },
+    { "type": "color", "id": "color_card_label", "label": "Carte — légende", "default": "#6B7C70" },
+    { "type": "color", "id": "color_icon_bg", "label": "Icône — fond", "default": "#E1EDD8" },
+    { "type": "color", "id": "color_icon_ink", "label": "Icône — trait", "default": "#3F6B34" }
+  ],
+  "presets": [{ "name": "Texte et vidéo" }]
+}
+{% endschema %}
