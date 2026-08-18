@@ -2506,17 +2506,18 @@
                     où le thème décide quoi que ce soit, et JavaScript les
                     recalcule alors au changement de couleur ou de pointure.
 
-                    Ce sont des réglages `number` : Shopify livre un nombre,
-                    jamais une chaîne à déchiffrer. Plus de virgule contre
-                    point, plus d'espace insécable ramassée par un copier-
-                    coller, plus de symbole monétaire — donc plus de saisie
-                    ramenée à zéro, qui faisait retomber la carte sur le prix
-                    du produit sans rien dire.
+                    Ce sont des réglages texte, et ils doivent le rester. Un
+                    réglage de type number s'appuie sur un champ numérique
+                    HTML : saisir 48,96 avec une virgule y produit une valeur
+                    invalide, que le navigateur rend comme une chaîne vide.
+                    Le marchand voyait son prix dans la case, Shopify
+                    n'enregistrait rien. Un champ numérique arrondit de plus
+                    les décimales. Le texte, lui, se contente de transmettre.
 
-                    Le nettoyage ci-dessous ne couvre plus que le cas d'une
-                    valeur arrivée sous forme de texte, par exemple par un
-                    gabarit modifié à la main : sur un nombre, aucun des
-                    remplacements ne trouve quoi que ce soit.
+                    D'où le nettoyage ci-dessous, qui absorbe tout ce qu'un
+                    clavier ou un copier-coller français peut produire :
+                    virgule ou point, espace ordinaire, espace insécable,
+                    espace fine insécable des milliers, symbole monétaire.
                   endcomment
                   capture unit_raw
                     echo b.price_pair | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
@@ -4123,16 +4124,18 @@
           "default": 0
         },
         {
-          "type": "number",
+          "type": "text",
           "id": "price_pair",
           "label": "Prix par paire",
-          "info": "Chiffres seuls, décimales avec un point : 51.96. Le bouton d'ajout au panier affiche ce prix multiplié par le nombre de paires de la carte. Laisse vide pour suivre le prix du produit."
+          "info": "Virgule ou point, comme tu veux : 48,96 ou 48.96. Le bouton d'ajout au panier affiche ce prix multiplié par le nombre de paires de la carte. Laisse vide pour suivre le prix du produit.",
+          "placeholder": "48,96"
         },
         {
-          "type": "number",
+          "type": "text",
           "id": "compare_pair",
           "label": "Prix barré par paire",
-          "info": "Chiffres seuls, décimales avec un point : 79.95. Sert au prix barré et au pourcentage d'économie. Laisse vide pour reprendre le prix barré du produit."
+          "info": "Virgule ou point, comme tu veux : 79,95 ou 79.95. Sert au prix barré et au pourcentage d'économie. Laisse vide pour reprendre le prix barré du produit.",
+          "placeholder": "79,95"
         },
         { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage, calculé depuis les deux prix ci-dessus.", "default": "Économisez [x] %" }
       ]
