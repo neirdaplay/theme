@@ -2519,8 +2519,37 @@
                     virgule ou point, espace ordinaire, espace insécable,
                     espace fine insécable des milliers, symbole monétaire.
                   endcomment
+                  comment
+                    Second chemin de saisie, indépendant des deux champs du
+                    bloc : un tableau au niveau de la section, une ligne par
+                    offre, au format
+                    nombre de paires | prix par paire | prix barré.
+                    Le champ du bloc reste prioritaire ; ce tableau ne sert
+                    que lorsqu'il est vide. Deux réglages distincts valent
+                    mieux qu'un seul quand l'éditeur refuse d'enregistrer
+                    l'un d'eux.
+                  endcomment
+                  assign price_src = b.price_pair
+                  assign was_src = b.compare_pair
+                  if s.offer_prices != blank
+                    assign rows = s.offer_prices | strip | newline_to_br | split: '<br />'
+                    for row in rows
+                      assign cells = row | split: '|'
+                      assign row_qty = cells[0] | strip | plus: 0
+                      if row_qty == qty
+                        if price_src == blank and cells.size > 1
+                          assign price_src = cells[1]
+                        endif
+                        if was_src == blank and cells.size > 2
+                          assign was_src = cells[2]
+                        endif
+                        break
+                      endif
+                    endfor
+                  endif
+
                   capture unit_raw
-                    echo b.price_pair | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
+                    echo price_src | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
                   endcapture
                   assign unit = unit_raw | times: 100 | round
                   assign unit_fixed = true
@@ -2530,7 +2559,7 @@
                   endif
 
                   capture was_raw
-                    echo b.compare_pair | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
+                    echo was_src | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
                   endcapture
                   assign unit_was = was_raw | times: 100 | round
                   assign was_fixed = true
@@ -2633,7 +2662,7 @@
                     affiche le prix du produit et rien ne distingue les deux.
                   {%- endcomment -%}
                   {%- if request.design_mode and unit_fixed == false -%}
-                    <span class="hkf__offer-hint">Prix par paire vide : cette carte suit le prix du produit.</span>
+                    <span class="hkf__offer-hint">Aucun prix pour {{ qty }} paire{% if qty > 1 %}s{% endif %} : cette carte suit le prix du produit. Renseigne le bloc, ou la ligne « {{ qty }} | … » du tableau « Prix des offres » de la section.</span>
                   {%- endif -%}
                   <span
                     class="hkf__offer-save"
@@ -3976,6 +4005,12 @@
       "info": "Le thème n'applique aucune remise : il affiche le prix que tu saisis par paire. La vraie remise est une remise automatique créée dans Shopify → Réductions, qui s'applique seule au panier. Saisis donc ici le même prix par paire que celui auquel Shopify aboutira.",
       "default": true
     },
+    {
+      "type": "textarea",
+      "id": "offer_prices",
+      "label": "Prix des offres",
+      "info": "Une ligne par offre, au format : nombre de paires | prix par paire | prix barré. Exemple : 3 | 48,96 | 79,95. Virgule ou point, comme tu veux. Le prix saisi dans un bloc reste prioritaire ; ce tableau prend le relais quand le bloc est vide."
+    },
     { "type": "text", "id": "bundle_note", "label": "Mention au-dessus", "default": "La promotion groupée est valable jusqu'à 23 h 59" },
     { "type": "text", "id": "bundle_aria_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de l'offre" },
     { "type": "text", "id": "per_pair_label", "label": "Mention après le prix (bureau)", "default": "par paire" },
@@ -4127,15 +4162,13 @@
           "type": "text",
           "id": "price_pair",
           "label": "Prix par paire",
-          "info": "Virgule ou point, comme tu veux : 48,96 ou 48.96. Le bouton d'ajout au panier affiche ce prix multiplié par le nombre de paires de la carte. Laisse vide pour suivre le prix du produit.",
-          "placeholder": "48,96"
+          "info": "Virgule ou point, comme tu veux : 48,96 ou 48.96. Le bouton d'ajout au panier affiche ce prix multiplié par le nombre de paires de la carte. Laisse vide pour suivre le prix du produit, ou pour utiliser le tableau « Prix des offres » de la section."
         },
         {
           "type": "text",
           "id": "compare_pair",
           "label": "Prix barré par paire",
-          "info": "Virgule ou point, comme tu veux : 79,95 ou 79.95. Sert au prix barré et au pourcentage d'économie. Laisse vide pour reprendre le prix barré du produit.",
-          "placeholder": "79,95"
+          "info": "Virgule ou point, comme tu veux : 79,95 ou 79.95. Sert au prix barré et au pourcentage d'économie. Laisse vide pour reprendre le prix barré du produit."
         },
         { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage, calculé depuis les deux prix ci-dessus.", "default": "Économisez [x] %" }
       ]
