@@ -844,14 +844,40 @@
 }
 
 .hkf__bundle-note {
-  font-size: 12px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--hk-bnote-size);
+  font-weight: var(--hk-bnote-weight);
   text-align: center;
-  color: var(--hk-muted);
+  color: var(--hk-bnote-ink);
 }
 
 .hkf__bundle-note b {
-  color: var(--hk-ink);
+  color: inherit;
+  font-weight: 700;
+}
+
+/* Les deux traits se partagent la place laissée par le texte, sans jamais
+   pousser celui-ci : c'est lui qui garde la priorité quand la ligne se
+   resserre. */
+.hkf__bundle-note-text {
+  flex: 0 1 auto;
+}
+
+.hkf__bundle-rule {
+  flex: 1 1 0;
+  /* Sans plancher, le texte comprimait les traits jusqu'à les faire
+     disparaître sur un écran étroit : le marchand cochait le réglage et ne
+     voyait rien sur mobile. Le min() garde le plancher sous la longueur
+     demandée, pour qu'un trait volontairement court le reste. */
+  min-width: min(var(--hk-bnote-rule-max), 14px);
+  max-width: var(--hk-bnote-rule-max);
+  height: var(--hk-bnote-rule-h);
+  border-radius: 999px;
+  background: var(--hk-bnote-rule);
 }
 
 .hkf__offers {
@@ -972,6 +998,13 @@
 /* Sur mobile la carte est deux fois moins large : on rétrécit et « par paire »
    devient « /paire » pour que la ligne de prix tienne d'un seul tenant. */
 @media (max-width: 899px) {
+  /* La mention rétrécit, sinon elle passe à la ligne dès que les traits
+     prennent leur place. */
+  .hkf__bundle-note {
+    gap: 8px;
+    font-size: var(--hk-bnote-size-m);
+  }
+
   .hkf__offer-title {
     font-size: var(--hk-offer-title-m);
   }
@@ -1974,9 +2007,22 @@
     --hk-flag-ink: {{ s.color_flag_ink }};
     --hk-save-bg: {{ s.color_save_bg }};
     --hk-save-ink: {{ s.color_save_ink }};
+
+    {%- comment -%}
+      Réglages propres à la mention au-dessus des offres. Elle avait jusqu'ici
+      la couleur générale du texte secondaire ; la voici indépendante, sans
+      toucher au reste de la section.
+    {%- endcomment -%}
+    --hk-bnote-ink: {{ s.color_bundle_note }};
+    --hk-bnote-rule: {{ s.color_bundle_rule }};
+    --hk-bnote-size: {{ s.bundle_note_size }}px;
+    --hk-bnote-weight: {% if s.bundle_note_bold %}700{% else %}500{% endif %};
+    --hk-bnote-rule-h: {{ s.bundle_rule_thickness }}px;
+    --hk-bnote-rule-max: {{ s.bundle_rule_length }}px;
     --hk-offer-img: {{ s.offer_img_w }}px;
     --hk-offer-img-m: {{ s.offer_img_w_mobile }}px;
     --hk-offer-title: {{ s.offer_title_size }}px;
+    --hk-bnote-size-m: {{ s.bundle_note_size_mobile }}px;
     --hk-offer-title-m: {{ s.offer_title_size_mobile }}px;
     --hk-offer-price: {{ s.offer_price_size }}px;
     --hk-offer-price-m: {{ s.offer_price_size_mobile }}px;
@@ -2459,7 +2505,15 @@
         {%- if s.show_bundle and offers.size > 0 -%}
           <div class="hkf__bundle" data-hkf-bundle>
             {%- if s.bundle_note != blank -%}
-              <p class="hkf__bundle-note">{{ s.bundle_note }}</p>
+              <p class="hkf__bundle-note">
+                {%- if s.bundle_note_rules -%}
+                  <span class="hkf__bundle-rule" aria-hidden="true"></span>
+                {%- endif -%}
+                <span class="hkf__bundle-note-text">{{ s.bundle_note }}</span>
+                {%- if s.bundle_note_rules -%}
+                  <span class="hkf__bundle-rule" aria-hidden="true"></span>
+                {%- endif -%}
+              </p>
             {%- endif -%}
 
             {%- comment -%}
@@ -4011,7 +4065,15 @@
       "label": "Prix des offres",
       "info": "Une ligne par offre, au format : nombre de paires | prix par paire | prix barré. Exemple : 3 | 48,96 | 79,95. Virgule ou point, comme tu veux. Le prix saisi dans un bloc reste prioritaire ; ce tableau prend le relais quand le bloc est vide."
     },
-    { "type": "text", "id": "bundle_note", "label": "Mention au-dessus", "default": "La promotion groupée est valable jusqu'à 23 h 59" },
+    { "type": "text", "id": "bundle_note", "label": "Mention au-dessus", "info": "Encadre un passage de <b> et </b> pour le mettre en gras.", "default": "La promotion groupée est valable jusqu'à 23 h 59" },
+    { "type": "checkbox", "id": "bundle_note_bold", "label": "Mention en gras", "default": false },
+    { "type": "checkbox", "id": "bundle_note_rules", "label": "Traits de part et d'autre", "default": true },
+    { "type": "range", "id": "bundle_note_size", "label": "Taille de la mention", "min": 9, "max": 22, "step": 1, "unit": "px", "default": 13 },
+    { "type": "range", "id": "bundle_note_size_mobile", "label": "Taille de la mention (mobile)", "min": 8, "max": 20, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "bundle_rule_length", "label": "Longueur des traits", "min": 8, "max": 200, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "bundle_rule_thickness", "label": "Épaisseur des traits", "min": 1, "max": 6, "step": 1, "unit": "px", "default": 1 },
+    { "type": "color", "id": "color_bundle_note", "label": "Couleur de la mention", "default": "#5B6660" },
+    { "type": "color", "id": "color_bundle_rule", "label": "Couleur des traits", "default": "#D5DED6" },
     { "type": "text", "id": "bundle_aria_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de l'offre" },
     { "type": "text", "id": "per_pair_label", "label": "Mention après le prix (bureau)", "default": "par paire" },
     { "type": "text", "id": "per_pair_short", "label": "Mention après le prix (mobile)", "info": "Version courte, pour que la ligne de prix tienne sur mobile.", "default": "/paire" },
