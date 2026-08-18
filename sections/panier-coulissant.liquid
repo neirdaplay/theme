@@ -1788,11 +1788,28 @@
          ligne, et la ligne de réduction disparaissait alors qu'il y en avait
          bien une. original_total_price, lui, précède toutes les remises. */
       var paid = cart.total_price || 0;
-      var full = cart.original_total_price;
-      if (full == null) {
-        full = cart.items_subtotal_price != null ? cart.items_subtotal_price : paid;
-      }
-      var saved = cart.total_discount != null ? cart.total_discount : Math.max(0, full - paid);
+
+      /* Le prix avant réductions vient de plusieurs sources possibles selon
+         la version de Shopify et le type de remise. On retient la plus haute :
+         un montant « avant remise » ne peut, par définition, être inférieur
+         à aucune des autres. La somme des lignes sert de filet quand
+         original_total_price manque. */
+      var fromLines = 0;
+      (cart.items || []).forEach(function (item) {
+        fromLines += item.original_line_price || 0;
+      });
+      var full = Math.max(
+        cart.original_total_price || 0,
+        fromLines,
+        cart.items_subtotal_price || 0,
+        paid
+      );
+
+      /* La remise se déduit des deux montants affichés plutôt que d'un champ
+         à part : le client peut ainsi vérifier que sous-total moins remise
+         donne bien le total, ce qu'un total_discount d'une autre origine ne
+         garantirait pas. */
+      var saved = Math.max(0, full - paid);
 
       if (subtotalEl) subtotalEl.textContent = formatMoney(full);
       if (totalEl) totalEl.textContent = formatMoney(paid);

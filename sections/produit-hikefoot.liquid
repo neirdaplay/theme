@@ -2487,31 +2487,24 @@
                     assign base_was = base
                   endif
 
-                  assign disc_raw = b.discount_value | strip | replace: ' ', '' | replace: '%', '' | replace: '€', '' | replace: ',', '.'
-                  assign disc_num = disc_raw | plus: 0.0
+                  comment
+                    Les deux prix sont saisis par le marchand, tels quels.
+                    Laissés vides, ils suivent la variante — c'est le seul cas
+                    où le thème décide quoi que ce soit, et JavaScript les
+                    recalcule alors au changement de couleur ou de pointure.
+                  endcomment
+                  assign unit = b.unit_price | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  assign unit_fixed = true
+                  if unit <= 0
+                    assign unit = base
+                    assign unit_fixed = false
+                  endif
 
-                  case b.discount_type
-                    when 'percent'
-                      assign cut = base | times: disc_num | divided_by: 100.0 | round
-                      assign unit = base | minus: cut
-                      assign unit_was = base_was
-                    when 'amount'
-                      assign cut = disc_num | times: 100 | round
-                      assign unit = base | minus: cut
-                      assign unit_was = base_was
-                    else
-                      comment
-                        Mode manuel : les deux prix sont saisis tels quels.
-                      endcomment
-                      assign unit = b.unit_price | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
-                      if unit <= 0
-                        assign unit = base
-                      endif
-                      assign unit_was = b.unit_compare | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
-                  endcase
-
-                  if unit < 0
-                    assign unit = 0
+                  assign unit_was = b.unit_compare | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.' | times: 100 | round
+                  assign was_fixed = true
+                  if unit_was <= 0
+                    assign unit_was = base_was
+                    assign was_fixed = false
                   endif
 
                   comment
@@ -2561,11 +2554,11 @@
                   data-unit="{{ unit }}"
                   data-unit-was="{{ unit_was }}"
                   {%- comment -%}
-                    La remise est portée par la carte, pas seulement calculée :
-                    le prix doit suivre quand le client change de variante.
+                    Un prix saisi ne doit jamais être recalculé. Seul un prix
+                    laissé vide suit la variante choisie.
                   {%- endcomment -%}
-                  data-disc-type="{{ b.discount_type }}"
-                  data-disc-value="{{ disc_num }}"
+                  data-unit-fixed="{{ unit_fixed }}"
+                  data-was-fixed="{{ was_fixed }}"
                   data-code="{{ b.discount_code | strip | escape }}"
                   {{ block.shopify_attributes }}
                 >
@@ -3155,14 +3148,18 @@
     function repriceOffers() {
       if (!current) return;
       offers.forEach(function (offer) {
-        var type = offer.getAttribute('data-disc-type');
-        if (type !== 'percent' && type !== 'amount') return;
+        var unitFixed = offer.getAttribute('data-unit-fixed') === 'true';
+        var wasFixed = offer.getAttribute('data-was-fixed') === 'true';
+        /* Les deux prix sont saisis : il n'y a rien à recalculer. */
+        if (unitFixed && wasFixed) return;
 
-        var value = Number(offer.getAttribute('data-disc-value')) || 0;
         var base = current.price;
-        var was = current.compareAt > base ? current.compareAt : base;
-        var cut = type === 'percent' ? Math.round((base * value) / 100) : Math.round(value * 100);
-        var unit = Math.max(0, base - cut);
+        var unit = unitFixed ? Number(offer.getAttribute('data-unit')) : base;
+        var was = wasFixed
+          ? Number(offer.getAttribute('data-unit-was'))
+          : current.compareAt > base
+            ? current.compareAt
+            : base;
 
         offer.setAttribute('data-unit', unit);
         offer.setAttribute('data-unit-was', was);
@@ -4112,31 +4109,20 @@
           "default": 0
         },
         {
-          "type": "select",
-          "id": "discount_type",
-          "label": "Remise par article",
-          "info": "Les prix de la carte sont alors calculés depuis le prix Shopify du produit : plus rien à saisir à la main, et plus de risque d'écart.",
-          "options": [
-            { "value": "percent", "label": "En pourcentage" },
-            { "value": "amount", "label": "Montant fixe" },
-            { "value": "none", "label": "Prix saisis à la main" }
-          ],
-          "default": "percent"
+          "type": "text",
+          "id": "unit_price",
+          "label": "Prix par paire",
+          "info": "C'est ce prix qui s'affiche, qui multiplie le bouton d'ajout au panier et qui sert au total. Laisse vide pour suivre le prix du produit.",
+          "default": "56,66"
         },
         {
           "type": "text",
-          "id": "discount_value",
-          "label": "Valeur de la remise",
-          "info": "Par article. Par exemple 10 pour 10 %, ou 6,30 pour 6,30 € de moins par paire.",
-          "default": "10"
+          "id": "unit_compare",
+          "label": "Prix barré par paire",
+          "info": "Laisse vide pour reprendre le prix barré du produit.",
+          "default": "99,90"
         },
-        { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage calculé.", "default": "Économisez [x] %" },
-        {
-          "type": "header",
-          "content": "Prix saisis à la main"
-        },
-        { "type": "text", "id": "unit_price", "label": "Prix par paire", "info": "Utilisé seulement en mode « Prix saisis à la main ».", "default": "56,66" },
-        { "type": "text", "id": "unit_compare", "label": "Prix barré par paire", "default": "99,90" },
+        { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage, calculé depuis les deux prix ci-dessus.", "default": "Économisez [x] %" },
         {
           "type": "header",
           "content": "Application de la remise"
