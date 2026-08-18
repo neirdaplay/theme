@@ -1801,13 +1801,24 @@
      * donné. Appelée deux fois : sur ce que /cart.js annonce, puis sur le
      * compare_at de la variante s'il dit mieux.
      */
-    /** Le nom de la première remise Shopify appliquée à la ligne, s'il y en a. */
+    /**
+     * Le nom de la remise Shopify en cours. On regarde d'abord celles posées
+     * sur l'article, puis celles posées sur la commande entière : une remise
+     * « 10 % sur la commande » n'apparaît nulle part dans les lignes, et
+     * c'est pourtant bien la remise en cours sur le panier.
+     */
     function discountName(item) {
       var allocations = (item && (item.line_level_discount_allocations || item.discounts)) || [];
       for (var i = 0; i < allocations.length; i += 1) {
         var app = allocations[i].discount_application || {};
         var title = app.title || allocations[i].title || '';
         if (title) return title;
+      }
+
+      var orderWide = (cart && (cart.cart_level_discount_applications || cart.discount_applications)) || [];
+      for (var j = 0; j < orderWide.length; j += 1) {
+        var name = orderWide[j].title || orderWide[j].code || '';
+        if (name) return name;
       }
       return '';
     }
@@ -1847,8 +1858,13 @@
       if (name && (mode === 'name' || (mode === 'name_or_percent' && !namedBelow))) {
         text = name;
       } else {
-        text = config.strings.ribbon.split('[x]').join(pct);
+        text = (config.strings.ribbon || '').split('[x]').join(pct);
       }
+
+      /* Une pastille vide ne dit rien et ne fait qu'une tache : si le libellé
+         a été effacé dans l'éditeur, on retombe sur le pourcentage brut. */
+      text = String(text || '').trim();
+      if (!text) text = '−' + pct + ' %';
 
       ribbon.querySelector('[data-pnc-ribbon-text]').textContent = text;
       ribbon.hidden = false;
