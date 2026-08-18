@@ -2506,15 +2506,20 @@
                     où le thème décide quoi que ce soit, et JavaScript les
                     recalcule alors au changement de couleur ou de pointure.
 
-                    Les deux espaces insécables du nettoyage ci-dessous ne font
-                    pas double emploi avec l'espace ordinaire : un prix copié
-                    depuis Shopify ou saisi sur un clavier français en contient,
-                    et `times` rend alors zéro. La carte retombait sur le prix
-                    du produit, ce qui donnait l'impression que la saisie
-                    n'avait pas été enregistrée.
+                    Ce sont des réglages `number` : Shopify livre un nombre,
+                    jamais une chaîne à déchiffrer. Plus de virgule contre
+                    point, plus d'espace insécable ramassée par un copier-
+                    coller, plus de symbole monétaire — donc plus de saisie
+                    ramenée à zéro, qui faisait retomber la carte sur le prix
+                    du produit sans rien dire.
+
+                    Le nettoyage ci-dessous ne couvre plus que le cas d'une
+                    valeur arrivée sous forme de texte, par exemple par un
+                    gabarit modifié à la main : sur un nombre, aucun des
+                    remplacements ne trouve quoi que ce soit.
                   endcomment
                   capture unit_raw
-                    echo b.unit_price | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
+                    echo b.price_pair | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
                   endcapture
                   assign unit = unit_raw | times: 100 | round
                   assign unit_fixed = true
@@ -2524,7 +2529,7 @@
                   endif
 
                   capture was_raw
-                    echo b.unit_compare | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
+                    echo b.compare_pair | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: '$', '' | replace: '£', '' | replace: ',', '.'
                   endcapture
                   assign unit_was = was_raw | times: 100 | round
                   assign was_fixed = true
@@ -4118,16 +4123,16 @@
           "default": 0
         },
         {
-          "type": "text",
-          "id": "unit_price",
+          "type": "number",
+          "id": "price_pair",
           "label": "Prix par paire",
-          "info": "C'est ce prix qui s'affiche, qui multiplie le bouton d'ajout au panier et qui sert au total. Clique en dehors du champ avant d'enregistrer, sinon Shopify garde l'ancienne valeur. Laisse vide pour suivre le prix du produit."
+          "info": "Chiffres seuls, décimales avec un point : 51.96. Le bouton d'ajout au panier affiche ce prix multiplié par le nombre de paires de la carte. Laisse vide pour suivre le prix du produit."
         },
         {
-          "type": "text",
-          "id": "unit_compare",
+          "type": "number",
+          "id": "compare_pair",
           "label": "Prix barré par paire",
-          "info": "Clique en dehors du champ avant d'enregistrer. Laisse vide pour reprendre le prix barré du produit."
+          "info": "Chiffres seuls, décimales avec un point : 79.95. Sert au prix barré et au pourcentage d'économie. Laisse vide pour reprendre le prix barré du produit."
         },
         { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage, calculé depuis les deux prix ci-dessus.", "default": "Économisez [x] %" }
       ]
