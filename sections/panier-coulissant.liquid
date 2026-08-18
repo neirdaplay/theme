@@ -1195,7 +1195,6 @@
       "showRibbon": {{ s.show_ribbon | json }},
       "ribbonContent": {{ s.ribbon_content | json }},
       "showDeals": {{ s.show_deals | json }},
-      "compareFromProduct": {{ s.compare_from_product | json }},
       "showSold": {{ s.show_sold | json }},
       "soldMin": {{ s.sold_min | json }},
       "soldMax": {{ s.sold_max | json }},
@@ -1977,29 +1976,12 @@
         }
       }
 
+      /* La pastille ne reflète que ce que Shopify a réellement remisé. Un
+         simple prix barré de fiche produit n'est pas une remise de panier :
+         l'afficher comme telle donnait un pourcentage plus flatteur pour une
+         paire que pour trois, ce qui laissait croire à une meilleure affaire
+         sur la plus petite quantité. */
       paintSavings(row, item.original_line_price, item.final_line_price, item);
-
-      /* Une remise de panier ne se voit que si Shopify en a appliqué une. Un
-         simple prix barré sur la fiche produit n'en est pas une : il faut
-         alors aller chercher le compare_at de la variante, que /cart.js ne
-         donne pas. On le fait après coup, pour ne pas retarder l'affichage. */
-      if (config.compareFromProduct && item.original_line_price <= item.final_line_price) {
-        loadProduct(item.handle)
-          .then(function (product) {
-            var match = null;
-            (product.variants || []).forEach(function (v) {
-              if (v.id === item.variant_id) match = v;
-            });
-            if (!match || !match.compare_at_price) return;
-            var fullPrice = match.compare_at_price * item.quantity;
-            if (fullPrice > item.final_line_price) {
-              paintSavings(row, fullPrice, item.final_line_price, item);
-            }
-          })
-          .catch(function () {
-            /* Le produit est introuvable : la ligne reste simplement nue. */
-          });
-      }
 
       /* Les promotions nommées, telles que Shopify les a appliquées. */
       var deals = frag.querySelector('[data-pnc-deals]');
@@ -2614,13 +2596,6 @@
     { "type": "checkbox", "id": "show_pills", "label": "Afficher les variantes en pastilles", "default": true },
     { "type": "checkbox", "id": "show_line_compare", "label": "Afficher le prix barré", "default": true },
     { "type": "checkbox", "id": "show_ribbon", "label": "Ruban d'économie sur l'article", "default": true },
-    {
-      "type": "checkbox",
-      "id": "compare_from_product",
-      "label": "Calculer aussi depuis le prix barré du produit",
-      "info": "Le panier de Shopify ne connaît que les remises qu'il a lui-même appliquées. Coché, un simple prix barré sur la fiche produit affiche quand même le ruban.",
-      "default": true
-    },
     {
       "type": "select",
       "id": "ribbon_content",

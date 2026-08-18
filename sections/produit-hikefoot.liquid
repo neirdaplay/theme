@@ -1995,7 +1995,6 @@
     {
       "cartAddUrl": {{ routes.cart_add_url | json }},
       "cartUrl": {{ routes.cart_url | json }},
-      "rootUrl": {{ routes.root_url | json }},
       "moneyFormat": {{ shop.money_format | json }},
       "afterAdd": {{ s.after_add_action | json }},
       "addedDelay": {{ s.added_delay | json }},
@@ -2559,7 +2558,6 @@
                   {%- endcomment -%}
                   data-unit-fixed="{{ unit_fixed }}"
                   data-was-fixed="{{ was_fixed }}"
-                  data-code="{{ b.discount_code | strip | escape }}"
                   {{ block.shopify_attributes }}
                 >
                   {%- comment -%}
@@ -3488,17 +3486,6 @@
       });
     }
 
-    /** Un code de remise groupée ne s'applique qu'en passant par /discount. */
-    function discountHref(code, destination) {
-      return (
-        config.rootUrl.replace(/\/$/, '') +
-        '/discount/' +
-        encodeURIComponent(code) +
-        '?redirect=' +
-        encodeURIComponent(destination)
-      );
-    }
-
     /**
      * Ouvre le panier coulissant, quel qu'il soit. Renvoie false si aucun
      * tiroir n'a répondu, auquel cas il faut bien aller quelque part.
@@ -3536,43 +3523,32 @@
       return false;
     }
 
-    /** Où va le client une fois l'ajout confirmé. */
-    function goAfterAdd(code) {
+    /**
+     * Où va le client une fois l'ajout confirmé.
+     *
+     * Le thème ne pose aucune remise : c'est la remise automatique réglée
+     * dans Shopify qui s'applique au panier, toute seule.
+     */
+    function goAfterAdd() {
       var mode = config.afterAdd;
 
       if (mode === 'cart' || mode === 'checkout') {
-        var destination = mode === 'checkout' ? '/checkout' : config.cartUrl;
-        window.location.href = code ? discountHref(code, destination) : destination;
+        window.location.href = mode === 'checkout' ? '/checkout' : config.cartUrl;
         return;
       }
 
       if (mode === 'drawer') {
         if (openDrawer()) {
-          /* Le tiroir ne recharge pas la page : la remise groupée doit donc
-             être posée à part, sans quoi elle n'existerait qu'au paiement. */
-          if (code) applyDiscountInBackground(code);
           resetBuy();
           return;
         }
         /* Pas de tiroir dans ce thème : mieux vaut la page panier qu'un clic
            qui semble ne rien faire. */
-        window.location.href = code ? discountHref(code, config.cartUrl) : config.cartUrl;
+        window.location.href = config.cartUrl;
         return;
       }
 
-      if (code) applyDiscountInBackground(code);
       resetBuy();
-    }
-
-    /** Pose le code de remise sans quitter la page. Au pire, il manquera. */
-    function applyDiscountInBackground(code) {
-      try {
-        fetch(config.rootUrl.replace(/\/$/, '') + '/discount/' + encodeURIComponent(code), {
-          credentials: 'same-origin'
-        }).catch(function () {});
-      } catch (e) {
-        /* Rien à faire : le client peut encore saisir le code au paiement. */
-      }
     }
 
     /** Rend au bouton son état normal après la confirmation. */
@@ -3622,16 +3598,13 @@
           .then(function (payload) {
             document.dispatchEvent(new CustomEvent('hkf:cart-added', { bubbles: true, detail: payload }));
 
-            var offer = currentOffer();
-            var code = offer ? offer.getAttribute('data-code') : '';
-
             /* La coche s'affiche d'abord ; la destination ne prend la main
                qu'ensuite, pour que le client voie que c'est parti. */
             addButton.classList.remove('is-loading');
             addButton.classList.add('is-done');
 
             window.setTimeout(function () {
-              goAfterAdd(code);
+              goAfterAdd();
             }, config.addedDelay);
           })
           .catch(function (error) {
@@ -3958,7 +3931,7 @@
       "type": "checkbox",
       "id": "show_bundle",
       "label": "Afficher les offres",
-      "info": "Un thème ne peut pas créer de remise dans Shopify. Règle la remise par article sur chaque bloc pour l'affichage, puis crée la remise correspondante dans Shopify → Réductions : une remise automatique s'applique sans code, un code se saisit dans le bloc.",
+      "info": "Le thème n'applique aucune remise : il affiche le prix que tu saisis par paire. La vraie remise est une remise automatique créée dans Shopify → Réductions, qui s'applique seule au panier. Saisis donc ici le même prix par paire que celui auquel Shopify aboutira.",
       "default": true
     },
     { "type": "text", "id": "bundle_note", "label": "Mention au-dessus", "default": "La promotion groupée est valable jusqu'à 23 h 59" },
@@ -4122,17 +4095,7 @@
           "info": "Laisse vide pour reprendre le prix barré du produit.",
           "default": "99,90"
         },
-        { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage, calculé depuis les deux prix ci-dessus.", "default": "Économisez [x] %" },
-        {
-          "type": "header",
-          "content": "Application de la remise"
-        },
-        {
-          "type": "text",
-          "id": "discount_code",
-          "label": "Code de réduction",
-          "info": "À laisser vide si tu utilises une remise automatique Shopify, qui s'applique sans code. Sinon, saisis ici le code créé dans Shopify : il est posé au passage en caisse."
-        }
+        { "type": "text", "id": "save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage, calculé depuis les deux prix ci-dessus.", "default": "Économisez [x] %" }
       ]
     },
     {
