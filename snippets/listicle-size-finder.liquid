@@ -1,0 +1,126 @@
+{% comment %}
+  listicle-size-finder.liquid
+  Sélecteur de pointure. Tout se calcule côté navigateur : aucun rechargement,
+  aucun appel serveur.
+
+  Le tableau de correspondance vient des blocs de type `size` de la section,
+  jamais de valeurs écrites dans le JS : le fournisseur change, le marchand
+  modifie les chiffres dans l'éditeur.
+
+  Volontairement sans <form> : la page peut être posée dans un gabarit qui
+  ouvre déjà un formulaire, et un formulaire imbriqué est invalide. Un bouton
+  `type="button"` suffit, puisque rien n'est envoyé.
+
+  Paramètres attendus : block (le bloc size_finder), sizes (les blocs size).
+{% endcomment %}
+
+{%- liquid
+  assign b = block.settings
+  assign uid = block.id | replace: '_', '' | slice: 0, 12
+-%}
+
+<div class="lad__finder" data-lad-finder>
+  {%- if b.titre != blank -%}
+    <p class="lad__finder-title">{{ b.titre }}</p>
+  {%- endif -%}
+
+  {%- if b.intro != blank -%}
+    <div class="lad__finder-intro">{{ b.intro }}</div>
+  {%- endif -%}
+
+  {%- comment -%}
+    Le tableau, sérialisé pour le JS. Les nombres restent des chaînes : le
+    marchand saisira « 24,5 » aussi bien que « 24.5 », et le JS accepte les
+    deux. Rien n'est écrit dans le DOM sans passer par textContent.
+  {%- endcomment -%}
+  <script type="application/json" data-lad-sizes>
+    [
+      {%- for size in sizes -%}
+        {
+          "eu": {{ size.settings.pointure | default: '' | json }},
+          "longueur": {{ size.settings.longueur | default: '' | json }},
+          "largeur": {{ size.settings.largeur | default: '' | json }}
+        }{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  </script>
+
+  <div class="lad__finder-fields">
+    <div class="lad__field">
+      <label class="lad__label" for="lad-len-{{ uid }}">
+        {{ b.label_longueur | default: '[Libellé — longueur du pied]' }}
+      </label>
+      <div class="lad__input-wrap">
+        <input
+          class="lad__input"
+          type="number"
+          id="lad-len-{{ uid }}"
+          data-lad-len
+          inputmode="decimal"
+          step="0.1"
+          min="20"
+          max="32"
+          placeholder="{{ b.placeholder_longueur | escape }}"
+          autocomplete="off"
+        >
+        <span class="lad__unit" aria-hidden="true">cm</span>
+      </div>
+    </div>
+
+    {%- if b.show_largeur -%}
+      <div class="lad__field">
+        <label class="lad__label" for="lad-wid-{{ uid }}">
+          {{ b.label_largeur | default: '[Libellé — largeur d’avant-pied]' }}
+          <span class="lad__optional">{{ b.mention_optionnel | default: '[facultatif]' }}</span>
+        </label>
+        <div class="lad__input-wrap">
+          <input
+            class="lad__input"
+            type="number"
+            id="lad-wid-{{ uid }}"
+            data-lad-wid
+            inputmode="decimal"
+            step="0.1"
+            min="5"
+            max="16"
+            placeholder="{{ b.placeholder_largeur | escape }}"
+            autocomplete="off"
+          >
+          <span class="lad__unit" aria-hidden="true">cm</span>
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+
+  <button class="lad__btn lad__btn--finder" type="button" data-lad-finder-go>
+    {{ b.bouton | default: '[Libellé du bouton]' }}
+  </button>
+
+  {%- comment -%}
+    aria-live sur le seul résultat : il ne change qu'au clic, donc l'annonce
+    arrive au bon moment et une seule fois.
+  {%- endcomment -%}
+  <div class="lad__finder-out" data-lad-finder-out aria-live="polite" hidden></div>
+
+  {%- if b.aide != blank -%}
+    <details class="lad__help">
+      <summary class="lad__help-sum">{{ b.aide_titre | default: '[Titre du protocole de mesure]' }}</summary>
+      <div class="lad__help-body">{{ b.aide }}</div>
+    </details>
+  {%- endif -%}
+
+  {%- comment -%}
+    Gabarits de message, remplis par le JS. Les placer ici les rend éditables
+    dans l'éditeur de thème plutôt que figés dans le script.
+    [taille] et [largeur] sont remplacés à l'exécution.
+  {%- endcomment -%}
+  <script type="application/json" data-lad-finder-copy>
+    {
+      "ok": {{ b.msg_ok | default: '[Message — pointure trouvée : [taille], largeur intérieure [largeur] cm]' | json }},
+      "aucune": {{ b.msg_aucune | default: '[Message — aucune pointure ne correspond]' | json }},
+      "invalide": {{ b.msg_invalide | default: '[Message — mesure hors de la plage attendue]' | json }},
+      "vide": {{ b.msg_vide | default: '[Message — saisis une longueur]' | json }},
+      "marge": {{ b.marge | default: 0 | json }}
+    }
+  </script>
+</div>

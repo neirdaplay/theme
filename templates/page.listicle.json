@@ -1,0 +1,228 @@
+{
+  "sections": {
+    "main": {
+      "type": "listicle-advertorial",
+      "blocks": {
+        "point-1": {
+          "type": "point",
+          "settings": {
+            "numero": "1",
+            "titre": "",
+            "image_alt": "[Alt — image point 1]",
+            "texte": "<p>[Point 1 — paragraphe 1]</p><p>[Point 1 — paragraphe 2]</p>",
+            "variable_slot": "a"
+          }
+        },
+        "point-2": {
+          "type": "point",
+          "settings": {
+            "numero": "2",
+            "titre": "[Point 2 — titre]",
+            "image_alt": "[Alt — image point 2]",
+            "texte": "<p>[Point 2 — paragraphe 1]</p><p>[Point 2 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "point-3": {
+          "type": "point",
+          "settings": {
+            "numero": "3",
+            "titre": "[Point 3 — titre]",
+            "image_alt": "[Alt — image point 3]",
+            "texte": "<p>[Point 3 — paragraphe 1]</p><p>[Point 3 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "size-finder": {
+          "type": "size_finder",
+          "settings": {}
+        },
+        "point-4": {
+          "type": "point",
+          "settings": {
+            "numero": "4",
+            "titre": "[Point 4 — titre]",
+            "image_alt": "[Alt — image point 4]",
+            "texte": "<p>[Point 4 — paragraphe 1]</p><p>[Point 4 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "point-5": {
+          "type": "point",
+          "settings": {
+            "numero": "5",
+            "titre": "",
+            "image_alt": "[Alt — image point 5]",
+            "texte": "<p>[Point 5 — paragraphe 1]</p><p>[Point 5 — paragraphe 2]</p>",
+            "variable_slot": "b"
+          }
+        },
+        "cta-1": {
+          "type": "cta",
+          "settings": {
+            "titre": "[CTA 1 — titre]",
+            "texte": "<p>[CTA 1 — texte]</p>",
+            "image_alt": "[Alt — image CTA 1]",
+            "bouton": "[CTA 1 — libellé du bouton]",
+            "sous_texte": "[CTA 1 — mention sous le bouton]",
+            "compteur": true
+          }
+        },
+        "point-6": {
+          "type": "point",
+          "settings": {
+            "numero": "6",
+            "titre": "[Point 6 — titre]",
+            "image_alt": "[Alt — image point 6]",
+            "texte": "<p>[Point 6 — paragraphe 1]</p><p>[Point 6 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "point-7": {
+          "type": "point",
+          "settings": {
+            "numero": "7",
+            "titre": "[Point 7 — titre]",
+            "image_alt": "[Alt — image point 7]",
+            "texte": "<p>[Point 7 — paragraphe 1]</p><p>[Point 7 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "point-8": {
+          "type": "point",
+          "settings": {
+            "numero": "8",
+            "titre": "[Point 8 — titre]",
+            "image_alt": "[Alt — image point 8]",
+            "texte": "<p>[Point 8 — paragraphe 1]</p><p>[Point 8 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "point-9": {
+          "type": "point",
+          "settings": {
+            "numero": "9",
+            "titre": "[Point 9 — titre]",
+            "image_alt": "[Alt — image point 9]",
+            "texte": "<p>[Point 9 — paragraphe 1]</p><p>[Point 9 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "point-10": {
+          "type": "point",
+          "settings": {
+            "numero": "10",
+            "titre": "[Point 10 — titre]",
+            "image_alt": "[Alt — image point 10]",
+            "texte": "<p>[Point 10 — paragraphe 1]</p><p>[Point 10 — paragraphe 2]</p>",
+            "variable_slot": "none"
+          }
+        },
+        "cta-2": {
+          "type": "cta",
+          "settings": {
+            "titre": "[CTA 2 — titre]",
+            "texte": "<p>[CTA 2 — texte]</p>",
+            "image_alt": "[Alt — image CTA 2]",
+            "bouton": "[CTA 2 — libellé du bouton]",
+            "sous_texte": "[CTA 2 — mention sous le bouton]",
+            "compteur": true
+          }
+        },
+        "size-36": {
+          "type": "size",
+          "settings": {
+            "pointure": "36",
+            "longueur": "23,3",
+            "largeur": "9,0"
+          }
+        },
+        "size-37": {
+          "type": "size",
+          "settings": {
+            "pointure": "37",
+            "longueur": "23,9",
+            "largeur": "9,2"
+          }
+        },
+        "size-38": {
+          "type": "size",
+          "settings": {
+            "pointure": "38",
+            "longueur": "24,6",
+            "largeur": "9,4"
+          }
+        },
+        "size-39": {
+          "type": "size",
+          "settings": {
+            "pointure": "39",
+            "longueur": "25,2",
+            "largeur": "9,6"
+          }
+        },
+        "size-40": {
+          "type": "size",
+          "settings": {
+            "pointure": "40",
+            "longueur": "25,9",
+            "largeur": "9,8"
+          }
+        },
+        "size-41": {
+          "type": "size",
+          "settings": {
+            "pointure": "41",
+            "longueur": "26,5",
+            "largeur": "10,0"
+          }
+        },
+        "size-42": {
+          "type": "size",
+          "settings": {
+            "pointure": "42",
+            "longueur": "27,2",
+            "largeur": "10,2"
+          }
+        },
+        "size-43": {
+          "type": "size",
+          "settings": {
+            "pointure": "43",
+            "longueur": "27,8",
+            "largeur": "10,4"
+          }
+        }
+      },
+      "block_order": [
+        "point-1",
+        "point-2",
+        "point-3",
+        "size-finder",
+        "point-4",
+        "point-5",
+        "cta-1",
+        "point-6",
+        "point-7",
+        "point-8",
+        "point-9",
+        "point-10",
+        "cta-2",
+        "size-36",
+        "size-37",
+        "size-38",
+        "size-39",
+        "size-40",
+        "size-41",
+        "size-42",
+        "size-43"
+      ],
+      "settings": {
+        "default_avatar": "morton"
+      }
+    }
+  },
+  "order": [
+    "main"
+  ]
+}

@@ -1,0 +1,83 @@
+{% comment %}
+  listicle-cta-block.liquid
+  Bloc d'appel à l'action de la page listicle. Rendu trois fois : après le
+  point 5, après le point 10, et dans le bloc de clôture.
+
+  Paramètres attendus :
+    position      cta_1 | cta_2 | cta_final — remonte tel quel dans le dataLayer
+    titre         titre du bloc, facultatif
+    texte         richtext, facultatif
+    bouton        libellé du bouton
+    sous_texte    mention sous le bouton, facultative
+    url           destination ; les UTM et l'avatar y sont ajoutés par le JS
+    image         image facultative au-dessus du bloc
+    image_alt     texte alternatif de cette image
+    compteur      booléen : reprendre le compte à rebours dans le bloc
+    compteur_fin  texte affiché une fois le compte à rebours terminé
+
+  Le bouton est un <a>, jamais un <button> dans un <form> : cette page est
+  parfois posée dans un gabarit qui ouvre déjà un formulaire, et un
+  formulaire imbriqué est invalide.
+{% endcomment %}
+
+{%- liquid
+  assign has_head = false
+  if titre != blank or texte != blank
+    assign has_head = true
+  endif
+-%}
+
+{%- if bouton != blank -%}
+  <div class="lad__cta" data-lad-cta="{{ position }}">
+    {%- if image != blank -%}
+      <div class="lad__cta-media">
+        {{
+          image
+          | image_url: width: 1200
+          | image_tag:
+            widths: '360, 540, 720, 1080, 1200',
+            sizes: '(min-width: 760px) 700px, 92vw',
+            loading: 'lazy',
+            alt: image_alt
+        }}
+      </div>
+    {%- endif -%}
+
+    {%- if has_head -%}
+      <div class="lad__cta-head">
+        {%- if titre != blank -%}
+          <p class="lad__cta-title">{{ titre }}</p>
+        {%- endif -%}
+        {%- if texte != blank -%}
+          <div class="lad__cta-text">{{ texte }}</div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- if compteur -%}
+      {%- comment -%}
+        Le compteur partage l'horloge unique de la page : le JS met à jour
+        toutes les instances portant data-lad-clock depuis un seul intervalle.
+      {%- endcomment -%}
+      <p
+        class="lad__cta-clock"
+        data-lad-clock
+        data-lad-clock-end="{{ compteur_fin | escape }}"
+      >
+        <span data-lad-clock-value>--h --m --s</span>
+      </p>
+    {%- endif -%}
+
+    <a
+      class="lad__btn"
+      href="{{ url | default: '#' }}"
+      data-lad-go="{{ position }}"
+    >
+      {{ bouton }}
+    </a>
+
+    {%- if sous_texte != blank -%}
+      <p class="lad__cta-sub">{{ sous_texte }}</p>
+    {%- endif -%}
+  </div>
+{%- endif -%}

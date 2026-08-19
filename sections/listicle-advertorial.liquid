@@ -1,0 +1,1265 @@
+{% comment %}
+  listicle-advertorial.liquid
+  Page listicle publicitaire, multi-avatars.
+
+  Quatre variantes de texte cohabitent dans le HTML. Celle qui s'affiche est
+  décidée par un attribut posé sur la racine de section :
+
+    1. paramètre d'URL ?a=          (liste blanche stricte)
+    2. sessionStorage               (survit à un rechargement)
+    3. réglage « avatar par défaut » (déjà rendu par Liquid, côté serveur)
+
+  Le troisième niveau est rendu par le serveur, pas par le script : JS coupé
+  ou en échec, la bonne variante par défaut s'affiche quand même, et le CSS
+  seul suffit à la faire apparaître.
+
+  Le script de sélection est en ligne et synchrone, premier enfant de la
+  section : les variantes qui le suivent ne sont pas encore construites quand
+  l'attribut est posé, donc aucune ne clignote.
+
+  CSS et JS sont en ligne, comme toutes les sections de ce thème : les envois
+  de fichiers dans assets/ échouaient. Seuls les deux snippets sont externes.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+
+  comment
+    La liste blanche des avatars, définie une seule fois et réutilisée par le
+    balisage, par le script en ligne et par le schéma.
+  endcomment
+  assign avatars = 'morton,aidante,postop,grossesse' | split: ','
+
+  assign sizes = section.blocks | where: 'type', 'size'
+
+  comment
+    Compteur d'images : la première de la page est chargée en priorité, toutes
+    les suivantes en différé.
+  endcomment
+  assign img_seen = 0
+-%}
+
+{% style %}
+/* ==========================================================================
+   Listicle publicitaire — tout est porté par .lad
+   ========================================================================== */
+
+#shopify-section-{{ section.id }} .lad {
+  --lad-bg: {{ s.color_bg }};
+  --lad-ink: {{ s.color_text }};
+  --lad-accent: {{ s.color_accent }};
+  --lad-muted: {{ s.color_muted }};
+  --lad-cta-bg: {{ s.color_cta_bg }};
+  --lad-cta-ink: {{ s.color_cta_text }};
+  --lad-sticky-bg: {{ s.color_sticky_bg }};
+  --lad-sticky-ink: {{ s.color_sticky_text }};
+
+  --lad-max: {{ s.container_width }}px;
+  --lad-size: {{ s.font_size }}px;
+
+  --lad-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  background: var(--lad-bg);
+  color: var(--lad-ink);
+  font-family: var(--lad-font);
+  /* Audience 45-65 ans : la base ne descend pas sous 17 px. */
+  font-size: var(--lad-size);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+#shopify-section-{{ section.id }} .lad *,
+#shopify-section-{{ section.id }} .lad *::before,
+#shopify-section-{{ section.id }} .lad *::after {
+  box-sizing: border-box;
+}
+
+.lad__wrap {
+  max-width: var(--lad-max);
+  margin-inline: auto;
+  padding: 24px 18px 56px;
+}
+
+/* --------------------------------------------------------------------------
+   Bascule d'avatar — quatre paires de règles, aucune interpolation Liquid.
+   -------------------------------------------------------------------------- */
+
+/* On masque les variantes inactives, on ne force jamais l'affichage de
+   l'active : elle garde ainsi le display de son propre composant. Une règle
+   d'affichage en `display: block` entrait sinon en conflit avec les
+   composants en flex — les quatre en-têtes de point variables s'affichaient
+   tous, parce que `.lad__point-head { display: flex }` est déclaré plus bas
+   à spécificité égale et l'emportait.
+
+   La spécificité (0,4,0) de ces sélecteurs passe devant celle de n'importe
+   quelle règle de composant, sans recourir à !important. */
+.lad[data-active-avatar="morton"]    .lad__var:not([data-avatar="morton"])    { display: none; }
+.lad[data-active-avatar="aidante"]   .lad__var:not([data-avatar="aidante"])   { display: none; }
+.lad[data-active-avatar="postop"]    .lad__var:not([data-avatar="postop"])    { display: none; }
+.lad[data-active-avatar="grossesse"] .lad__var:not([data-avatar="grossesse"]) { display: none; }
+
+/* --------------------------------------------------------------------------
+   Barre haute
+   -------------------------------------------------------------------------- */
+
+.lad__sticky {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: var(--lad-sticky-bg);
+  color: var(--lad-sticky-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  transform: translateY(-100%);
+  transition: transform 0.22s ease;
+}
+
+.lad__sticky.is-on { transform: none; }
+
+.lad__sticky-clock { font-variant-numeric: tabular-nums; }
+
+/* Réservé aux lecteurs d'écran : le compte à rebours visuel bat à la seconde,
+   celui-ci n'est mis à jour qu'une fois par minute pour ne pas noyer
+   l'utilisatrice sous les annonces. */
+.lad__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Titre, chapô, bascule
+   -------------------------------------------------------------------------- */
+
+.lad__h1 {
+  margin: 0 0 16px;
+  font-size: calc(var(--lad-size) * 1.75);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+}
+
+.lad__lede { margin: 0 0 18px; }
+.lad__lede p { margin: 0 0 0.9em; }
+.lad__lede ul { margin: 0 0 1em; padding-left: 1.2em; }
+.lad__lede li { margin-bottom: 0.35em; }
+.lad__lede strong { color: var(--lad-ink); }
+
+.lad__bascule {
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--lad-accent);
+  background: color-mix(in srgb, var(--lad-accent) 8%, transparent);
+  font-size: calc(var(--lad-size) * 1.06);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Badge auteur
+   -------------------------------------------------------------------------- */
+
+.lad__author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 28px;
+  padding: 12px 0;
+  border-block: 1px solid color-mix(in srgb, var(--lad-ink) 12%, transparent);
+}
+
+.lad__author-photo {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--lad-ink) 8%, transparent);
+}
+
+.lad__author-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lad__author-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(var(--lad-size) * 0.94);
+  font-weight: 700;
+}
+
+.lad__author-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--lad-accent);
+  font-size: calc(var(--lad-size) * 0.76);
+  font-weight: 600;
+}
+
+.lad__author-check svg { width: 1.1em; height: 1.1em; fill: currentColor; }
+
+.lad__author-role {
+  color: var(--lad-muted);
+  font-size: calc(var(--lad-size) * 0.84);
+  line-height: 1.3;
+}
+
+/* --------------------------------------------------------------------------
+   Points numérotés
+   -------------------------------------------------------------------------- */
+
+.lad__point { margin: 0 0 34px; }
+
+.lad__point-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.lad__point-num {
+  flex: 0 0 auto;
+  color: var(--lad-accent);
+  font-size: calc(var(--lad-size) * 1.5);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.lad__point-title {
+  margin: 0;
+  font-size: calc(var(--lad-size) * 1.2);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.lad__point-media { margin: 0 0 14px; }
+
+.lad__point-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.lad__point-text p { margin: 0 0 0.9em; }
+.lad__point-text > *:last-child { margin-bottom: 0; }
+
+.lad__micro {
+  display: inline-block;
+  margin-top: 10px;
+  /* Zone tactile confortable, comme tous les éléments cliquables ici. */
+  min-height: 44px;
+  line-height: 44px;
+  color: var(--lad-accent);
+  font-size: calc(var(--lad-size) * 0.94);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Blocs CTA
+   -------------------------------------------------------------------------- */
+
+.lad__cta {
+  margin: 0 0 34px;
+  padding: 22px 18px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--lad-cta-bg) 12%, transparent);
+  text-align: center;
+}
+
+.lad__cta-media { margin: 0 0 14px; }
+
+.lad__cta-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.lad__cta-title {
+  margin: 0 0 8px;
+  font-size: calc(var(--lad-size) * 1.2);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.lad__cta-text { margin: 0 0 14px; }
+.lad__cta-text p { margin: 0 0 0.7em; }
+.lad__cta-text > *:last-child { margin-bottom: 0; }
+
+.lad__cta-clock {
+  margin: 0 0 12px;
+  font-size: calc(var(--lad-size) * 0.94);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lad__btn {
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  padding: 15px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--lad-cta-bg);
+  color: var(--lad-cta-ink);
+  font-family: inherit;
+  font-size: calc(var(--lad-size) * 1.02);
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.lad__cta-sub {
+  margin: 10px 0 0;
+  color: var(--lad-muted);
+  font-size: calc(var(--lad-size) * 0.84);
+}
+
+/* --------------------------------------------------------------------------
+   Sélecteur de pointure
+   -------------------------------------------------------------------------- */
+
+.lad__finder {
+  margin: 0 0 34px;
+  padding: 20px 18px;
+  border: 1px solid color-mix(in srgb, var(--lad-ink) 14%, transparent);
+  border-radius: 16px;
+}
+
+.lad__finder-title {
+  margin: 0 0 8px;
+  font-size: calc(var(--lad-size) * 1.2);
+  font-weight: 700;
+}
+
+.lad__finder-intro { margin: 0 0 16px; }
+.lad__finder-intro p { margin: 0 0 0.7em; }
+
+.lad__finder-fields {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 16px;
+}
+
+.lad__label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: calc(var(--lad-size) * 0.94);
+  font-weight: 600;
+}
+
+.lad__optional {
+  color: var(--lad-muted);
+  font-weight: 500;
+}
+
+.lad__input-wrap { position: relative; }
+
+.lad__input {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 46px 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--lad-ink) 28%, transparent);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--lad-ink);
+  font-family: inherit;
+  /* 16 px minimum, sinon iOS zoome à la mise au point du champ. */
+  font-size: max(16px, calc(var(--lad-size) * 0.98));
+}
+
+.lad__unit {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: var(--lad-muted);
+  font-size: calc(var(--lad-size) * 0.9);
+}
+
+.lad__btn--finder { margin: 0; }
+
+.lad__finder-out {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--lad-accent) 10%, transparent);
+  font-weight: 600;
+}
+
+.lad__finder-out[hidden] { display: none; }
+
+.lad__help { margin: 16px 0 0; }
+
+.lad__help-sum {
+  min-height: 44px;
+  line-height: 44px;
+  color: var(--lad-accent);
+  font-size: calc(var(--lad-size) * 0.9);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lad__help-body {
+  padding-top: 6px;
+  color: var(--lad-muted);
+  font-size: calc(var(--lad-size) * 0.9);
+}
+
+/* --------------------------------------------------------------------------
+   Comparatif
+   -------------------------------------------------------------------------- */
+
+.lad__compare { margin: 0 0 34px; }
+
+.lad__compare-title {
+  margin: 0 0 12px;
+  font-size: calc(var(--lad-size) * 1.2);
+  font-weight: 700;
+}
+
+.lad__compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: calc(var(--lad-size) * 0.92);
+}
+
+.lad__compare-table th,
+.lad__compare-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--lad-ink) 12%, transparent);
+  text-align: left;
+  vertical-align: top;
+}
+
+.lad__compare-table th { font-weight: 700; }
+.lad__compare-table td:not(:first-child) { text-align: center; }
+
+/* --------------------------------------------------------------------------
+   Clôture
+   -------------------------------------------------------------------------- */
+
+.lad__close { margin: 40px 0 0; }
+
+.lad__close-title {
+  margin: 0 0 14px;
+  font-size: calc(var(--lad-size) * 1.35);
+  font-weight: 700;
+  line-height: 1.22;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   Bureau : simple confort de lecture, la page reste une colonne.
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: 760px) {
+  .lad__wrap { padding: 36px 24px 80px; }
+  .lad__h1 { font-size: calc(var(--lad-size) * 2.3); }
+  .lad__cta { padding: 30px 28px; }
+  .lad__btn { display: inline-block; width: auto; min-width: 320px; }
+  .lad__finder-fields { grid-template-columns: 1fr 1fr; }
+  .lad__btn--finder { width: auto; min-width: 260px; }
+}
+{% endstyle %}
+
+<section
+  class="lad"
+  id="lad-{{ section.id }}"
+  data-lad
+  data-active-avatar="{{ s.default_avatar }}"
+  data-lad-url="{{ s.cta_url }}"
+  data-lad-hours="{{ s.countdown_hours }}"
+  data-lad-key="lad-{{ section.id }}"
+  {{ section.shopify_attributes }}
+>
+  {%- comment -%}
+    Sélection de l'avatar. Synchrone, en tête de section : tout ce qui suit
+    est encore à construire, donc rien ne s'affiche dans la mauvaise variante.
+    Le tableau OK sert de liste blanche ET de source des valeurs : la chaîne
+    reçue n'est jamais réutilisée telle quelle, seule la constante trouvée
+    l'est. Rien venant de l'URL n'atteint le DOM.
+  {%- endcomment -%}
+  <script>
+    (function () {
+      var OK = {{ avatars | json }};
+      var root = document.currentScript.parentNode;
+
+      function clean(v) {
+        if (typeof v !== 'string') return null;
+        var i = OK.indexOf(v.toLowerCase().trim());
+        return i === -1 ? null : OK[i];
+      }
+
+      function fromCookie() {
+        var m = document.cookie.match(/(?:^|;\s*)lad_avatar=([^;]*)/);
+        return m ? clean(decodeURIComponent(m[1])) : null;
+      }
+
+      var fromUrl = null;
+      try {
+        fromUrl = clean(new URLSearchParams(window.location.search).get('a'));
+      } catch (e) {}
+
+      var stored = null;
+      try {
+        stored = clean(window.sessionStorage.getItem('lad_avatar'));
+      } catch (e) {}
+
+      /* Le dernier recours est l'attribut déjà rendu par le serveur : le
+         réglage « avatar par défaut » n'a donc pas besoin du script. */
+      var chosen = fromUrl || stored || fromCookie() || clean(root.getAttribute('data-active-avatar')) || OK[0];
+
+      root.setAttribute('data-active-avatar', chosen);
+      document.documentElement.setAttribute('data-avatar', chosen);
+
+      try {
+        window.sessionStorage.setItem('lad_avatar', chosen);
+      } catch (e) {}
+      try {
+        var exp = new Date(Date.now() + 30 * 864e5).toUTCString();
+        document.cookie =
+          'lad_avatar=' + encodeURIComponent(chosen) + ';expires=' + exp + ';path=/;SameSite=Lax';
+      } catch (e) {}
+    })();
+  </script>
+
+  {%- if s.show_sticky and s.sticky_text != blank -%}
+    <div class="lad__sticky" data-lad-sticky>
+      <span>{{ s.sticky_text }}</span>
+      {%- if s.sticky_countdown -%}
+        <span
+          class="lad__sticky-clock"
+          data-lad-clock
+          data-lad-clock-end="{{ s.countdown_end_text | escape }}"
+        >
+          <span data-lad-clock-value>--h --m --s</span>
+        </span>
+        {%- comment -%}
+          Une seule source d'annonce pour toute la page, rafraîchie à la
+          minute : aria-live sur un compteur à la seconde rendrait la page
+          inutilisable au lecteur d'écran.
+        {%- endcomment -%}
+        <span class="lad__sr" aria-live="polite" data-lad-clock-sr></span>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  <div class="lad__wrap">
+    {%- comment -%} ---------- Titre ---------- {%- endcomment -%}
+    {%- for av in avatars -%}
+      {%- assign k = 'h1_' | append: av -%}
+      {%- if s[k] != blank -%}
+        <h1 class="lad__h1 lad__var" data-avatar="{{ av }}">{{ s[k] }}</h1>
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- comment -%} ---------- Chapô ---------- {%- endcomment -%}
+    {%- for av in avatars -%}
+      {%- assign k = 'lede_' | append: av -%}
+      {%- if s[k] != blank -%}
+        <div class="lad__lede lad__var" data-avatar="{{ av }}">{{ s[k] }}</div>
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- comment -%} ---------- Ligne de bascule ---------- {%- endcomment -%}
+    {%- for av in avatars -%}
+      {%- assign k = 'bascule_' | append: av -%}
+      {%- if s[k] != blank -%}
+        <p class="lad__bascule lad__var" data-avatar="{{ av }}">{{ s[k] }}</p>
+      {%- endif -%}
+    {%- endfor -%}
+
+    {%- comment -%} ---------- Badge auteur ---------- {%- endcomment -%}
+    {%- if s.show_author and s.author_name != blank -%}
+      <div class="lad__author">
+        {%- comment -%}
+          La photo d'auteur ne compte pas dans `img_seen` : 48 px de côté, ce
+          n'est jamais le plus grand élément affiché, et lui donner la priorité
+          la retirait à la première image de point, qui elle est candidate au
+          LCP. Chargement immédiat quand même, elle est au-dessus de la ligne
+          de flottaison.
+        {%- endcomment -%}
+        {%- if s.author_image != blank -%}
+          <span class="lad__author-photo">
+            {{
+              s.author_image
+              | image_url: width: 160
+              | image_tag: widths: '48, 96, 160', loading: 'eager', alt: s.author_image_alt
+            }}
+          </span>
+        {%- endif -%}
+        <span>
+          <span class="lad__author-name">
+            {{ s.author_name }}
+            {%- if s.author_verified and s.author_verified_label != blank -%}
+              <span class="lad__author-check">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1.1 14.6l-4-4 1.5-1.5 2.5 2.5 5.2-5.2 1.5 1.5-6.7 6.7z"/></svg>
+                {{ s.author_verified_label }}
+              </span>
+            {%- endif -%}
+          </span>
+          {%- if s.author_role != blank -%}
+            <span class="lad__author-role">{{ s.author_role }}</span>
+          {%- endif -%}
+        </span>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%}
+      ---------- Blocs ----------
+      L'ordre de l'éditeur fait foi : rien n'est réordonné au rendu. Les blocs
+      `size` ne s'affichent pas ici, ils alimentent le sélecteur de pointure.
+    {%- endcomment -%}
+    {%- assign cta_seen = 0 -%}
+    {%- for block in section.blocks -%}
+      {%- case block.type -%}
+        {%- when 'point' -%}
+          {%- liquid
+            assign b = block.settings
+            assign slot = b.variable_slot
+
+            assign fixed_title = b.titre
+            assign fixed_text = b.texte
+          -%}
+          {%- comment -%}
+            Un point « variable » ne remplace que son titre et son texte : le
+            numéro, l'image et le micro-lien restent ceux du bloc.
+          {%- endcomment -%}
+          <article class="lad__point" {{ block.shopify_attributes }}>
+            {%- if slot == 'none' -%}
+              {%- if b.numero != blank or fixed_title != blank -%}
+                <div class="lad__point-head">
+                  {%- if b.numero != blank -%}
+                    <span class="lad__point-num">{{ b.numero }}</span>
+                  {%- endif -%}
+                  {%- if fixed_title != blank -%}
+                    <h2 class="lad__point-title">{{ fixed_title }}</h2>
+                  {%- endif -%}
+                </div>
+              {%- endif -%}
+            {%- else -%}
+              {%- assign prefix = 'point1' -%}
+              {%- if slot == 'b' -%}
+                {%- assign prefix = 'point5' -%}
+              {%- endif -%}
+              {%- for av in avatars -%}
+                {%- assign kt = prefix | append: '_titre_' | append: av -%}
+                {%- if b.numero != blank or s[kt] != blank -%}
+                  <div class="lad__point-head lad__var" data-avatar="{{ av }}">
+                    {%- if b.numero != blank -%}
+                      <span class="lad__point-num">{{ b.numero }}</span>
+                    {%- endif -%}
+                    {%- if s[kt] != blank -%}
+                      <h2 class="lad__point-title">{{ s[kt] }}</h2>
+                    {%- endif -%}
+                  </div>
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+
+            {%- if b.image != blank -%}
+              {%- assign img_seen = img_seen | plus: 1 -%}
+              <div class="lad__point-media" style="aspect-ratio: {{ b.image.aspect_ratio | default: 1.5 }}">
+                {%- if img_seen == 1 -%}
+                  {{
+                    b.image
+                    | image_url: width: 1200
+                    | image_tag:
+                      widths: '360, 540, 720, 1080, 1200',
+                      sizes: '(min-width: 760px) 700px, 92vw',
+                      loading: 'eager',
+                      fetchpriority: 'high',
+                      alt: b.image_alt
+                  }}
+                {%- else -%}
+                  {{
+                    b.image
+                    | image_url: width: 1200
+                    | image_tag:
+                      widths: '360, 540, 720, 1080, 1200',
+                      sizes: '(min-width: 760px) 700px, 92vw',
+                      loading: 'lazy',
+                      alt: b.image_alt
+                  }}
+                {%- endif -%}
+              </div>
+            {%- endif -%}
+
+            {%- if slot == 'none' -%}
+              {%- if fixed_text != blank -%}
+                <div class="lad__point-text">{{ fixed_text }}</div>
+              {%- endif -%}
+            {%- else -%}
+              {%- for av in avatars -%}
+                {%- assign kx = prefix | append: '_texte_' | append: av -%}
+                {%- if s[kx] != blank -%}
+                  <div class="lad__point-text lad__var" data-avatar="{{ av }}">{{ s[kx] }}</div>
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+
+            {%- if b.micro_lien_texte != blank and b.micro_lien_url != blank -%}
+              <a class="lad__micro" href="{{ b.micro_lien_url }}">{{ b.micro_lien_texte }}</a>
+            {%- endif -%}
+          </article>
+
+        {%- when 'cta' -%}
+          {%- assign cta_seen = cta_seen | plus: 1 -%}
+          {%- capture cta_position -%}cta_{{ cta_seen }}{%- endcapture -%}
+          <div {{ block.shopify_attributes }}>
+            {%- render 'listicle-cta-block',
+              position: cta_position,
+              titre: block.settings.titre,
+              texte: block.settings.texte,
+              bouton: block.settings.bouton,
+              sous_texte: block.settings.sous_texte,
+              url: s.cta_url,
+              image: block.settings.image,
+              image_alt: block.settings.image_alt,
+              compteur: block.settings.compteur,
+              compteur_fin: s.countdown_end_text
+            -%}
+          </div>
+
+        {%- when 'size_finder' -%}
+          <div {{ block.shopify_attributes }}>
+            {%- render 'listicle-size-finder', block: block, sizes: sizes -%}
+          </div>
+
+        {%- when 'comparatif' -%}
+          {%- liquid
+            assign c = block.settings
+            assign rows = c.lignes | strip | newline_to_br | split: '<br />'
+          -%}
+          <div class="lad__compare" {{ block.shopify_attributes }}>
+            {%- if c.titre != blank -%}
+              <p class="lad__compare-title">{{ c.titre }}</p>
+            {%- endif -%}
+            {%- if rows.size > 0 and c.lignes != blank -%}
+              <table class="lad__compare-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ c.col_critere }}</th>
+                    <th scope="col">{{ c.col_a }}</th>
+                    <th scope="col">{{ c.col_b }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {%- for row in rows -%}
+                    {%- assign cells = row | split: '|' -%}
+                    {%- if cells.size > 1 -%}
+                      <tr>
+                        <th scope="row">{{ cells[0] | strip }}</th>
+                        <td>{{ cells[1] | strip }}</td>
+                        <td>{{ cells[2] | strip }}</td>
+                      </tr>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </tbody>
+              </table>
+            {%- endif -%}
+          </div>
+      {%- endcase -%}
+    {%- endfor -%}
+
+    {%- comment -%} ---------- Clôture ---------- {%- endcomment -%}
+    {%- if s.close_title != blank or s.close_button != blank -%}
+      <div class="lad__close">
+        {%- if s.close_title != blank -%}
+          <p class="lad__close-title">{{ s.close_title }}</p>
+        {%- endif -%}
+        {%- render 'listicle-cta-block',
+          position: 'cta_final',
+          titre: s.close_cta_title,
+          texte: s.close_cta_text,
+          bouton: s.close_button,
+          sous_texte: s.close_sub,
+          url: s.cta_url,
+          image: s.close_image,
+          image_alt: s.close_image_alt,
+          compteur: s.close_countdown,
+          compteur_fin: s.countdown_end_text
+        -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('lad-{{ section.id }}');
+    if (!root || root.dataset.ladReady === '1') return;
+    root.dataset.ladReady = '1';
+
+    var avatar = root.getAttribute('data-active-avatar');
+
+    /* ---------------------------------------------------------------- *
+     * Mesure — dataLayer et pixel Meta
+     * ---------------------------------------------------------------- */
+
+    window.dataLayer = window.dataLayer || [];
+
+    function push(payload) {
+      payload.avatar = avatar;
+      try {
+        window.dataLayer.push(payload);
+      } catch (e) {}
+    }
+
+    push({ event: 'avatar_view' });
+
+    /* ---------------------------------------------------------------- *
+     * Compte à rebours — une seule horloge pour toute la page
+     * ---------------------------------------------------------------- */
+
+    var clocks = root.querySelectorAll('[data-lad-clock]');
+    var srCell = root.querySelector('[data-lad-clock-sr]');
+    var lastMinuteSpoken = -1;
+
+    function deadline() {
+      var key = root.dataset.ladKey + ':deadline';
+      var hours = parseFloat(root.dataset.ladHours) || 9;
+      var stored = null;
+      try {
+        stored = window.localStorage.getItem(key);
+      } catch (e) {}
+
+      var at = stored ? parseInt(stored, 10) : NaN;
+      if (!isNaN(at) && at > 0) return at;
+
+      /* Première visite seulement. Une fois posée, l'échéance ne bouge plus :
+         le compteur ne redémarre jamais, y compris après rechargement. */
+      at = Date.now() + hours * 3600 * 1000;
+      try {
+        window.localStorage.setItem(key, String(at));
+      } catch (e) {}
+      return at;
+    }
+
+    var endsAt = clocks.length ? deadline() : 0;
+    var timer = null;
+
+    function pad(n) {
+      return n < 10 ? '0' + n : String(n);
+    }
+
+    function tick() {
+      var left = endsAt - Date.now();
+
+      if (left <= 0) {
+        for (var i = 0; i < clocks.length; i++) {
+          var over = clocks[i].getAttribute('data-lad-clock-end') || '';
+          var slot = clocks[i].querySelector('[data-lad-clock-value]');
+          if (slot) slot.textContent = over;
+        }
+        if (srCell) srCell.textContent = clocks.length ? clocks[0].getAttribute('data-lad-clock-end') || '' : '';
+        if (timer) window.clearInterval(timer);
+        return;
+      }
+
+      var total = Math.floor(left / 1000);
+      var h = Math.floor(total / 3600);
+      var m = Math.floor((total % 3600) / 60);
+      var sec = total % 60;
+      var text = pad(h) + 'h ' + pad(m) + 'm ' + pad(sec) + 's';
+
+      for (var j = 0; j < clocks.length; j++) {
+        var cell = clocks[j].querySelector('[data-lad-clock-value]');
+        if (cell) cell.textContent = text;
+      }
+
+      /* Le lecteur d'écran n'est prévenu qu'au changement de minute. */
+      if (srCell && m !== lastMinuteSpoken) {
+        lastMinuteSpoken = m;
+        srCell.textContent = pad(h) + ' heures ' + pad(m) + ' minutes';
+      }
+    }
+
+    if (clocks.length) {
+      tick();
+      timer = window.setInterval(tick, 1000);
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Barre haute et profondeur de lecture
+     * ---------------------------------------------------------------- */
+
+    var sticky = root.querySelector('[data-lad-sticky]');
+    var marks = [25, 50, 75, 100];
+    var fired = {};
+    var viewContentSent = false;
+    var waiting = false;
+
+    function onScroll() {
+      if (waiting) return;
+      waiting = true;
+      window.requestAnimationFrame(function () {
+        waiting = false;
+
+        if (sticky) {
+          if (window.scrollY > 400) sticky.classList.add('is-on');
+          else sticky.classList.remove('is-on');
+        }
+
+        var doc = document.documentElement;
+        var scrollable = doc.scrollHeight - window.innerHeight;
+        var pct = scrollable > 0 ? ((window.scrollY / scrollable) * 100) : 100;
+
+        for (var i = 0; i < marks.length; i++) {
+          var mark = marks[i];
+          if (pct >= mark && !fired[mark]) {
+            fired[mark] = true;
+            push({ event: 'scroll_depth', percent: mark });
+
+            /* ViewContent à mi-page, pas au chargement : une lectrice qui
+               rebondit en deux secondes n'a rien vu. */
+            if (mark === 50 && !viewContentSent && typeof window.fbq === 'function') {
+              viewContentSent = true;
+              window.fbq('track', 'ViewContent', { content_category: avatar });
+            }
+          }
+        }
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    /* ---------------------------------------------------------------- *
+     * CTA — traçabilité
+     * ---------------------------------------------------------------- */
+
+    var TRACKED = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid', 'ttclid'];
+
+    function carried() {
+      var out = {};
+      try {
+        var q = new URLSearchParams(window.location.search);
+        for (var i = 0; i < TRACKED.length; i++) {
+          var v = q.get(TRACKED[i]);
+          if (v) out[TRACKED[i]] = v;
+        }
+      } catch (e) {}
+      return out;
+    }
+
+    function withParams(href) {
+      try {
+        var url = new URL(href, window.location.origin);
+        url.searchParams.set('a', avatar);
+        var extra = carried();
+        for (var key in extra) {
+          if (Object.prototype.hasOwnProperty.call(extra, key)) url.searchParams.set(key, extra[key]);
+        }
+        return url.toString();
+      } catch (e) {
+        return href;
+      }
+    }
+
+    /* L'avatar rejoint les attributs de panier : il remonte alors dans la
+       commande Shopify, donc dans les exports et les rapports. keepalive
+       laisse la requête se terminer même si la navigation part aussitôt. */
+    function stampCart() {
+      var attrs = carried();
+      attrs.avatar = avatar;
+      try {
+        return window.fetch('/cart/update.js', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ attributes: attrs }),
+          keepalive: true
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    var buttons = root.querySelectorAll('[data-lad-go]');
+    for (var b = 0; b < buttons.length; b++) {
+      buttons[b].addEventListener('click', function (event) {
+        var el = event.currentTarget;
+        var position = el.getAttribute('data-lad-go');
+        push({ event: 'cta_click', cta_position: position });
+        stampCart();
+        el.setAttribute('href', withParams(el.getAttribute('href') || '#'));
+      });
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Sélecteur de pointure
+     * ---------------------------------------------------------------- */
+
+    var finders = root.querySelectorAll('[data-lad-finder]');
+
+    function readJson(scope, selector) {
+      var tag = scope.querySelector(selector);
+      if (!tag) return null;
+      try {
+        return JSON.parse(tag.textContent);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function num(value) {
+      if (value === null || value === undefined) return NaN;
+      return parseFloat(String(value).replace(',', '.').replace(/[^0-9.\-]/g, ''));
+    }
+
+    for (var f = 0; f < finders.length; f++) {
+      (function (box) {
+        var table = readJson(box, '[data-lad-sizes]') || [];
+        var copy = readJson(box, '[data-lad-finder-copy]') || {};
+        var out = box.querySelector('[data-lad-finder-out]');
+        var lenField = box.querySelector('[data-lad-len]');
+        var widField = box.querySelector('[data-lad-wid]');
+        var go = box.querySelector('[data-lad-finder-go]');
+        if (!go || !out || !lenField) return;
+
+        var margin = (num(copy.marge) || 0) / 10; // le réglage est en millimètres
+
+        function say(text) {
+          // textContent, jamais innerHTML : rien de saisi n'est interprété.
+          out.textContent = text;
+          out.hidden = false;
+        }
+
+        go.addEventListener('click', function () {
+          var foot = num(lenField.value);
+          if (isNaN(foot)) return say(copy.vide || '');
+          if (foot < 20 || foot > 32) return say(copy.invalide || '');
+
+          var width = widField ? num(widField.value) : NaN;
+          var needLength = foot + margin;
+          var best = null;
+
+          for (var i = 0; i < table.length; i++) {
+            var row = table[i];
+            var rowLength = num(row.longueur);
+            var rowWidth = num(row.largeur);
+            if (isNaN(rowLength) || rowLength < needLength) continue;
+            if (!isNaN(width) && !isNaN(rowWidth) && rowWidth < width) continue;
+            if (best === null || rowLength < num(best.longueur)) best = row;
+          }
+
+          /* Aucune pointure ne convient : on le dit, on n'en invente pas une. */
+          if (!best) return say(copy.aucune || '');
+
+          var message = String(copy.ok || '')
+            .replace('[taille]', String(best.eu))
+            .replace('[largeur]', String(best.largeur));
+          say(message);
+          push({ event: 'size_finder_result', pointure: String(best.eu) });
+        });
+      })(finders[f]);
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Listicle publicitaire",
+  "tag": "section",
+  "class": "section-listicle",
+  "max_blocks": 50,
+  "settings": [
+    { "type": "header", "content": "Général" },
+    {
+      "type": "select",
+      "id": "default_avatar",
+      "label": "Avatar par défaut",
+      "info": "Utilisé quand l'URL ne porte pas de paramètre ?a= reconnu.",
+      "options": [
+        { "value": "morton", "label": "morton" },
+        { "value": "aidante", "label": "aidante" },
+        { "value": "postop", "label": "postop" },
+        { "value": "grossesse", "label": "grossesse" }
+      ],
+      "default": "morton"
+    },
+    { "type": "url", "id": "cta_url", "label": "Destination des boutons", "info": "L'avatar et les UTM présents dans l'URL y sont ajoutés automatiquement." },
+    { "type": "range", "id": "container_width", "label": "Largeur maximale du contenu", "min": 320, "max": 900, "step": 10, "unit": "px", "default": 720 },
+    { "type": "range", "id": "font_size", "label": "Taille du texte de base", "info": "17 px minimum recommandé pour une audience de 45 à 65 ans.", "min": 15, "max": 22, "step": 1, "unit": "px", "default": 17 },
+
+    { "type": "header", "content": "Barre haute" },
+    { "type": "checkbox", "id": "show_sticky", "label": "Afficher la barre haute", "default": true },
+    { "type": "text", "id": "sticky_text", "label": "Texte de la barre", "default": "[Barre haute — texte promo]" },
+    { "type": "checkbox", "id": "sticky_countdown", "label": "Afficher le compte à rebours dans la barre", "default": true },
+
+    { "type": "header", "content": "Compte à rebours" },
+    { "type": "range", "id": "countdown_hours", "label": "Durée", "info": "Décomptée depuis la première visite. Ne repart jamais à zéro.", "min": 1, "max": 72, "step": 1, "unit": "h", "default": 9 },
+    { "type": "text", "id": "countdown_end_text", "label": "Texte une fois terminé", "default": "[Texte affiché à l'expiration du compteur]" },
+
+    { "type": "header", "content": "Avatar — morton" },
+    { "type": "text", "id": "h1_morton", "label": "Titre H1", "default": "[H1 — avatar morton]" },
+    { "type": "richtext", "id": "lede_morton", "label": "Chapô", "default": "<p>[Chapô — avatar morton — paragraphe 1]</p><p>[Chapô — avatar morton — paragraphe 2]</p><p>[Chapô — avatar morton — pile de prix]</p>" },
+    { "type": "text", "id": "bascule_morton", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar morton]" },
+    { "type": "text", "id": "point1_titre_morton", "label": "Variante A — titre", "default": "[Variante A — titre — avatar morton]" },
+    { "type": "richtext", "id": "point1_texte_morton", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar morton]</p><p>[Variante A — paragraphe 2 — avatar morton]</p>" },
+    { "type": "text", "id": "point5_titre_morton", "label": "Variante B — titre", "default": "[Variante B — titre — avatar morton]" },
+    { "type": "richtext", "id": "point5_texte_morton", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar morton]</p><p>[Variante B — paragraphe 2 — avatar morton]</p>" },
+
+    { "type": "header", "content": "Avatar — aidante" },
+    { "type": "text", "id": "h1_aidante", "label": "Titre H1", "default": "[H1 — avatar aidante]" },
+    { "type": "richtext", "id": "lede_aidante", "label": "Chapô", "default": "<p>[Chapô — avatar aidante — paragraphe 1]</p><p>[Chapô — avatar aidante — paragraphe 2]</p><p>[Chapô — avatar aidante — pile de prix]</p>" },
+    { "type": "text", "id": "bascule_aidante", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar aidante]" },
+    { "type": "text", "id": "point1_titre_aidante", "label": "Variante A — titre", "default": "[Variante A — titre — avatar aidante]" },
+    { "type": "richtext", "id": "point1_texte_aidante", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar aidante]</p><p>[Variante A — paragraphe 2 — avatar aidante]</p>" },
+    { "type": "text", "id": "point5_titre_aidante", "label": "Variante B — titre", "default": "[Variante B — titre — avatar aidante]" },
+    { "type": "richtext", "id": "point5_texte_aidante", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar aidante]</p><p>[Variante B — paragraphe 2 — avatar aidante]</p>" },
+
+    { "type": "header", "content": "Avatar — postop" },
+    { "type": "text", "id": "h1_postop", "label": "Titre H1", "default": "[H1 — avatar postop]" },
+    { "type": "richtext", "id": "lede_postop", "label": "Chapô", "default": "<p>[Chapô — avatar postop — paragraphe 1]</p><p>[Chapô — avatar postop — paragraphe 2]</p><p>[Chapô — avatar postop — pile de prix]</p>" },
+    { "type": "text", "id": "bascule_postop", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar postop]" },
+    { "type": "text", "id": "point1_titre_postop", "label": "Variante A — titre", "default": "[Variante A — titre — avatar postop]" },
+    { "type": "richtext", "id": "point1_texte_postop", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar postop]</p><p>[Variante A — paragraphe 2 — avatar postop]</p>" },
+    { "type": "text", "id": "point5_titre_postop", "label": "Variante B — titre", "default": "[Variante B — titre — avatar postop]" },
+    { "type": "richtext", "id": "point5_texte_postop", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar postop]</p><p>[Variante B — paragraphe 2 — avatar postop]</p>" },
+
+    { "type": "header", "content": "Avatar — grossesse" },
+    { "type": "text", "id": "h1_grossesse", "label": "Titre H1", "default": "[H1 — avatar grossesse]" },
+    { "type": "richtext", "id": "lede_grossesse", "label": "Chapô", "default": "<p>[Chapô — avatar grossesse — paragraphe 1]</p><p>[Chapô — avatar grossesse — paragraphe 2]</p><p>[Chapô — avatar grossesse — pile de prix]</p>" },
+    { "type": "text", "id": "bascule_grossesse", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar grossesse]" },
+    { "type": "text", "id": "point1_titre_grossesse", "label": "Variante A — titre", "default": "[Variante A — titre — avatar grossesse]" },
+    { "type": "richtext", "id": "point1_texte_grossesse", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar grossesse]</p><p>[Variante A — paragraphe 2 — avatar grossesse]</p>" },
+    { "type": "text", "id": "point5_titre_grossesse", "label": "Variante B — titre", "default": "[Variante B — titre — avatar grossesse]" },
+    { "type": "richtext", "id": "point5_texte_grossesse", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar grossesse]</p><p>[Variante B — paragraphe 2 — avatar grossesse]</p>" },
+
+    { "type": "header", "content": "Badge auteur" },
+    { "type": "checkbox", "id": "show_author", "label": "Afficher le badge", "default": true },
+    { "type": "image_picker", "id": "author_image", "label": "Photo" },
+    { "type": "text", "id": "author_image_alt", "label": "Texte alternatif de la photo", "default": "[Alt — photo auteur]" },
+    { "type": "text", "id": "author_name", "label": "Prénom", "default": "[Prénom]" },
+    { "type": "checkbox", "id": "author_verified", "label": "Afficher la pastille", "default": true },
+    { "type": "text", "id": "author_verified_label", "label": "Texte de la pastille", "default": "Vérifiée" },
+    { "type": "text", "id": "author_role", "label": "Libellé de rôle", "info": "Champ libre. À toi de vérifier que ce libellé correspond à la réalité.", "default": "Passionnée de chaussures minimalistes" },
+
+    { "type": "header", "content": "Clôture" },
+    { "type": "text", "id": "close_title", "label": "Titre d'engagement", "default": "[Titre de clôture]" },
+    { "type": "text", "id": "close_cta_title", "label": "Titre du bloc d'achat", "default": "[Titre — bloc d'achat final]" },
+    { "type": "richtext", "id": "close_cta_text", "label": "Texte du bloc d'achat", "default": "<p>[Texte — bloc d'achat final]</p>" },
+    { "type": "image_picker", "id": "close_image", "label": "Image du bloc d'achat" },
+    { "type": "text", "id": "close_image_alt", "label": "Texte alternatif", "default": "[Alt — image bloc d'achat final]" },
+    { "type": "text", "id": "close_button", "label": "Libellé du bouton", "default": "[Libellé du bouton final]" },
+    { "type": "text", "id": "close_sub", "label": "Mention sous le bouton", "default": "[Mention sous le bouton final]" },
+    { "type": "checkbox", "id": "close_countdown", "label": "Reprendre le compte à rebours", "default": true },
+
+    { "type": "header", "content": "Couleurs" },
+    { "type": "color", "id": "color_bg", "label": "Fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_text", "label": "Texte", "default": "#1B1B1B" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#5B5B5B" },
+    { "type": "color", "id": "color_accent", "label": "Accent", "default": "#1F6B3A" },
+    { "type": "color", "id": "color_cta_bg", "label": "Fond des boutons", "default": "#1F6B3A" },
+    { "type": "color", "id": "color_cta_text", "label": "Texte des boutons", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_sticky_bg", "label": "Fond de la barre haute", "default": "#1B1B1B" },
+    { "type": "color", "id": "color_sticky_text", "label": "Texte de la barre haute", "default": "#FFFFFF" }
+  ],
+  "blocks": [
+    {
+      "type": "point",
+      "name": "Point",
+      "settings": [
+        { "type": "text", "id": "numero", "label": "Numéro", "default": "1" },
+        { "type": "text", "id": "titre", "label": "Titre", "default": "[Point — titre]" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_alt", "label": "Texte alternatif", "default": "[Alt — image du point]" },
+        { "type": "richtext", "id": "texte", "label": "Texte", "default": "<p>[Point — paragraphe 1]</p><p>[Point — paragraphe 2]</p>" },
+        { "type": "text", "id": "micro_lien_texte", "label": "Micro-lien — texte" },
+        { "type": "url", "id": "micro_lien_url", "label": "Micro-lien — destination" },
+        {
+          "type": "select",
+          "id": "variable_slot",
+          "label": "Variante liée à l'avatar",
+          "info": "Le titre et le texte de ce point sont alors lus dans les réglages de l'avatar actif. Le numéro, l'image et le micro-lien restent ceux du bloc.",
+          "options": [
+            { "value": "none", "label": "Aucune — contenu fixe" },
+            { "value": "a", "label": "Variante A" },
+            { "value": "b", "label": "Variante B" }
+          ],
+          "default": "none"
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "name": "Bloc CTA",
+      "settings": [
+        { "type": "text", "id": "titre", "label": "Titre", "default": "[CTA — titre]" },
+        { "type": "richtext", "id": "texte", "label": "Texte", "default": "<p>[CTA — texte]</p>" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_alt", "label": "Texte alternatif", "default": "[Alt — image du CTA]" },
+        { "type": "text", "id": "bouton", "label": "Libellé du bouton", "default": "[CTA — libellé du bouton]" },
+        { "type": "text", "id": "sous_texte", "label": "Mention sous le bouton", "default": "[CTA — mention sous le bouton]" },
+        { "type": "checkbox", "id": "compteur", "label": "Afficher le compte à rebours", "default": true }
+      ]
+    },
+    {
+      "type": "size_finder",
+      "name": "Sélecteur de pointure",
+      "settings": [
+        { "type": "text", "id": "titre", "label": "Titre", "default": "[Sélecteur — titre]" },
+        { "type": "richtext", "id": "intro", "label": "Introduction", "default": "<p>[Sélecteur — introduction]</p>" },
+        { "type": "text", "id": "label_longueur", "label": "Libellé — longueur", "default": "[Libellé — longueur du pied]" },
+        { "type": "text", "id": "placeholder_longueur", "label": "Exemple affiché — longueur", "default": "24,5" },
+        { "type": "checkbox", "id": "show_largeur", "label": "Demander aussi la largeur", "default": true },
+        { "type": "text", "id": "label_largeur", "label": "Libellé — largeur", "default": "[Libellé — largeur d'avant-pied]" },
+        { "type": "text", "id": "placeholder_largeur", "label": "Exemple affiché — largeur", "default": "9,5" },
+        { "type": "text", "id": "mention_optionnel", "label": "Mention « facultatif »", "default": "(facultatif)" },
+        { "type": "text", "id": "bouton", "label": "Libellé du bouton", "default": "[Sélecteur — libellé du bouton]" },
+        { "type": "range", "id": "marge", "label": "Marge ajoutée à la mesure", "info": "Ajoutée à la longueur saisie avant la recherche dans le tableau.", "min": 0, "max": 20, "step": 1, "unit": "mm", "default": 5 },
+        { "type": "text", "id": "msg_ok", "label": "Message — pointure trouvée", "info": "[taille] et [largeur] sont remplacés par les valeurs du tableau.", "default": "[Message — pointure trouvée : [taille], largeur intérieure [largeur] cm]" },
+        { "type": "text", "id": "msg_aucune", "label": "Message — aucune pointure", "default": "[Message — aucune pointure ne correspond]" },
+        { "type": "text", "id": "msg_invalide", "label": "Message — mesure hors plage", "default": "[Message — mesure hors de la plage attendue]" },
+        { "type": "text", "id": "msg_vide", "label": "Message — champ vide", "default": "[Message — saisis une longueur]" },
+        { "type": "text", "id": "aide_titre", "label": "Titre du dépliant d'aide", "default": "[Titre du protocole de mesure]" },
+        { "type": "richtext", "id": "aide", "label": "Protocole de mesure", "default": "<p>[Protocole de mesure talon contre mur — étape 1]</p><p>[Étape 2]</p><p>[Étape 3]</p>" }
+      ]
+    },
+    {
+      "type": "size",
+      "name": "Pointure (tableau)",
+      "settings": [
+        { "type": "text", "id": "pointure", "label": "Pointure EU", "default": "38" },
+        { "type": "text", "id": "longueur", "label": "Longueur intérieure", "info": "En centimètres. Virgule ou point.", "default": "24,5" },
+        { "type": "text", "id": "largeur", "label": "Largeur intérieure", "info": "En centimètres. Virgule ou point.", "default": "9,5" }
+      ]
+    },
+    {
+      "type": "comparatif",
+      "name": "Comparatif",
+      "settings": [
+        { "type": "text", "id": "titre", "label": "Titre", "default": "[Comparatif — titre]" },
+        { "type": "text", "id": "col_critere", "label": "En-tête — colonne critère", "default": "[Critère]" },
+        { "type": "text", "id": "col_a", "label": "En-tête — colonne A", "default": "[Colonne A]" },
+        { "type": "text", "id": "col_b", "label": "En-tête — colonne B", "default": "[Colonne B]" },
+        { "type": "textarea", "id": "lignes", "label": "Lignes", "info": "Une ligne par critère, au format : critère | colonne A | colonne B", "default": "[Critère 1] | [A] | [B]\n[Critère 2] | [A] | [B]\n[Critère 3] | [A] | [B]" }
+      ]
+    }
+  ],
+  "presets": [{ "name": "Listicle publicitaire" }]
+}
+{% endschema %}
