@@ -59,6 +59,8 @@
   --lad-max: {{ s.container_width }}px;
   --lad-size: {{ s.font_size }}px;
   --lad-media-col: {{ s.point_media_width }}%;
+  --lad-point-gap: {{ s.point_column_gap }}px;
+  --lad-point-space: {{ s.point_space }}px;
 
   --lad-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -248,7 +250,7 @@
    Points numérotés
    -------------------------------------------------------------------------- */
 
-.lad__point { margin: 0 0 38px; }
+.lad__point { margin: 0 0 var(--lad-point-space); }
 
 .lad__point-head { margin: 0 0 14px; }
 
@@ -634,7 +636,7 @@
     display: grid;
     grid-template-columns: var(--lad-media-col) 1fr;
     grid-template-rows: auto auto 1fr;
-    column-gap: 28px;
+    column-gap: var(--lad-point-gap);
     row-gap: 0;
   }
 
@@ -644,6 +646,19 @@
     margin: 0;
     align-self: {{ s.point_media_align }};
   }
+
+  {%- if s.point_media_align == 'stretch' %}
+  /* Étirée, l'image prend la hauteur du titre et du texte réunis : c'est ce
+     qui fait lire le point comme une section image + texte plutôt que comme
+     une vignette posée à côté d'un paragraphe. Le rapport imposé doit alors
+     s'effacer, sinon il rendrait la hauteur à nouveau fixe. */
+  .lad__point-media {
+    aspect-ratio: auto;
+    min-height: {{ s.point_media_min }}px;
+  }
+
+  .lad__point-media img { height: 100%; }
+  {%- endif %}
 
   .lad__point-head { grid-column: 2; grid-row: 1; }
   .lad__point-text { grid-column: 2; grid-row: 2; }
@@ -1383,9 +1398,12 @@
   "settings": [
     { "type": "header", "content": "Général" },
     { "type": "url", "id": "cta_url", "label": "Destination des boutons", "info": "L'avatar et les UTM présents dans l'URL y sont ajoutés automatiquement." },
-    { "type": "range", "id": "container_width", "label": "Largeur maximale du contenu", "min": 320, "max": 900, "step": 10, "unit": "px", "default": 720 },
+    { "type": "range", "id": "container_width", "label": "Largeur maximale du contenu", "info": "Plus large, le texte tient sur moins de lignes et les points paraissent moins hauts.", "min": 320, "max": 1200, "step": 10, "unit": "px", "default": 1040 },
     { "type": "range", "id": "font_size", "label": "Taille du texte de base", "info": "17 px minimum recommandé pour une audience de 45 à 65 ans.", "min": 15, "max": 22, "step": 1, "unit": "px", "default": 17 },
-    { "type": "range", "id": "point_media_width", "label": "Largeur de l'image des points (bureau)", "info": "En % de la largeur du point. Sur mobile, l'image est toujours au-dessus du texte.", "min": 25, "max": 60, "step": 1, "unit": "%", "default": 40 },
+    { "type": "range", "id": "point_media_width", "label": "Largeur de l'image des points (bureau)", "info": "En % de la largeur du point. Sur mobile, l'image est toujours au-dessus du texte.", "min": 25, "max": 60, "step": 1, "unit": "%", "default": 46 },
+    { "type": "range", "id": "point_column_gap", "label": "Espace entre l'image et le texte (bureau)", "min": 16, "max": 96, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "point_space", "label": "Espace entre deux points", "min": 20, "max": 140, "step": 4, "unit": "px", "default": 60 },
+    { "type": "range", "id": "point_media_min", "label": "Hauteur minimale de l'image (bureau)", "info": "S'applique quand l'image est étirée sur toute la hauteur du texte.", "min": 120, "max": 520, "step": 10, "unit": "px", "default": 280 },
     { "type": "range", "id": "point_media_ratio", "label": "Hauteur de l'image des points", "info": "En % de sa largeur. 100 = carré. Les photos sont recadrées par le centre pour que tous les points aient la même allure.", "min": 50, "max": 160, "step": 5, "unit": "%", "default": 100 },
     {
       "type": "select",
@@ -1412,12 +1430,13 @@
     {
       "type": "select",
       "id": "point_media_align",
-      "label": "Alignement vertical de l'image (bureau)",
+      "label": "Hauteur de l'image (bureau)",
       "options": [
-        { "value": "center", "label": "Au milieu du texte" },
-        { "value": "start", "label": "En haut" }
+        { "value": "stretch", "label": "Toute la hauteur du texte" },
+        { "value": "center", "label": "Rapport imposé, au milieu" },
+        { "value": "start", "label": "Rapport imposé, en haut" }
       ],
-      "default": "center"
+      "default": "stretch"
     },
     { "type": "range", "id": "cta_media_width", "label": "Largeur du panneau visuel des CTA (bureau)", "min": 30, "max": 60, "step": 1, "unit": "%", "default": 45 },
     {
