@@ -1,21 +1,19 @@
 {% comment %}
   listicle-advertorial.liquid
-  Page listicle publicitaire, multi-avatars.
+  Page listicle publicitaire.
 
-  Quatre variantes de texte cohabitent dans le HTML. Celle qui s'affiche est
-  décidée par un attribut posé sur la racine de section :
+  Le contenu est unique : la bascule multi-avatars a été retirée. Le paramètre
+  d'URL ?a= subsiste pour la seule traçabilité — il n'a plus aucun effet sur
+  ce qui s'affiche, il sert à savoir quelle publicité a produit la vente.
 
-    1. paramètre d'URL ?a=          (liste blanche stricte)
-    2. sessionStorage               (survit à un rechargement)
-    3. réglage « avatar par défaut » (déjà rendu par Liquid, côté serveur)
+  Il reste assaini par liste blanche : sa valeur part dans les attributs de
+  commande et dans le dataLayer, elle ne doit donc jamais être arbitraire. La
+  liste est éditable dans le schéma, pour ajouter un avatar sans toucher au
+  code.
 
-  Le troisième niveau est rendu par le serveur, pas par le script : JS coupé
-  ou en échec, la bonne variante par défaut s'affiche quand même, et le CSS
-  seul suffit à la faire apparaître.
-
-  Le script de sélection est en ligne et synchrone, premier enfant de la
-  section : les variantes qui le suivent ne sont pas encore construites quand
-  l'attribut est posé, donc aucune ne clignote.
+  Trois valeurs reviennent dans plusieurs textes : le prix, la remise et le
+  poids. Elles sont sorties en réglages de section et remplacées à l'affichage
+  partout où [prix], [remise] et [poids] apparaissent.
 
   CSS et JS sont en ligne, comme toutes les sections de ce thème : les envois
   de fichiers dans assets/ échouaient. Seuls les deux snippets sont externes.
@@ -23,18 +21,11 @@
 
 {%- liquid
   assign s = section.settings
-
-  comment
-    La liste blanche des avatars, définie une seule fois et réutilisée par le
-    balisage, par le script en ligne et par le schéma.
-  endcomment
-  assign avatars = 'morton,aidante,postop,grossesse' | split: ','
-
   assign sizes = section.blocks | where: 'type', 'size'
 
   comment
-    Compteur d'images : la première de la page est chargée en priorité, toutes
-    les suivantes en différé.
+    Compteur d'images : la première grande image de la page est chargée en
+    priorité, toutes les suivantes en différé.
   endcomment
   assign img_seen = 0
 -%}
@@ -56,6 +47,7 @@
 
   --lad-max: {{ s.container_width }}px;
   --lad-size: {{ s.font_size }}px;
+  --lad-media-col: {{ s.point_media_width }}%;
 
   --lad-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -82,24 +74,6 @@
 }
 
 /* --------------------------------------------------------------------------
-   Bascule d'avatar — quatre paires de règles, aucune interpolation Liquid.
-   -------------------------------------------------------------------------- */
-
-/* On masque les variantes inactives, on ne force jamais l'affichage de
-   l'active : elle garde ainsi le display de son propre composant. Une règle
-   d'affichage en `display: block` entrait sinon en conflit avec les
-   composants en flex — les quatre en-têtes de point variables s'affichaient
-   tous, parce que `.lad__point-head { display: flex }` est déclaré plus bas
-   à spécificité égale et l'emportait.
-
-   La spécificité (0,4,0) de ces sélecteurs passe devant celle de n'importe
-   quelle règle de composant, sans recourir à !important. */
-.lad[data-active-avatar="morton"]    .lad__var:not([data-avatar="morton"])    { display: none; }
-.lad[data-active-avatar="aidante"]   .lad__var:not([data-avatar="aidante"])   { display: none; }
-.lad[data-active-avatar="postop"]    .lad__var:not([data-avatar="postop"])    { display: none; }
-.lad[data-active-avatar="grossesse"] .lad__var:not([data-avatar="grossesse"]) { display: none; }
-
-/* --------------------------------------------------------------------------
    Barre haute
    -------------------------------------------------------------------------- */
 
@@ -116,7 +90,8 @@
   background: var(--lad-sticky-bg);
   color: var(--lad-sticky-ink);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   text-align: center;
   transform: translateY(-100%);
   transition: transform 0.22s ease;
@@ -142,7 +117,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Titre, chapô, bascule
+   Titre, chapô, encadré, ligne de bascule
    -------------------------------------------------------------------------- */
 
 .lad__h1 {
@@ -155,17 +130,24 @@
 
 .lad__lede { margin: 0 0 18px; }
 .lad__lede p { margin: 0 0 0.9em; }
+.lad__lede > *:last-child { margin-bottom: 0; }
 .lad__lede ul { margin: 0 0 1em; padding-left: 1.2em; }
 .lad__lede li { margin-bottom: 0.35em; }
-.lad__lede strong { color: var(--lad-ink); }
+
+.lad__note {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--lad-accent);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--lad-accent) 8%, transparent);
+  font-weight: 600;
+}
 
 .lad__bascule {
   margin: 0 0 22px;
-  padding: 14px 16px;
-  border-left: 4px solid var(--lad-accent);
-  background: color-mix(in srgb, var(--lad-accent) 8%, transparent);
-  font-size: calc(var(--lad-size) * 1.06);
+  font-size: calc(var(--lad-size) * 1.1);
   font-weight: 700;
+  line-height: 1.35;
 }
 
 /* --------------------------------------------------------------------------
@@ -176,7 +158,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 28px;
+  margin: 0 0 32px;
   padding: 12px 0;
   border-block: 1px solid color-mix(in srgb, var(--lad-ink) 12%, transparent);
 }
@@ -226,31 +208,31 @@
    Points numérotés
    -------------------------------------------------------------------------- */
 
-.lad__point { margin: 0 0 34px; }
+.lad__point { margin: 0 0 38px; }
 
 .lad__point-head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin: 0 0 12px;
+  gap: 12px;
+  margin: 0 0 14px;
 }
 
 .lad__point-num {
   flex: 0 0 auto;
   color: var(--lad-accent);
-  font-size: calc(var(--lad-size) * 1.5);
+  font-size: calc(var(--lad-size) * 2.2);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .lad__point-title {
   margin: 0;
-  font-size: calc(var(--lad-size) * 1.2);
+  font-size: calc(var(--lad-size) * 1.18);
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.28;
 }
 
-.lad__point-media { margin: 0 0 14px; }
+.lad__point-media { margin: 0 0 16px; }
 
 .lad__point-media img {
   display: block;
@@ -264,10 +246,13 @@
 
 .lad__micro {
   display: inline-block;
-  margin-top: 10px;
-  /* Zone tactile confortable, comme tous les éléments cliquables ici. */
+  margin-top: 12px;
+  /* Zone tactile de 44 px obtenue par le rembourrage, pas par l'interligne :
+     un interligne de 44 px écartelait le lien dès qu'il passait sur deux
+     lignes, ce qui arrive sur toutes les colonnes étroites. */
+  padding: 11px 0;
   min-height: 44px;
-  line-height: 44px;
+  line-height: 1.4;
   color: var(--lad-accent);
   font-size: calc(var(--lad-size) * 0.94);
   font-weight: 600;
@@ -278,14 +263,14 @@
    -------------------------------------------------------------------------- */
 
 .lad__cta {
-  margin: 0 0 34px;
-  padding: 22px 18px;
+  margin: 0 0 38px;
+  padding: 24px 18px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--lad-cta-bg) 12%, transparent);
+  background: color-mix(in srgb, var(--lad-cta-bg) 10%, transparent);
   text-align: center;
 }
 
-.lad__cta-media { margin: 0 0 14px; }
+.lad__cta-media { margin: 0 0 16px; }
 
 .lad__cta-media img {
   display: block;
@@ -294,16 +279,55 @@
   border-radius: 12px;
 }
 
-.lad__cta-title {
-  margin: 0 0 8px;
-  font-size: calc(var(--lad-size) * 1.2);
+.lad__cta-pill {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--lad-cta-bg);
+  color: var(--lad-cta-ink);
+  font-size: calc(var(--lad-size) * 0.74);
   font-weight: 700;
-  line-height: 1.25;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+}
+
+.lad__cta-title {
+  margin: 0 0 10px;
+  font-size: calc(var(--lad-size) * 1.3);
+  font-weight: 700;
+  line-height: 1.22;
 }
 
 .lad__cta-text { margin: 0 0 14px; }
 .lad__cta-text p { margin: 0 0 0.7em; }
 .lad__cta-text > *:last-child { margin-bottom: 0; }
+
+.lad__cta-list {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.lad__cta-list li {
+  position: relative;
+  margin-bottom: 8px;
+  padding-left: 26px;
+  font-size: calc(var(--lad-size) * 0.94);
+}
+
+.lad__cta-list li::before {
+  content: "";
+  position: absolute;
+  top: 0.45em;
+  left: 4px;
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--lad-cta-bg);
+  border-bottom: 2px solid var(--lad-cta-bg);
+  transform: rotate(-45deg);
+}
 
 .lad__cta-clock {
   margin: 0 0 12px;
@@ -330,8 +354,14 @@
   cursor: pointer;
 }
 
-.lad__cta-sub {
+.lad__cta-line {
   margin: 10px 0 0;
+  font-size: calc(var(--lad-size) * 0.86);
+  font-weight: 600;
+}
+
+.lad__cta-sub {
+  margin: 8px 0 0;
   color: var(--lad-muted);
   font-size: calc(var(--lad-size) * 0.84);
 }
@@ -341,7 +371,7 @@
    -------------------------------------------------------------------------- */
 
 .lad__finder {
-  margin: 0 0 34px;
+  margin: 0 0 38px;
   padding: 20px 18px;
   border: 1px solid color-mix(in srgb, var(--lad-ink) 14%, transparent);
   border-radius: 16px;
@@ -398,8 +428,6 @@
   font-size: calc(var(--lad-size) * 0.9);
 }
 
-.lad__btn--finder { margin: 0; }
-
 .lad__finder-out {
   margin: 16px 0 0;
   padding: 14px 16px;
@@ -413,8 +441,9 @@
 .lad__help { margin: 16px 0 0; }
 
 .lad__help-sum {
+  padding: 11px 0;
   min-height: 44px;
-  line-height: 44px;
+  line-height: 1.4;
   color: var(--lad-accent);
   font-size: calc(var(--lad-size) * 0.9);
   font-weight: 600;
@@ -431,7 +460,7 @@
    Comparatif
    -------------------------------------------------------------------------- */
 
-.lad__compare { margin: 0 0 34px; }
+.lad__compare { margin: 0 0 38px; }
 
 .lad__compare-title {
   margin: 0 0 12px;
@@ -460,27 +489,57 @@
    Clôture
    -------------------------------------------------------------------------- */
 
-.lad__close { margin: 40px 0 0; }
+.lad__close { margin: 44px 0 0; }
 
 .lad__close-title {
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   font-size: calc(var(--lad-size) * 1.35);
   font-weight: 700;
-  line-height: 1.22;
+  line-height: 1.24;
+  text-align: center;
+}
+
+.lad__close-sub {
+  margin: 0 0 20px;
+  color: var(--lad-muted);
   text-align: center;
 }
 
 /* --------------------------------------------------------------------------
-   Bureau : simple confort de lecture, la page reste une colonne.
+   Bureau : l'image passe à gauche du texte, le reste reste une colonne.
    -------------------------------------------------------------------------- */
 
 @media screen and (min-width: 760px) {
   .lad__wrap { padding: 36px 24px 80px; }
   .lad__h1 { font-size: calc(var(--lad-size) * 2.3); }
-  .lad__cta { padding: 30px 28px; }
+  .lad__cta { padding: 32px 28px; }
   .lad__btn { display: inline-block; width: auto; min-width: 320px; }
   .lad__finder-fields { grid-template-columns: 1fr 1fr; }
-  .lad__btn--finder { width: auto; min-width: 260px; }
+
+  /* Trois rangées, dont la dernière absorbe le surplus : sans ce 1fr, la
+     hauteur de l'image se répartirait entre les rangées qu'elle traverse et
+     décollerait le titre de son texte. */
+  .lad__point {
+    display: grid;
+    grid-template-columns: var(--lad-media-col) 1fr;
+    grid-template-rows: auto auto 1fr;
+    column-gap: 28px;
+    row-gap: 0;
+  }
+
+  .lad__point-media {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    margin: 0;
+    align-self: start;
+  }
+
+  .lad__point-head { grid-column: 2; grid-row: 1; }
+  .lad__point-text { grid-column: 2; grid-row: 2; }
+  .lad__micro { grid-column: 2; grid-row: 3; align-self: start; }
+
+  /* Un point sans image reprend toute la largeur. */
+  .lad__point--nomedia { display: block; }
 }
 {% endstyle %}
 
@@ -488,27 +547,29 @@
   class="lad"
   id="lad-{{ section.id }}"
   data-lad
-  data-active-avatar="{{ s.default_avatar }}"
-  data-lad-url="{{ s.cta_url }}"
+  data-lad-avatar="{{ s.default_avatar }}"
+  data-lad-allowed="{{ s.avatar_allowed | escape }}"
   data-lad-hours="{{ s.countdown_hours }}"
   data-lad-key="lad-{{ section.id }}"
   {{ section.shopify_attributes }}
 >
   {%- comment -%}
-    Sélection de l'avatar. Synchrone, en tête de section : tout ce qui suit
-    est encore à construire, donc rien ne s'affiche dans la mauvaise variante.
-    Le tableau OK sert de liste blanche ET de source des valeurs : la chaîne
-    reçue n'est jamais réutilisée telle quelle, seule la constante trouvée
-    l'est. Rien venant de l'URL n'atteint le DOM.
+    Résolution de l'avatar, pour la seule traçabilité : ?a= puis session puis
+    cookie puis le défaut rendu par le serveur. La liste blanche sert aussi de
+    source des valeurs — la fonction renvoie l'entrée trouvée, jamais la
+    chaîne reçue. Rien venant de l'URL n'atteint donc le DOM.
   {%- endcomment -%}
   <script>
     (function () {
-      var OK = {{ avatars | json }};
       var root = document.currentScript.parentNode;
+      var OK = (root.getAttribute('data-lad-allowed') || '')
+        .split(',')
+        .map(function (v) { return v.trim().toLowerCase(); })
+        .filter(Boolean);
 
       function clean(v) {
         if (typeof v !== 'string') return null;
-        var i = OK.indexOf(v.toLowerCase().trim());
+        var i = OK.indexOf(v.trim().toLowerCase());
         return i === -1 ? null : OK[i];
       }
 
@@ -527,11 +588,10 @@
         stored = clean(window.sessionStorage.getItem('lad_avatar'));
       } catch (e) {}
 
-      /* Le dernier recours est l'attribut déjà rendu par le serveur : le
-         réglage « avatar par défaut » n'a donc pas besoin du script. */
-      var chosen = fromUrl || stored || fromCookie() || clean(root.getAttribute('data-active-avatar')) || OK[0];
+      var chosen =
+        fromUrl || stored || fromCookie() || clean(root.getAttribute('data-lad-avatar')) || OK[0] || '';
 
-      root.setAttribute('data-active-avatar', chosen);
+      root.setAttribute('data-lad-avatar', chosen);
       document.documentElement.setAttribute('data-avatar', chosen);
 
       try {
@@ -547,7 +607,7 @@
 
   {%- if s.show_sticky and s.sticky_text != blank -%}
     <div class="lad__sticky" data-lad-sticky>
-      <span>{{ s.sticky_text }}</span>
+      <span>{{ s.sticky_text | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</span>
       {%- if s.sticky_countdown -%}
         <span
           class="lad__sticky-clock"
@@ -567,39 +627,28 @@
   {%- endif -%}
 
   <div class="lad__wrap">
-    {%- comment -%} ---------- Titre ---------- {%- endcomment -%}
-    {%- for av in avatars -%}
-      {%- assign k = 'h1_' | append: av -%}
-      {%- if s[k] != blank -%}
-        <h1 class="lad__h1 lad__var" data-avatar="{{ av }}">{{ s[k] }}</h1>
-      {%- endif -%}
-    {%- endfor -%}
+    {%- if s.h1 != blank -%}
+      <h1 class="lad__h1">{{ s.h1 | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</h1>
+    {%- endif -%}
 
-    {%- comment -%} ---------- Chapô ---------- {%- endcomment -%}
-    {%- for av in avatars -%}
-      {%- assign k = 'lede_' | append: av -%}
-      {%- if s[k] != blank -%}
-        <div class="lad__lede lad__var" data-avatar="{{ av }}">{{ s[k] }}</div>
-      {%- endif -%}
-    {%- endfor -%}
+    {%- if s.lede != blank -%}
+      <div class="lad__lede">{{ s.lede | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</div>
+    {%- endif -%}
 
-    {%- comment -%} ---------- Ligne de bascule ---------- {%- endcomment -%}
-    {%- for av in avatars -%}
-      {%- assign k = 'bascule_' | append: av -%}
-      {%- if s[k] != blank -%}
-        <p class="lad__bascule lad__var" data-avatar="{{ av }}">{{ s[k] }}</p>
-      {%- endif -%}
-    {%- endfor -%}
+    {%- if s.note != blank -%}
+      <p class="lad__note">{{ s.note | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</p>
+    {%- endif -%}
 
-    {%- comment -%} ---------- Badge auteur ---------- {%- endcomment -%}
+    {%- if s.bascule != blank -%}
+      <p class="lad__bascule">{{ s.bascule | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</p>
+    {%- endif -%}
+
     {%- if s.show_author and s.author_name != blank -%}
       <div class="lad__author">
         {%- comment -%}
           La photo d'auteur ne compte pas dans `img_seen` : 48 px de côté, ce
           n'est jamais le plus grand élément affiché, et lui donner la priorité
-          la retirait à la première image de point, qui elle est candidate au
-          LCP. Chargement immédiat quand même, elle est au-dessus de la ligne
-          de flottaison.
+          la retirait à la première image de point, seule candidate au LCP.
         {%- endcomment -%}
         {%- if s.author_image != blank -%}
           <span class="lad__author-photo">
@@ -636,47 +685,20 @@
     {%- for block in section.blocks -%}
       {%- case block.type -%}
         {%- when 'point' -%}
-          {%- liquid
-            assign b = block.settings
-            assign slot = b.variable_slot
-
-            assign fixed_title = b.titre
-            assign fixed_text = b.texte
-          -%}
-          {%- comment -%}
-            Un point « variable » ne remplace que son titre et son texte : le
-            numéro, l'image et le micro-lien restent ceux du bloc.
-          {%- endcomment -%}
-          <article class="lad__point" {{ block.shopify_attributes }}>
-            {%- if slot == 'none' -%}
-              {%- if b.numero != blank or fixed_title != blank -%}
-                <div class="lad__point-head">
-                  {%- if b.numero != blank -%}
-                    <span class="lad__point-num">{{ b.numero }}</span>
-                  {%- endif -%}
-                  {%- if fixed_title != blank -%}
-                    <h2 class="lad__point-title">{{ fixed_title }}</h2>
-                  {%- endif -%}
-                </div>
-              {%- endif -%}
-            {%- else -%}
-              {%- assign prefix = 'point1' -%}
-              {%- if slot == 'b' -%}
-                {%- assign prefix = 'point5' -%}
-              {%- endif -%}
-              {%- for av in avatars -%}
-                {%- assign kt = prefix | append: '_titre_' | append: av -%}
-                {%- if b.numero != blank or s[kt] != blank -%}
-                  <div class="lad__point-head lad__var" data-avatar="{{ av }}">
-                    {%- if b.numero != blank -%}
-                      <span class="lad__point-num">{{ b.numero }}</span>
-                    {%- endif -%}
-                    {%- if s[kt] != blank -%}
-                      <h2 class="lad__point-title">{{ s[kt] }}</h2>
-                    {%- endif -%}
-                  </div>
+          {%- assign b = block.settings -%}
+          <article
+            class="lad__point{% if b.image == blank %} lad__point--nomedia{% endif %}"
+            {{ block.shopify_attributes }}
+          >
+            {%- if b.numero != blank or b.titre != blank -%}
+              <div class="lad__point-head">
+                {%- if b.numero != blank -%}
+                  <span class="lad__point-num">{{ b.numero }}</span>
                 {%- endif -%}
-              {%- endfor -%}
+                {%- if b.titre != blank -%}
+                  <h2 class="lad__point-title">{{ b.titre | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</h2>
+                {%- endif -%}
+              </div>
             {%- endif -%}
 
             {%- if b.image != blank -%}
@@ -688,7 +710,7 @@
                     | image_url: width: 1200
                     | image_tag:
                       widths: '360, 540, 720, 1080, 1200',
-                      sizes: '(min-width: 760px) 700px, 92vw',
+                      sizes: '(min-width: 760px) 40vw, 92vw',
                       loading: 'eager',
                       fetchpriority: 'high',
                       alt: b.image_alt
@@ -699,7 +721,7 @@
                     | image_url: width: 1200
                     | image_tag:
                       widths: '360, 540, 720, 1080, 1200',
-                      sizes: '(min-width: 760px) 700px, 92vw',
+                      sizes: '(min-width: 760px) 40vw, 92vw',
                       loading: 'lazy',
                       alt: b.image_alt
                   }}
@@ -707,21 +729,23 @@
               </div>
             {%- endif -%}
 
-            {%- if slot == 'none' -%}
-              {%- if fixed_text != blank -%}
-                <div class="lad__point-text">{{ fixed_text }}</div>
-              {%- endif -%}
-            {%- else -%}
-              {%- for av in avatars -%}
-                {%- assign kx = prefix | append: '_texte_' | append: av -%}
-                {%- if s[kx] != blank -%}
-                  <div class="lad__point-text lad__var" data-avatar="{{ av }}">{{ s[kx] }}</div>
-                {%- endif -%}
-              {%- endfor -%}
+            {%- if b.texte != blank -%}
+              <div class="lad__point-text">{{ b.texte | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</div>
             {%- endif -%}
 
-            {%- if b.micro_lien_texte != blank and b.micro_lien_url != blank -%}
-              <a class="lad__micro" href="{{ b.micro_lien_url }}">{{ b.micro_lien_texte }}</a>
+            {%- comment -%}
+              Le micro-lien retombe sur la destination des boutons quand aucune
+              adresse propre n'est saisie, sinon le texte resterait invisible.
+              Il porte data-lad-go pour recevoir, lui aussi, l'avatar et les
+              UTM : sans cela un clic ici perdait toute l'attribution.
+            {%- endcomment -%}
+            {%- if b.micro_lien_texte != blank -%}
+              {%- assign micro_url = b.micro_lien_url | default: s.cta_url -%}
+              {%- if micro_url != blank -%}
+                <a class="lad__micro" href="{{ micro_url }}" data-lad-go="micro_{{ b.numero | default: forloop.index }}">
+                  {{ b.micro_lien_texte }}
+                </a>
+              {%- endif -%}
             {%- endif -%}
           </article>
 
@@ -731,15 +755,21 @@
           <div {{ block.shopify_attributes }}>
             {%- render 'listicle-cta-block',
               position: cta_position,
+              pastille: block.settings.pastille,
               titre: block.settings.titre,
               texte: block.settings.texte,
+              puces: block.settings.puces,
               bouton: block.settings.bouton,
+              ligne: block.settings.ligne,
               sous_texte: block.settings.sous_texte,
               url: s.cta_url,
               image: block.settings.image,
               image_alt: block.settings.image_alt,
               compteur: block.settings.compteur,
-              compteur_fin: s.countdown_end_text
+              compteur_fin: s.countdown_end_text,
+              prix: s.prix,
+              remise: s.remise,
+              poids: s.poids
             -%}
           </div>
 
@@ -757,7 +787,7 @@
             {%- if c.titre != blank -%}
               <p class="lad__compare-title">{{ c.titre }}</p>
             {%- endif -%}
-            {%- if rows.size > 0 and c.lignes != blank -%}
+            {%- if c.lignes != blank -%}
               <table class="lad__compare-table">
                 <thead>
                   <tr>
@@ -784,23 +814,31 @@
       {%- endcase -%}
     {%- endfor -%}
 
-    {%- comment -%} ---------- Clôture ---------- {%- endcomment -%}
     {%- if s.close_title != blank or s.close_button != blank -%}
       <div class="lad__close">
         {%- if s.close_title != blank -%}
-          <p class="lad__close-title">{{ s.close_title }}</p>
+          <p class="lad__close-title">{{ s.close_title | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</p>
+        {%- endif -%}
+        {%- if s.close_sub != blank -%}
+          <p class="lad__close-sub">{{ s.close_sub | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</p>
         {%- endif -%}
         {%- render 'listicle-cta-block',
           position: 'cta_final',
+          pastille: s.close_pastille,
           titre: s.close_cta_title,
           texte: s.close_cta_text,
+          puces: s.close_bullets,
           bouton: s.close_button,
-          sous_texte: s.close_sub,
+          ligne: s.close_line,
+          sous_texte: s.close_note,
           url: s.cta_url,
           image: s.close_image,
           image_alt: s.close_image_alt,
           compteur: s.close_countdown,
-          compteur_fin: s.countdown_end_text
+          compteur_fin: s.countdown_end_text,
+          prix: s.prix,
+          remise: s.remise,
+          poids: s.poids
         -%}
       </div>
     {%- endif -%}
@@ -813,7 +851,7 @@
     if (!root || root.dataset.ladReady === '1') return;
     root.dataset.ladReady = '1';
 
-    var avatar = root.getAttribute('data-active-avatar');
+    var avatar = root.getAttribute('data-lad-avatar');
 
     /* ---------------------------------------------------------------- *
      * Mesure — dataLayer et pixel Meta
@@ -925,7 +963,7 @@
 
         var doc = document.documentElement;
         var scrollable = doc.scrollHeight - window.innerHeight;
-        var pct = scrollable > 0 ? ((window.scrollY / scrollable) * 100) : 100;
+        var pct = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 100;
 
         for (var i = 0; i < marks.length; i++) {
           var mark = marks[i];
@@ -948,7 +986,7 @@
     onScroll();
 
     /* ---------------------------------------------------------------- *
-     * CTA — traçabilité
+     * Liens sortants — traçabilité
      * ---------------------------------------------------------------- */
 
     var TRACKED = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid', 'ttclid'];
@@ -968,7 +1006,7 @@
     function withParams(href) {
       try {
         var url = new URL(href, window.location.origin);
-        url.searchParams.set('a', avatar);
+        if (avatar) url.searchParams.set('a', avatar);
         var extra = carried();
         for (var key in extra) {
           if (Object.prototype.hasOwnProperty.call(extra, key)) url.searchParams.set(key, extra[key]);
@@ -984,7 +1022,7 @@
        laisse la requête se terminer même si la navigation part aussitôt. */
     function stampCart() {
       var attrs = carried();
-      attrs.avatar = avatar;
+      if (avatar) attrs.avatar = avatar;
       try {
         return window.fetch('/cart/update.js', {
           method: 'POST',
@@ -997,9 +1035,9 @@
       }
     }
 
-    var buttons = root.querySelectorAll('[data-lad-go]');
-    for (var b = 0; b < buttons.length; b++) {
-      buttons[b].addEventListener('click', function (event) {
+    var links = root.querySelectorAll('[data-lad-go]');
+    for (var b = 0; b < links.length; b++) {
+      links[b].addEventListener('click', function (event) {
         var el = event.currentTarget;
         var position = el.getAttribute('data-lad-go');
         push({ event: 'cta_click', cta_position: position });
@@ -1087,85 +1125,69 @@
   "max_blocks": 50,
   "settings": [
     { "type": "header", "content": "Général" },
-    {
-      "type": "select",
-      "id": "default_avatar",
-      "label": "Avatar par défaut",
-      "info": "Utilisé quand l'URL ne porte pas de paramètre ?a= reconnu.",
-      "options": [
-        { "value": "morton", "label": "morton" },
-        { "value": "aidante", "label": "aidante" },
-        { "value": "postop", "label": "postop" },
-        { "value": "grossesse", "label": "grossesse" }
-      ],
-      "default": "morton"
-    },
     { "type": "url", "id": "cta_url", "label": "Destination des boutons", "info": "L'avatar et les UTM présents dans l'URL y sont ajoutés automatiquement." },
     { "type": "range", "id": "container_width", "label": "Largeur maximale du contenu", "min": 320, "max": 900, "step": 10, "unit": "px", "default": 720 },
     { "type": "range", "id": "font_size", "label": "Taille du texte de base", "info": "17 px minimum recommandé pour une audience de 45 à 65 ans.", "min": 15, "max": 22, "step": 1, "unit": "px", "default": 17 },
+    { "type": "range", "id": "point_media_width", "label": "Largeur de l'image des points (bureau)", "info": "En % de la largeur du point. Sur mobile, l'image est toujours au-dessus du texte.", "min": 25, "max": 60, "step": 1, "unit": "%", "default": 40 },
+
+    {
+      "type": "header",
+      "content": "Valeurs répétées",
+      "info": "Ces trois valeurs remplacent [prix], [remise] et [poids] partout où ils apparaissent dans les textes. Un seul endroit à modifier."
+    },
+    { "type": "text", "id": "prix", "label": "Prix", "default": "69,95 €" },
+    { "type": "text", "id": "remise", "label": "Remise", "default": "-40%" },
+    { "type": "text", "id": "poids", "label": "Poids", "default": "moins de 200 g" },
+
+    {
+      "type": "header",
+      "content": "Traçabilité",
+      "info": "Le paramètre ?a= n'a plus d'effet sur le contenu affiché. Il sert uniquement à savoir quelle publicité a produit la vente."
+    },
+    { "type": "text", "id": "avatar_allowed", "label": "Valeurs acceptées pour ?a=", "info": "Séparées par des virgules. Toute autre valeur est ignorée.", "default": "morton, aidante, postop, grossesse" },
+    { "type": "text", "id": "default_avatar", "label": "Valeur par défaut", "info": "Utilisée quand l'URL ne porte aucun paramètre reconnu.", "default": "morton" },
 
     { "type": "header", "content": "Barre haute" },
     { "type": "checkbox", "id": "show_sticky", "label": "Afficher la barre haute", "default": true },
-    { "type": "text", "id": "sticky_text", "label": "Texte de la barre", "default": "[Barre haute — texte promo]" },
+    { "type": "text", "id": "sticky_text", "label": "Texte de la barre", "default": "OFFRE DE LANCEMENT · JUSQU'À [remise] · LIVRAISON OFFERTE" },
     { "type": "checkbox", "id": "sticky_countdown", "label": "Afficher le compte à rebours dans la barre", "default": true },
 
     { "type": "header", "content": "Compte à rebours" },
     { "type": "range", "id": "countdown_hours", "label": "Durée", "info": "Décomptée depuis la première visite. Ne repart jamais à zéro.", "min": 1, "max": 72, "step": 1, "unit": "h", "default": 9 },
-    { "type": "text", "id": "countdown_end_text", "label": "Texte une fois terminé", "default": "[Texte affiché à l'expiration du compteur]" },
+    { "type": "text", "id": "countdown_end_text", "label": "Texte une fois terminé", "default": "Offre de lancement terminée" },
 
-    { "type": "header", "content": "Avatar — morton" },
-    { "type": "text", "id": "h1_morton", "label": "Titre H1", "default": "[H1 — avatar morton]" },
-    { "type": "richtext", "id": "lede_morton", "label": "Chapô", "default": "<p>[Chapô — avatar morton — paragraphe 1]</p><p>[Chapô — avatar morton — paragraphe 2]</p><p>[Chapô — avatar morton — pile de prix]</p>" },
-    { "type": "text", "id": "bascule_morton", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar morton]" },
-    { "type": "text", "id": "point1_titre_morton", "label": "Variante A — titre", "default": "[Variante A — titre — avatar morton]" },
-    { "type": "richtext", "id": "point1_texte_morton", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar morton]</p><p>[Variante A — paragraphe 2 — avatar morton]</p>" },
-    { "type": "text", "id": "point5_titre_morton", "label": "Variante B — titre", "default": "[Variante B — titre — avatar morton]" },
-    { "type": "richtext", "id": "point5_texte_morton", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar morton]</p><p>[Variante B — paragraphe 2 — avatar morton]</p>" },
-
-    { "type": "header", "content": "Avatar — aidante" },
-    { "type": "text", "id": "h1_aidante", "label": "Titre H1", "default": "[H1 — avatar aidante]" },
-    { "type": "richtext", "id": "lede_aidante", "label": "Chapô", "default": "<p>[Chapô — avatar aidante — paragraphe 1]</p><p>[Chapô — avatar aidante — paragraphe 2]</p><p>[Chapô — avatar aidante — pile de prix]</p>" },
-    { "type": "text", "id": "bascule_aidante", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar aidante]" },
-    { "type": "text", "id": "point1_titre_aidante", "label": "Variante A — titre", "default": "[Variante A — titre — avatar aidante]" },
-    { "type": "richtext", "id": "point1_texte_aidante", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar aidante]</p><p>[Variante A — paragraphe 2 — avatar aidante]</p>" },
-    { "type": "text", "id": "point5_titre_aidante", "label": "Variante B — titre", "default": "[Variante B — titre — avatar aidante]" },
-    { "type": "richtext", "id": "point5_texte_aidante", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar aidante]</p><p>[Variante B — paragraphe 2 — avatar aidante]</p>" },
-
-    { "type": "header", "content": "Avatar — postop" },
-    { "type": "text", "id": "h1_postop", "label": "Titre H1", "default": "[H1 — avatar postop]" },
-    { "type": "richtext", "id": "lede_postop", "label": "Chapô", "default": "<p>[Chapô — avatar postop — paragraphe 1]</p><p>[Chapô — avatar postop — paragraphe 2]</p><p>[Chapô — avatar postop — pile de prix]</p>" },
-    { "type": "text", "id": "bascule_postop", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar postop]" },
-    { "type": "text", "id": "point1_titre_postop", "label": "Variante A — titre", "default": "[Variante A — titre — avatar postop]" },
-    { "type": "richtext", "id": "point1_texte_postop", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar postop]</p><p>[Variante A — paragraphe 2 — avatar postop]</p>" },
-    { "type": "text", "id": "point5_titre_postop", "label": "Variante B — titre", "default": "[Variante B — titre — avatar postop]" },
-    { "type": "richtext", "id": "point5_texte_postop", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar postop]</p><p>[Variante B — paragraphe 2 — avatar postop]</p>" },
-
-    { "type": "header", "content": "Avatar — grossesse" },
-    { "type": "text", "id": "h1_grossesse", "label": "Titre H1", "default": "[H1 — avatar grossesse]" },
-    { "type": "richtext", "id": "lede_grossesse", "label": "Chapô", "default": "<p>[Chapô — avatar grossesse — paragraphe 1]</p><p>[Chapô — avatar grossesse — paragraphe 2]</p><p>[Chapô — avatar grossesse — pile de prix]</p>" },
-    { "type": "text", "id": "bascule_grossesse", "label": "Ligne de bascule", "default": "[Ligne de bascule — avatar grossesse]" },
-    { "type": "text", "id": "point1_titre_grossesse", "label": "Variante A — titre", "default": "[Variante A — titre — avatar grossesse]" },
-    { "type": "richtext", "id": "point1_texte_grossesse", "label": "Variante A — texte", "default": "<p>[Variante A — paragraphe 1 — avatar grossesse]</p><p>[Variante A — paragraphe 2 — avatar grossesse]</p>" },
-    { "type": "text", "id": "point5_titre_grossesse", "label": "Variante B — titre", "default": "[Variante B — titre — avatar grossesse]" },
-    { "type": "richtext", "id": "point5_texte_grossesse", "label": "Variante B — texte", "default": "<p>[Variante B — paragraphe 1 — avatar grossesse]</p><p>[Variante B — paragraphe 2 — avatar grossesse]</p>" },
+    { "type": "header", "content": "En-tête" },
+    { "type": "text", "id": "h1", "label": "Titre H1", "default": "J'ai essayé 7 paires de chaussures « confort ». Une seule a vraiment changé quelque chose." },
+    {
+      "type": "richtext",
+      "id": "lede",
+      "label": "Chapô",
+      "default": "<p>Je vais vous faire gagner le temps et l'argent que j'ai perdus.</p><p>En trois ans, j'ai acheté 199 € de semelles orthopédiques sur mesure, une paire de Hoka à 165 € parce qu'on m'avait dit que l'amorti était la solution, 135 € de chaussures « confort » que ma mère m'avait recommandées, 89 € de baskets à mémoire de forme, trois protections en silicone de pharmacie, une paire de chaussures barefoot à 39 € sur Amazon notée 5 étoiles — et plus d'ibuprofène que je ne veux l'admettre, juste pour finir mes journées debout.</p><p>Six échecs. Une réussite. Voilà exactement ce qui a fait la différence.</p>"
+    },
+    { "type": "text", "id": "note", "label": "Encadré", "default": "À lire avant d'acheter une paire de plus." },
+    { "type": "text", "id": "bascule", "label": "Ligne de bascule", "default": "Plus de 700 € dépensés. Et ce n'est pas la plus chère qui a marché." },
 
     { "type": "header", "content": "Badge auteur" },
     { "type": "checkbox", "id": "show_author", "label": "Afficher le badge", "default": true },
     { "type": "image_picker", "id": "author_image", "label": "Photo" },
-    { "type": "text", "id": "author_image_alt", "label": "Texte alternatif de la photo", "default": "[Alt — photo auteur]" },
-    { "type": "text", "id": "author_name", "label": "Prénom", "default": "[Prénom]" },
+    { "type": "text", "id": "author_image_alt", "label": "Texte alternatif de la photo" },
+    { "type": "text", "id": "author_name", "label": "Prénom", "default": "Sandrine M." },
     { "type": "checkbox", "id": "author_verified", "label": "Afficher la pastille", "default": true },
-    { "type": "text", "id": "author_verified_label", "label": "Texte de la pastille", "default": "Vérifiée" },
+    { "type": "text", "id": "author_verified_label", "label": "Texte de la pastille", "default": "Vérifié" },
     { "type": "text", "id": "author_role", "label": "Libellé de rôle", "info": "Champ libre. À toi de vérifier que ce libellé correspond à la réalité.", "default": "Passionnée de chaussures minimalistes" },
 
     { "type": "header", "content": "Clôture" },
-    { "type": "text", "id": "close_title", "label": "Titre d'engagement", "default": "[Titre de clôture]" },
-    { "type": "text", "id": "close_cta_title", "label": "Titre du bloc d'achat", "default": "[Titre — bloc d'achat final]" },
-    { "type": "richtext", "id": "close_cta_text", "label": "Texte du bloc d'achat", "default": "<p>[Texte — bloc d'achat final]</p>" },
+    { "type": "text", "id": "close_title", "label": "Titre d'engagement", "default": "Vous avez lu jusqu'au point 10. Ça veut dire une seule chose : vous en avez vraiment assez de vos chaussures." },
+    { "type": "text", "id": "close_sub", "label": "Sous-titre", "default": "Voilà tout ce qu'il vous faut pour décider." },
+    { "type": "text", "id": "close_pastille", "label": "Pastille", "default": "OFFRE DE LANCEMENT" },
+    { "type": "text", "id": "close_cta_title", "label": "Titre du bloc d'achat", "default": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE" },
+    { "type": "richtext", "id": "close_cta_text", "label": "Texte du bloc d'achat" },
+    { "type": "textarea", "id": "close_bullets", "label": "Liste à puces", "info": "Une puce par ligne.", "default": "Livraison offerte en France\n30 jours pour les essayer\nRenvoi gratuit, sans justification\nLargeur intérieure indiquée en cm pour chaque pointure" },
     { "type": "image_picker", "id": "close_image", "label": "Image du bloc d'achat" },
-    { "type": "text", "id": "close_image_alt", "label": "Texte alternatif", "default": "[Alt — image bloc d'achat final]" },
-    { "type": "text", "id": "close_button", "label": "Libellé du bouton", "default": "[Libellé du bouton final]" },
-    { "type": "text", "id": "close_sub", "label": "Mention sous le bouton", "default": "[Mention sous le bouton final]" },
+    { "type": "text", "id": "close_image_alt", "label": "Texte alternatif" },
+    { "type": "text", "id": "close_button", "label": "Libellé du bouton", "default": "ESSAYER SANS RISQUE →" },
+    { "type": "text", "id": "close_line", "label": "Ligne sous le bouton" },
+    { "type": "text", "id": "close_note", "label": "Mention", "default": "Si elles ne vont pas, vous renvoyez. Pas de frais de restockage, pas de discussion." },
     { "type": "checkbox", "id": "close_countdown", "label": "Reprendre le compte à rebours", "default": true },
 
     { "type": "header", "content": "Couleurs" },
@@ -1183,37 +1205,34 @@
       "type": "point",
       "name": "Point",
       "settings": [
-        { "type": "text", "id": "numero", "label": "Numéro", "default": "1" },
-        { "type": "text", "id": "titre", "label": "Titre", "default": "[Point — titre]" },
-        { "type": "image_picker", "id": "image", "label": "Image" },
-        { "type": "text", "id": "image_alt", "label": "Texte alternatif", "default": "[Alt — image du point]" },
-        { "type": "richtext", "id": "texte", "label": "Texte", "default": "<p>[Point — paragraphe 1]</p><p>[Point — paragraphe 2]</p>" },
-        { "type": "text", "id": "micro_lien_texte", "label": "Micro-lien — texte" },
-        { "type": "url", "id": "micro_lien_url", "label": "Micro-lien — destination" },
         {
-          "type": "select",
-          "id": "variable_slot",
-          "label": "Variante liée à l'avatar",
-          "info": "Le titre et le texte de ce point sont alors lus dans les réglages de l'avatar actif. Le numéro, l'image et le micro-lien restent ceux du bloc.",
-          "options": [
-            { "value": "none", "label": "Aucune — contenu fixe" },
-            { "value": "a", "label": "Variante A" },
-            { "value": "b", "label": "Variante B" }
-          ],
-          "default": "none"
-        }
+          "type": "text",
+          "id": "photo_brief",
+          "label": "Brief photo",
+          "info": "Repère interne. Jamais affiché en boutique."
+        },
+        { "type": "text", "id": "numero", "label": "Numéro", "default": "1" },
+        { "type": "text", "id": "titre", "label": "Titre" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_alt", "label": "Texte alternatif" },
+        { "type": "richtext", "id": "texte", "label": "Texte" },
+        { "type": "text", "id": "micro_lien_texte", "label": "Micro-lien — texte" },
+        { "type": "url", "id": "micro_lien_url", "label": "Micro-lien — destination", "info": "Vide : le micro-lien pointe vers la destination des boutons." }
       ]
     },
     {
       "type": "cta",
       "name": "Bloc CTA",
       "settings": [
-        { "type": "text", "id": "titre", "label": "Titre", "default": "[CTA — titre]" },
-        { "type": "richtext", "id": "texte", "label": "Texte", "default": "<p>[CTA — texte]</p>" },
+        { "type": "text", "id": "pastille", "label": "Pastille", "default": "OFFRE DE LANCEMENT" },
+        { "type": "text", "id": "titre", "label": "Titre", "default": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE" },
+        { "type": "richtext", "id": "texte", "label": "Sous-titre", "default": "<p>J'étais sceptique aussi. Mais avec la livraison offerte et 30 jours pour changer d'avis, il n'y a rien à perdre.</p>" },
+        { "type": "textarea", "id": "puces", "label": "Liste à puces", "info": "Une puce par ligne. Laisse vide pour n'en afficher aucune." },
         { "type": "image_picker", "id": "image", "label": "Image" },
-        { "type": "text", "id": "image_alt", "label": "Texte alternatif", "default": "[Alt — image du CTA]" },
-        { "type": "text", "id": "bouton", "label": "Libellé du bouton", "default": "[CTA — libellé du bouton]" },
-        { "type": "text", "id": "sous_texte", "label": "Mention sous le bouton", "default": "[CTA — mention sous le bouton]" },
+        { "type": "text", "id": "image_alt", "label": "Texte alternatif" },
+        { "type": "text", "id": "bouton", "label": "Libellé du bouton", "default": "ESSAYER SANS RISQUE →" },
+        { "type": "text", "id": "ligne", "label": "Ligne sous le bouton", "default": "Stock limité · Livraison offerte" },
+        { "type": "text", "id": "sous_texte", "label": "Mention", "default": "30 jours pour les essayer. Si elles ne vont pas, renvoi gratuit." },
         { "type": "checkbox", "id": "compteur", "label": "Afficher le compte à rebours", "default": true }
       ]
     },
@@ -1221,22 +1240,22 @@
       "type": "size_finder",
       "name": "Sélecteur de pointure",
       "settings": [
-        { "type": "text", "id": "titre", "label": "Titre", "default": "[Sélecteur — titre]" },
-        { "type": "richtext", "id": "intro", "label": "Introduction", "default": "<p>[Sélecteur — introduction]</p>" },
-        { "type": "text", "id": "label_longueur", "label": "Libellé — longueur", "default": "[Libellé — longueur du pied]" },
+        { "type": "text", "id": "titre", "label": "Titre", "default": "Trouvez votre pointure avant de commander" },
+        { "type": "richtext", "id": "intro", "label": "Introduction", "default": "<p>Mesurez votre pied en centimètres, talon contre le mur. Vous obtenez la pointure et la largeur intérieure réelle de cette pointure.</p>" },
+        { "type": "text", "id": "label_longueur", "label": "Libellé — longueur", "default": "Longueur de mon pied" },
         { "type": "text", "id": "placeholder_longueur", "label": "Exemple affiché — longueur", "default": "24,5" },
         { "type": "checkbox", "id": "show_largeur", "label": "Demander aussi la largeur", "default": true },
-        { "type": "text", "id": "label_largeur", "label": "Libellé — largeur", "default": "[Libellé — largeur d'avant-pied]" },
+        { "type": "text", "id": "label_largeur", "label": "Libellé — largeur", "default": "Largeur de mon avant-pied" },
         { "type": "text", "id": "placeholder_largeur", "label": "Exemple affiché — largeur", "default": "9,5" },
         { "type": "text", "id": "mention_optionnel", "label": "Mention « facultatif »", "default": "(facultatif)" },
-        { "type": "text", "id": "bouton", "label": "Libellé du bouton", "default": "[Sélecteur — libellé du bouton]" },
+        { "type": "text", "id": "bouton", "label": "Libellé du bouton", "default": "Voir ma pointure" },
         { "type": "range", "id": "marge", "label": "Marge ajoutée à la mesure", "info": "Ajoutée à la longueur saisie avant la recherche dans le tableau.", "min": 0, "max": 20, "step": 1, "unit": "mm", "default": 5 },
-        { "type": "text", "id": "msg_ok", "label": "Message — pointure trouvée", "info": "[taille] et [largeur] sont remplacés par les valeurs du tableau.", "default": "[Message — pointure trouvée : [taille], largeur intérieure [largeur] cm]" },
-        { "type": "text", "id": "msg_aucune", "label": "Message — aucune pointure", "default": "[Message — aucune pointure ne correspond]" },
-        { "type": "text", "id": "msg_invalide", "label": "Message — mesure hors plage", "default": "[Message — mesure hors de la plage attendue]" },
-        { "type": "text", "id": "msg_vide", "label": "Message — champ vide", "default": "[Message — saisis une longueur]" },
-        { "type": "text", "id": "aide_titre", "label": "Titre du dépliant d'aide", "default": "[Titre du protocole de mesure]" },
-        { "type": "richtext", "id": "aide", "label": "Protocole de mesure", "default": "<p>[Protocole de mesure talon contre mur — étape 1]</p><p>[Étape 2]</p><p>[Étape 3]</p>" }
+        { "type": "text", "id": "msg_ok", "label": "Message — pointure trouvée", "info": "[taille] et [largeur] sont remplacés par les valeurs du tableau.", "default": "Votre pointure : [taille]. Largeur intérieure de cette pointure : [largeur] cm." },
+        { "type": "text", "id": "msg_aucune", "label": "Message — aucune pointure", "default": "Aucune pointure de notre tableau ne correspond à cette mesure." },
+        { "type": "text", "id": "msg_invalide", "label": "Message — mesure hors plage", "default": "Cette mesure sort de la plage attendue. Vérifiez qu'elle est bien en centimètres." },
+        { "type": "text", "id": "msg_vide", "label": "Message — champ vide", "default": "Saisissez la longueur de votre pied en centimètres." },
+        { "type": "text", "id": "aide_titre", "label": "Titre du dépliant d'aide", "default": "Comment mesurer mon pied" },
+        { "type": "richtext", "id": "aide", "label": "Protocole de mesure", "default": "<p>Posez une feuille contre une plinthe, talon contre le mur, debout.</p><p>Marquez au crayon le bout de l'orteil le plus long, puis mesurez du bord de la feuille jusqu'au trait.</p><p>Mesurez le soir, et prenez le pied le plus grand des deux.</p>" }
       ]
     },
     {
@@ -1252,11 +1271,11 @@
       "type": "comparatif",
       "name": "Comparatif",
       "settings": [
-        { "type": "text", "id": "titre", "label": "Titre", "default": "[Comparatif — titre]" },
-        { "type": "text", "id": "col_critere", "label": "En-tête — colonne critère", "default": "[Critère]" },
-        { "type": "text", "id": "col_a", "label": "En-tête — colonne A", "default": "[Colonne A]" },
-        { "type": "text", "id": "col_b", "label": "En-tête — colonne B", "default": "[Colonne B]" },
-        { "type": "textarea", "id": "lignes", "label": "Lignes", "info": "Une ligne par critère, au format : critère | colonne A | colonne B", "default": "[Critère 1] | [A] | [B]\n[Critère 2] | [A] | [B]\n[Critère 3] | [A] | [B]" }
+        { "type": "text", "id": "titre", "label": "Titre" },
+        { "type": "text", "id": "col_critere", "label": "En-tête — colonne critère" },
+        { "type": "text", "id": "col_a", "label": "En-tête — colonne A" },
+        { "type": "text", "id": "col_b", "label": "En-tête — colonne B" },
+        { "type": "textarea", "id": "lignes", "label": "Lignes", "info": "Une ligne par critère, au format : critère | colonne A | colonne B" }
       ]
     }
   ],

@@ -6,31 +6,34 @@
         "point-1": {
           "type": "point",
           "settings": {
+            "photo_brief": "Femme assise sur une chaise d'entrée, en train de retirer une chaussure de ville, pied nu visible, lumière de fin de journée, intérieur français ordinaire.",
             "numero": "1",
-            "titre": "",
-            "image_alt": "[Alt — image point 1]",
-            "texte": "<p>[Point 1 — paragraphe 1]</p><p>[Point 1 — paragraphe 2]</p>",
-            "variable_slot": "a"
+            "titre": "Le soir, j'enlevais mes chaussures et tout s'arrêtait",
+            "texte": "<p>Pendant des années, j'ai cru que c'était le repos. Je rentrais, je me déchaussais, et en trente secondes la journée s'effaçait. J'attendais ce moment. Je le planifiais, même — combien de temps encore avant de pouvoir m'asseoir et retirer ça.</p><p>Un jour j'ai retourné la logique. Si tout s'arrête quand j'enlève mes chaussures, ce n'est peut-être pas mon pied le problème. C'est ce que je mets autour.</p>",
+            "micro_lien_texte": "👉 La paire que je n'enlève plus en rentrant",
+            "image_alt": ""
           }
         },
         "point-2": {
           "type": "point",
           "settings": {
+            "photo_brief": "Gros plan main qui étire le tissu de la chaussure au niveau de l'avant-pied, pour montrer l'élasticité. Fond neutre.",
             "numero": "2",
-            "titre": "[Point 2 — titre]",
-            "image_alt": "[Alt — image point 2]",
-            "texte": "<p>[Point 2 — paragraphe 1]</p><p>[Point 2 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "Plus rien n'appuyait sur le côté de mon pied",
+            "texte": "<p>Toutes mes chaussures avaient une couture, un renfort ou une surpiqûre exactement là où mon pied est le plus large. Je le sentais au bout de deux heures. J'avais fini par découper l'intérieur d'une paire de baskets au cutter — je ne les mettais que chez moi.</p><p>Le tissu de celles-ci est souple et sans couture sur toute cette zone. Il s'écarte au lieu de résister. C'est bête, mais c'est la première chose que j'ai remarquée en marchant.</p>",
+            "micro_lien_texte": "👉 Voir la tige souple de près",
+            "image_alt": ""
           }
         },
         "point-3": {
           "type": "point",
           "settings": {
+            "photo_brief": "Pied nu posé sur une feuille A4 contre une plinthe, mètre ruban visible. Vue du dessus. — Ce bloc est suivi immédiatement du sélecteur de pointure.",
             "numero": "3",
-            "titre": "[Point 3 — titre]",
-            "image_alt": "[Alt — image point 3]",
-            "texte": "<p>[Point 3 — paragraphe 1]</p><p>[Point 3 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "J'ai su ma pointure avant de commander",
+            "texte": "<p>C'est le point sur lequel je me suis fait avoir le plus souvent. Je commande la pointure indiquée, ça arrive trop petit. Je reprends au-dessus, ça flotte. J'ai renvoyé quatre paires en deux ans et j'ai fini par ne plus oser commander en ligne.</p><p>Là, j'ai mesuré mon pied en centimètres, talon contre le mur, et le site m'a donné la pointure et la largeur intérieure réelle de cette pointure. Pas une taille approximative : un chiffre. C'est la première fois qu'une marque me donnait ça.</p>",
+            "micro_lien_texte": "👉 Mesurer mon pied en 30 secondes",
+            "image_alt": ""
           }
         },
         "size-finder": {
@@ -40,93 +43,106 @@
         "point-4": {
           "type": "point",
           "settings": {
+            "photo_brief": "Deux paires côte à côte vues du dessus — une chaussure classique à bout étroit et le modèle barefoot — pour montrer l'écart de forme. Ou : pieds dans la chaussure, orteils visibles à travers le mesh.",
             "numero": "4",
-            "titre": "[Point 4 — titre]",
-            "image_alt": "[Alt — image point 4]",
-            "texte": "<p>[Point 4 — paragraphe 1]</p><p>[Point 4 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "Mes orteils avaient enfin de la place",
+            "texte": "<p>Depuis vingt ans, mes orteils passaient leurs journées serrés les uns contre les autres, dans une pointe qui se rétrécissait à partir du milieu du pied. Je ne m'en rendais même plus compte. C'était juste comme ça que des chaussures étaient censées être.</p><p>La première fois que j'ai posé le pied dans celles-ci, mes orteils se sont écartés. Vraiment écartés, en éventail. Je suis restée debout dans mon couloir à faire ça pendant une minute.</p>",
+            "micro_lien_texte": "👉 Voir la largeur de l'avant-pied",
+            "image_alt": ""
           }
         },
         "point-5": {
           "type": "point",
           "settings": {
+            "photo_brief": "Semelle retournée, gros plan des crampons. Deuxième option : pied posé sur un sol mouillé / pavé humide.",
             "numero": "5",
-            "titre": "",
-            "image_alt": "[Alt — image point 5]",
-            "texte": "<p>[Point 5 — paragraphe 1]</p><p>[Point 5 — paragraphe 2]</p>",
-            "variable_slot": "b"
+            "titre": "Je ne glissais plus",
+            "texte": "<p>Ce n'est pas un truc dont on parle beaucoup, mais je faisais attention en permanence. Sol mouillé à l'entrée d'un magasin, trottoir en janvier, carrelage. J'attrapais des rampes que je n'attrapais pas avant.</p><p>Celles-ci accrochent. Je n'y pensais plus au bout de trois jours, et c'est exactement le genre de chose dont on mesure la valeur quand elle disparaît.</p>",
+            "micro_lien_texte": "👉 Voir la semelle",
+            "image_alt": ""
           }
         },
         "cta-1": {
           "type": "cta",
           "settings": {
-            "titre": "[CTA 1 — titre]",
-            "texte": "<p>[CTA 1 — texte]</p>",
-            "image_alt": "[Alt — image CTA 1]",
-            "bouton": "[CTA 1 — libellé du bouton]",
-            "sous_texte": "[CTA 1 — mention sous le bouton]",
-            "compteur": true
+            "pastille": "OFFRE DE LANCEMENT",
+            "titre": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE",
+            "texte": "<p>J'étais sceptique aussi. Mais avec la livraison offerte et 30 jours pour changer d'avis, il n'y a rien à perdre.</p>",
+            "puces": "",
+            "bouton": "ESSAYER SANS RISQUE →",
+            "ligne": "Stock limité · Livraison offerte",
+            "sous_texte": "30 jours pour les essayer. Si elles ne vont pas, renvoi gratuit.",
+            "compteur": true,
+            "image_alt": ""
           }
         },
         "point-6": {
           "type": "point",
           "settings": {
+            "photo_brief": "Main qui retire la semelle intérieure de la chaussure. Semelle orthopédique posée à côté.",
             "numero": "6",
-            "titre": "[Point 6 — titre]",
-            "image_alt": "[Alt — image point 6]",
-            "texte": "<p>[Point 6 — paragraphe 1]</p><p>[Point 6 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "J'ai pu remettre mes semelles dedans",
+            "texte": "<p>J'ai 199 € de semelles sur mesure dans un tiroir. Je ne les mets plus tous les jours, mais il y a des jours où j'en ai envie, et je ne voulais pas d'une chaussure qui m'oblige à choisir.</p><p>La semelle intérieure se retire entièrement. Les miennes rentrent. Je fais ce que je veux, selon la journée.</p>",
+            "micro_lien_texte": "",
+            "image_alt": ""
           }
         },
         "point-7": {
           "type": "point",
           "settings": {
+            "photo_brief": "La chaussure portée en situation urbaine — jean, terrasse de café ou trottoir de centre-ville. Cadrage taille-pieds. Pas de studio.",
             "numero": "7",
-            "titre": "[Point 7 — titre]",
-            "image_alt": "[Alt — image point 7]",
-            "texte": "<p>[Point 7 — paragraphe 1]</p><p>[Point 7 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "Elles ne font pas « chaussure orthopédique »",
+            "texte": "<p>C'est ce qui m'a retenue le plus longtemps. J'avais regardé ce genre de chaussures avant et j'avais refermé l'onglet : larges devant, plates, beiges, on aurait dit des sabots de jardin. Je n'allais pas mettre ça pour aller déjeuner chez ma fille.</p><p>Celles-ci sont larges à l'intérieur et normales à l'extérieur. Personne ne m'a jamais fait de remarque. On m'a demandé où je les avais achetées, ça oui.</p>",
+            "micro_lien_texte": "",
+            "image_alt": ""
           }
         },
         "point-8": {
           "type": "point",
           "settings": {
+            "photo_brief": "La chaussure dans le tambour d'une machine à laver, ou gros plan de la maille avec contre-jour pour montrer la respirabilité.",
             "numero": "8",
-            "titre": "[Point 8 — titre]",
-            "image_alt": "[Alt — image point 8]",
-            "texte": "<p>[Point 8 — paragraphe 1]</p><p>[Point 8 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "Au bout d'une journée, elles ne sentaient rien",
+            "texte": "<p>C'était mon secret honteux. Vers 16h je gardais mes pieds sous le bureau et je ne me déchaussais nulle part. J'avais essayé les chaussettes techniques, les poudres, tout.</p><p>Le tissu respire vraiment. Et quand elles sont sales, elles passent en machine — j'ai vérifié trois fois avant d'oser, elles n'ont pas bougé.</p>",
+            "micro_lien_texte": "",
+            "image_alt": ""
           }
         },
         "point-9": {
           "type": "point",
           "settings": {
+            "photo_brief": "Chaussure posée sur une balance de cuisine, chiffre lisible. Ou tenue par un lacet avec un seul doigt.",
             "numero": "9",
-            "titre": "[Point 9 — titre]",
-            "image_alt": "[Alt — image point 9]",
-            "texte": "<p>[Point 9 — paragraphe 1]</p><p>[Point 9 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "Elles ne pèsent rien",
+            "texte": "<p>Mes anciennes chaussures « confort » faisaient l'effet de briques. Le soir, ce n'étaient pas que mes pieds qui étaient fatigués, c'étaient mes jambes entières. Je mettais ça sur le compte de l'âge.</p><p>Celles-ci font [poids]. Le premier soir, j'ai fait le tour du quartier après le dîner sans y penser. Ça ne m'était pas arrivé depuis longtemps.</p>",
+            "micro_lien_texte": "",
+            "image_alt": ""
           }
         },
         "point-10": {
           "type": "point",
           "settings": {
+            "photo_brief": "Toutes les paires ratées alignées au sol ou dans un carton, et la paire retenue posée devant, à part.",
             "numero": "10",
-            "titre": "[Point 10 — titre]",
-            "image_alt": "[Alt — image point 10]",
-            "texte": "<p>[Point 10 — paragraphe 1]</p><p>[Point 10 — paragraphe 2]</p>",
-            "variable_slot": "none"
+            "titre": "La moins chère est la seule qui a marché",
+            "texte": "<p>Faisons les comptes. Semelles sur mesure : 199 €, n'ont rien changé. Hoka : 165 €, agréables une heure. Chaussures « confort » : 135 €, elles sont au fond du placard. Baskets à mémoire de forme : 89 €. Plus de 700 € au total.</p><p>Celles-ci coûtent [prix]. Et ce sont les seules que je porte encore. Cher ne veut pas dire adapté.</p>",
+            "micro_lien_texte": "",
+            "image_alt": ""
           }
         },
         "cta-2": {
           "type": "cta",
           "settings": {
-            "titre": "[CTA 2 — titre]",
-            "texte": "<p>[CTA 2 — texte]</p>",
-            "image_alt": "[Alt — image CTA 2]",
-            "bouton": "[CTA 2 — libellé du bouton]",
-            "sous_texte": "[CTA 2 — mention sous le bouton]",
-            "compteur": true
+            "pastille": "OFFRE DE LANCEMENT",
+            "titre": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE",
+            "texte": "<p>J'étais sceptique aussi. Mais avec la livraison offerte et 30 jours pour changer d'avis, il n'y a rien à perdre.</p>",
+            "puces": "",
+            "bouton": "ESSAYER SANS RISQUE →",
+            "ligne": "Stock limité · Livraison offerte",
+            "sous_texte": "30 jours pour les essayer. Si elles ne vont pas, renvoi gratuit.",
+            "compteur": true,
+            "image_alt": ""
           }
         },
         "size-36": {
@@ -217,9 +233,7 @@
         "size-42",
         "size-43"
       ],
-      "settings": {
-        "default_avatar": "morton"
-      }
+      "settings": {}
     }
   },
   "order": [
