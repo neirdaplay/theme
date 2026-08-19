@@ -44,6 +44,8 @@
   --lad-cta-ink: {{ s.color_cta_text }};
   --lad-sticky-bg: {{ s.color_sticky_bg }};
   --lad-sticky-ink: {{ s.color_sticky_text }};
+  --lad-pill-bg: {{ s.color_pill_bg }};
+  --lad-pill-ink: {{ s.color_pill_text }};
 
   --lad-max: {{ s.container_width }}px;
   --lad-size: {{ s.font_size }}px;
@@ -232,12 +234,21 @@
   line-height: 1.28;
 }
 
-.lad__point-media { margin: 0 0 16px; }
+/* Rapport imposé et recadrage par le centre : les photos du marchand
+   n'auront pas toutes le même format, et sans cela chaque point prenait une
+   hauteur différente. Le rapport étant fixé, la place est réservée avant le
+   chargement : aucun décalage de mise en page. */
+.lad__point-media {
+  margin: 0 0 16px;
+  aspect-ratio: 100 / {{ s.point_media_ratio }};
+}
 
 .lad__point-media img {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   border-radius: 12px;
 }
 
@@ -263,6 +274,7 @@
    -------------------------------------------------------------------------- */
 
 .lad__cta {
+  position: relative;
   margin: 0 0 38px;
   padding: 24px 18px;
   border-radius: 16px;
@@ -284,12 +296,22 @@
   margin: 0 0 10px;
   padding: 6px 14px;
   border-radius: 999px;
-  background: var(--lad-cta-bg);
-  color: var(--lad-cta-ink);
+  background: var(--lad-pill-bg);
+  color: var(--lad-pill-ink);
   font-size: calc(var(--lad-size) * 0.74);
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1.2;
+}
+
+.lad__cta-over {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--lad-muted);
+  font-size: calc(var(--lad-size) * 0.78);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
 }
 
 .lad__cta-title {
@@ -388,9 +410,19 @@
 
 .lad__finder-fields {
   display: grid;
-  gap: 14px;
-  margin: 0 0 16px;
+  gap: 14px 18px;
+  margin: 0 0 18px;
 }
+
+/* Les deux libellés n'ont pas la même hauteur — « (facultatif) » fait passer
+   le second sur deux lignes. Sans cela les champs se retrouvaient à des
+   hauteurs différentes : la colonne pousse donc le champ vers le bas. */
+.lad__field {
+  display: flex;
+  flex-direction: column;
+}
+
+.lad__field .lad__input-wrap { margin-top: auto; }
 
 .lad__label {
   display: block;
@@ -409,6 +441,11 @@
 .lad__input {
   width: 100%;
   min-height: 52px;
+  /* Les flèches natives du champ numérique n'apparaissent que sur celui qui a
+     le focus, ce qui décalait « cm » et donnait deux champs d'aspect
+     différent. On les retire, la saisie au clavier suffit. */
+  appearance: textfield;
+  -moz-appearance: textfield;
   padding: 12px 46px 12px 14px;
   border: 1px solid color-mix(in srgb, var(--lad-ink) 28%, transparent);
   border-radius: 10px;
@@ -417,6 +454,13 @@
   font-family: inherit;
   /* 16 px minimum, sinon iOS zoome à la mise au point du champ. */
   font-size: max(16px, calc(var(--lad-size) * 0.98));
+}
+
+.lad__input::-webkit-outer-spin-button,
+.lad__input::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .lad__unit {
@@ -515,6 +559,7 @@
   .lad__cta { padding: 32px 28px; }
   .lad__btn { display: inline-block; width: auto; min-width: 320px; }
   .lad__finder-fields { grid-template-columns: 1fr 1fr; }
+  .lad__btn--finder { min-width: 260px; }
 
   /* Trois rangées, dont la dernière absorbe le surplus : sans ce 1fr, la
      hauteur de l'image se répartirait entre les rangées qu'elle traverse et
@@ -531,7 +576,7 @@
     grid-column: 1;
     grid-row: 1 / span 3;
     margin: 0;
-    align-self: start;
+    align-self: {{ s.point_media_align }};
   }
 
   .lad__point-head { grid-column: 2; grid-row: 1; }
@@ -540,6 +585,49 @@
 
   /* Un point sans image reprend toute la largeur. */
   .lad__point--nomedia { display: block; }
+
+  /* Carte CTA en deux colonnes : visuel à gauche, argumentaire à droite. La
+     pastille sort alors du flux et se pose à cheval sur le bord haut. */
+  .lad__cta--split {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 28px;
+    text-align: left;
+  }
+
+  .lad__cta--split .lad__cta-media {
+    flex: 0 0 42%;
+    margin: 0;
+  }
+
+  .lad__cta--split .lad__cta-body { flex: 1 1 auto; }
+
+  /* Un enfant absolu d'une grille prend pour référence SA zone de grille dès
+     qu'il en a une — placé en colonne 2, `left` partait du bord de la colonne
+     de droite. Sans aucun placement, la référence redevient la boîte de la
+     carte, rembourrage compris : c'est ce qu'il faut pour déborder de l'angle.
+     D'où l'absence volontaire de grid-column ici. */
+  .lad__cta--split .lad__cta-pill {
+    position: absolute;
+    top: -13px;
+    left: 24px;
+    margin: 0;
+    z-index: 1;
+  }
+
+  .lad__cta--split .lad__btn {
+    width: 100%;
+    min-width: 0;
+    max-width: 340px;
+  }
+
+  .lad__cta--split .lad__cta-line,
+  .lad__cta--split .lad__cta-sub,
+  .lad__cta--split .lad__cta-clock { text-align: left; }
+
+  /* Sans visuel, l'enveloppe occupe seule toute la carte. */
+  .lad__cta--split.lad__cta--nomedia { display: block; }
 }
 {% endstyle %}
 
@@ -703,7 +791,7 @@
 
             {%- if b.image != blank -%}
               {%- assign img_seen = img_seen | plus: 1 -%}
-              <div class="lad__point-media" style="aspect-ratio: {{ b.image.aspect_ratio | default: 1.5 }}">
+              <div class="lad__point-media">
                 {%- if img_seen == 1 -%}
                   {{
                     b.image
@@ -755,7 +843,10 @@
           <div {{ block.shopify_attributes }}>
             {%- render 'listicle-cta-block',
               position: cta_position,
+              layout: s.cta_layout,
+              produit: block.settings.produit,
               pastille: block.settings.pastille,
+              surtitre: block.settings.surtitre,
               titre: block.settings.titre,
               texte: block.settings.texte,
               puces: block.settings.puces,
@@ -824,7 +915,10 @@
         {%- endif -%}
         {%- render 'listicle-cta-block',
           position: 'cta_final',
+          layout: s.cta_layout,
+          produit: s.close_produit,
           pastille: s.close_pastille,
+          surtitre: s.close_surtitre,
           titre: s.close_cta_title,
           texte: s.close_cta_text,
           puces: s.close_bullets,
@@ -1129,6 +1223,27 @@
     { "type": "range", "id": "container_width", "label": "Largeur maximale du contenu", "min": 320, "max": 900, "step": 10, "unit": "px", "default": 720 },
     { "type": "range", "id": "font_size", "label": "Taille du texte de base", "info": "17 px minimum recommandé pour une audience de 45 à 65 ans.", "min": 15, "max": 22, "step": 1, "unit": "px", "default": 17 },
     { "type": "range", "id": "point_media_width", "label": "Largeur de l'image des points (bureau)", "info": "En % de la largeur du point. Sur mobile, l'image est toujours au-dessus du texte.", "min": 25, "max": 60, "step": 1, "unit": "%", "default": 40 },
+    { "type": "range", "id": "point_media_ratio", "label": "Hauteur de l'image des points", "info": "En % de sa largeur. 100 = carré. Les photos sont recadrées par le centre pour que tous les points aient la même allure.", "min": 50, "max": 160, "step": 5, "unit": "%", "default": 100 },
+    {
+      "type": "select",
+      "id": "point_media_align",
+      "label": "Alignement vertical de l'image (bureau)",
+      "options": [
+        { "value": "center", "label": "Au milieu du texte" },
+        { "value": "start", "label": "En haut" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "cta_layout",
+      "label": "Mise en page des cartes CTA",
+      "options": [
+        { "value": "split", "label": "Visuel à gauche, texte à droite" },
+        { "value": "stack", "label": "Visuel au-dessus, tout centré" }
+      ],
+      "default": "split"
+    },
 
     {
       "type": "header",
@@ -1179,7 +1294,9 @@
     { "type": "header", "content": "Clôture" },
     { "type": "text", "id": "close_title", "label": "Titre d'engagement", "default": "Vous avez lu jusqu'au point 10. Ça veut dire une seule chose : vous en avez vraiment assez de vos chaussures." },
     { "type": "text", "id": "close_sub", "label": "Sous-titre", "default": "Voilà tout ce qu'il vous faut pour décider." },
-    { "type": "text", "id": "close_pastille", "label": "Pastille", "default": "OFFRE DE LANCEMENT" },
+    { "type": "product", "id": "close_produit", "label": "Produit", "info": "Le bouton mène vers ce produit et reprend son visuel." },
+    { "type": "text", "id": "close_pastille", "label": "Pastille d'angle", "default": "OFFRE DE LANCEMENT" },
+    { "type": "text", "id": "close_surtitre", "label": "Sur-titre" },
     { "type": "text", "id": "close_cta_title", "label": "Titre du bloc d'achat", "default": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE" },
     { "type": "richtext", "id": "close_cta_text", "label": "Texte du bloc d'achat" },
     { "type": "textarea", "id": "close_bullets", "label": "Liste à puces", "info": "Une puce par ligne.", "default": "Livraison offerte en France\n30 jours pour les essayer\nRenvoi gratuit, sans justification\nLargeur intérieure indiquée en cm pour chaque pointure" },
@@ -1198,7 +1315,9 @@
     { "type": "color", "id": "color_cta_bg", "label": "Fond des boutons", "default": "#1F6B3A" },
     { "type": "color", "id": "color_cta_text", "label": "Texte des boutons", "default": "#FFFFFF" },
     { "type": "color", "id": "color_sticky_bg", "label": "Fond de la barre haute", "default": "#1B1B1B" },
-    { "type": "color", "id": "color_sticky_text", "label": "Texte de la barre haute", "default": "#FFFFFF" }
+    { "type": "color", "id": "color_sticky_text", "label": "Texte de la barre haute", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_pill_bg", "label": "Pastille d'angle — fond", "default": "#C86B9B" },
+    { "type": "color", "id": "color_pill_text", "label": "Pastille d'angle — texte", "default": "#FFFFFF" }
   ],
   "blocks": [
     {
@@ -1224,7 +1343,9 @@
       "type": "cta",
       "name": "Bloc CTA",
       "settings": [
-        { "type": "text", "id": "pastille", "label": "Pastille", "default": "OFFRE DE LANCEMENT" },
+        { "type": "product", "id": "produit", "label": "Produit", "info": "Le bouton mène vers ce produit et reprend son visuel. Vide : la destination générale des boutons s'applique." },
+        { "type": "text", "id": "pastille", "label": "Pastille d'angle", "default": "OFFRE DE LANCEMENT" },
+        { "type": "text", "id": "surtitre", "label": "Sur-titre", "default": "PLUS VOUS EN PRENEZ, PLUS VOUS ÉCONOMISEZ" },
         { "type": "text", "id": "titre", "label": "Titre", "default": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE" },
         { "type": "richtext", "id": "texte", "label": "Sous-titre", "default": "<p>J'étais sceptique aussi. Mais avec la livraison offerte et 30 jours pour changer d'avis, il n'y a rien à perdre.</p>" },
         { "type": "textarea", "id": "puces", "label": "Liste à puces", "info": "Une puce par ligne. Laisse vide pour n'en afficher aucune." },

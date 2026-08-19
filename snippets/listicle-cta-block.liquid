@@ -5,15 +5,19 @@
 
   Paramètres attendus :
     position      cta_1 | cta_2 | cta_final — remonte tel quel dans le dataLayer
-    pastille      sur-titre en pastille, facultatif
+    layout        'split' (visuel à gauche, texte à droite) ou 'stack' (centré)
+    produit       produit Shopify facultatif ; s'il est choisi, le bouton mène
+                  vers sa fiche et son visuel sert d'image par défaut
+    pastille      badge d'angle, facultatif
+    surtitre      petite ligne au-dessus du titre, facultative
     titre         titre du bloc, facultatif
     texte         richtext sous le titre, facultatif
     puces         une puce par ligne, facultatif
     bouton        libellé du bouton — sans lui, rien n'est rendu
     ligne         ligne juste sous le bouton, facultative
     sous_texte    mention en bas du bloc, facultative
-    url           destination ; les UTM et l'avatar y sont ajoutés par le JS
-    image         image facultative au-dessus du bloc
+    url           destination de repli quand aucun produit n'est choisi
+    image         image facultative ; prioritaire sur le visuel du produit
     image_alt     texte alternatif de cette image
     compteur      booléen : reprendre le compte à rebours dans le bloc
     compteur_fin  texte affiché une fois le compte à rebours terminé
@@ -28,26 +32,58 @@
 
 {%- liquid
   assign bullets = puces | strip | newline_to_br | split: '<br />'
+
+  comment
+    Le produit choisi commande la destination. Sans produit, on retombe sur
+    l'URL générale des boutons.
+  endcomment
+  assign target = url
+  if produit != blank
+    assign target = produit.url
+  endif
+
+  comment
+    L'image explicite l'emporte toujours ; à défaut, le visuel du produit
+    évite au marchand d'avoir à le redéposer.
+  endcomment
+  assign visual = image
+  if visual == blank and produit != blank
+    assign visual = produit.featured_image
+  endif
 -%}
 
 {%- if bouton != blank -%}
-  <div class="lad__cta" data-lad-cta="{{ position }}">
-    {%- if image != blank -%}
+  <div
+    class="lad__cta lad__cta--{{ layout | default: 'split' }}{% if visual == blank %} lad__cta--nomedia{% endif %}"
+    data-lad-cta="{{ position }}"
+  >
+    {%- if pastille != blank -%}
+      <span class="lad__cta-pill">{{ pastille | replace: '[prix]', prix | replace: '[remise]', remise | replace: '[poids]', poids }}</span>
+    {%- endif -%}
+
+    {%- if visual != blank -%}
       <div class="lad__cta-media">
         {{
-          image
+          visual
           | image_url: width: 1200
           | image_tag:
             widths: '360, 540, 720, 1080, 1200',
-            sizes: '(min-width: 760px) 700px, 92vw',
+            sizes: '(min-width: 760px) 42vw, 92vw',
             loading: 'lazy',
             alt: image_alt
         }}
       </div>
     {%- endif -%}
 
-    {%- if pastille != blank -%}
-      <span class="lad__cta-pill">{{ pastille | replace: '[prix]', prix | replace: '[remise]', remise | replace: '[poids]', poids }}</span>
+    {%- comment -%}
+      Tout ce qui n'est ni la pastille ni le visuel entre dans une enveloppe :
+      la carte devient alors deux boîtes côte à côte, ce qui se centre
+      verticalement sans effort. La grille, elle, demandait de connaître à
+      l'avance le nombre de lignes du bloc de droite.
+    {%- endcomment -%}
+    <div class="lad__cta-body">
+    {%- if surtitre != blank -%}
+      <span class="lad__cta-over">{{ surtitre | replace: '[prix]', prix | replace: '[remise]', remise | replace: '[poids]', poids }}</span>
     {%- endif -%}
 
     {%- if titre != blank -%}
@@ -85,7 +121,7 @@
 
     <a
       class="lad__btn"
-      href="{{ url | default: '#' }}"
+      href="{{ target | default: '#' }}"
       data-lad-go="{{ position }}"
     >
       {{ bouton | replace: '[prix]', prix | replace: '[remise]', remise | replace: '[poids]', poids }}
@@ -98,5 +134,6 @@
     {%- if sous_texte != blank -%}
       <p class="lad__cta-sub">{{ sous_texte | replace: '[prix]', prix | replace: '[remise]', remise | replace: '[poids]', poids }}</p>
     {%- endif -%}
+    </div>
   </div>
 {%- endif -%}
