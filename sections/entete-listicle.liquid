@@ -1,0 +1,129 @@
+{% comment %}
+  entete-listicle.liquid
+  En-tête simple réservé à la page listicle : un bandeau de couleur et un logo
+  au centre. Rien d'autre — pas de menu, pas de panier, pas de recherche.
+
+  Il défile avec la page. C'est le bandeau d'annonce qui reste en haut, pas
+  celui-ci : deux barres collantes mangeraient un tiers d'un écran de
+  téléphone.
+
+  Le logo est une image, ou à défaut un texte. Les deux acceptent un lien.
+
+  Fichier autonome : styles en ligne, aucun comportement.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign has_logo = false
+  if s.logo != blank or s.texte != blank
+    assign has_logo = true
+  endif
+-%}
+
+{% style %}
+#shopify-section-{{ section.id }} .ehl {
+  --ehl-bg: {{ s.color_bg }};
+  --ehl-ink: {{ s.color_text }};
+
+  --ehl-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  display: block;
+  padding: {{ s.padding_mobile }}px 16px;
+  background: var(--ehl-bg);
+  color: var(--ehl-ink);
+  font-family: var(--ehl-font);
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+}
+
+#shopify-section-{{ section.id }} .ehl *,
+#shopify-section-{{ section.id }} .ehl *::before,
+#shopify-section-{{ section.id }} .ehl *::after { box-sizing: border-box; }
+
+.ehl__link {
+  display: inline-block;
+  color: inherit;
+  text-decoration: none;
+  /* Zone tactile confortable, obtenue par le rembourrage et non par
+     l'interligne, qui écartèlerait un logo en deux mots. */
+  padding: 6px 8px;
+  min-height: 44px;
+}
+
+.ehl__texte {
+  display: block;
+  font-size: {{ s.texte_size_mobile }}px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.ehl__logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  /* La hauteur commande, la largeur suit : un logo reste net et à sa place
+     quel que soit le fichier déposé. */
+  max-height: {{ s.logo_height_mobile }}px;
+  margin-inline: auto;
+}
+
+@media screen and (min-width: 760px) {
+  #shopify-section-{{ section.id }} .ehl { padding: {{ s.padding }}px 24px; }
+  .ehl__texte { font-size: {{ s.texte_size }}px; }
+  .ehl__logo { max-height: {{ s.logo_height }}px; }
+}
+{% endstyle %}
+
+{%- if has_logo -%}
+  <header class="ehl" {{ section.shopify_attributes }}>
+    {%- capture inner -%}
+      {%- if s.logo != blank -%}
+        {{
+          s.logo
+          | image_url: width: 900
+          | image_tag: widths: '180, 300, 450, 600, 900', class: 'ehl__logo', loading: 'eager', alt: s.logo_alt
+        }}
+      {%- else -%}
+        <span class="ehl__texte">{{ s.texte }}</span>
+      {%- endif -%}
+    {%- endcapture -%}
+
+    {%- if s.lien != blank -%}
+      <a class="ehl__link" href="{{ s.lien }}">{{ inner }}</a>
+    {%- else -%}
+      <span class="ehl__link">{{ inner }}</span>
+    {%- endif -%}
+  </header>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "En-tête listicle",
+  "tag": "section",
+  "class": "section-entete-listicle",
+  "settings": [
+    { "type": "header", "content": "Logo" },
+    { "type": "image_picker", "id": "logo", "label": "Logo", "info": "Vide : le texte ci-dessous est affiché à la place." },
+    { "type": "text", "id": "logo_alt", "label": "Texte alternatif du logo" },
+    { "type": "text", "id": "texte", "label": "Texte à défaut de logo", "default": "FOOT-INSIDER" },
+    { "type": "url", "id": "lien", "label": "Lien", "info": "Facultatif." },
+
+    { "type": "header", "content": "Dimensions" },
+    { "type": "range", "id": "logo_height", "label": "Hauteur du logo (bureau)", "min": 16, "max": 120, "step": 2, "unit": "px", "default": 34 },
+    { "type": "range", "id": "logo_height_mobile", "label": "Hauteur du logo (mobile)", "min": 14, "max": 90, "step": 2, "unit": "px", "default": 26 },
+    { "type": "range", "id": "texte_size", "label": "Taille du texte (bureau)", "min": 14, "max": 44, "step": 1, "unit": "px", "default": 26 },
+    { "type": "range", "id": "texte_size_mobile", "label": "Taille du texte (mobile)", "min": 12, "max": 34, "step": 1, "unit": "px", "default": 21 },
+    { "type": "range", "id": "padding", "label": "Marge haute et basse (bureau)", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "padding_mobile", "label": "Marge haute et basse (mobile)", "min": 0, "max": 48, "step": 2, "unit": "px", "default": 10 },
+
+    { "type": "header", "content": "Couleurs" },
+    { "type": "color", "id": "color_bg", "label": "Fond du bandeau", "default": "#2B3A24" },
+    { "type": "color", "id": "color_text", "label": "Texte", "default": "#FFFFFF" }
+  ],
+  "presets": [{ "name": "En-tête listicle" }]
+}
+{% endschema %}

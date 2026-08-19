@@ -1,0 +1,380 @@
+{% comment %}
+  annonce-listicle.liquid
+  Bandeau d'annonce de la page listicle : deux lignes de texte, un compte à
+  rebours en pavés, et une barre de progression de lecture juste en dessous.
+
+  Le bandeau est collant. Il est déplacé dans <body> au chargement : un
+  ancêtre porteur d'un `transform`, d'un `filter` ou d'un `will-change` suffit
+  à faire de `position: fixed` un positionnement relatif à cet ancêtre, et
+  beaucoup de thèmes animent leurs sections à l'apparition. Rattaché au corps
+  du document, plus rien ne peut s'interposer.
+
+  Le compte à rebours part à la première visite et ne repart jamais : son
+  échéance est gardée en localStorage. À l'expiration, un texte de repli
+  s'affiche — il ne redémarre pas et ne ment pas sur le stock.
+
+  Fichier autonome : styles et comportement sont en ligne.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+-%}
+
+{% style %}
+#shopify-section-{{ section.id }} .anl,
+#anl-{{ section.id }} {
+  --anl-bg: {{ s.color_bg }};
+  --anl-ink: {{ s.color_text }};
+  --anl-cell-bg: {{ s.color_cell_bg }};
+  --anl-cell-ink: {{ s.color_cell_text }};
+  --anl-track: {{ s.color_track }};
+  --anl-fill: {{ s.color_fill }};
+  --anl-progress-h: {{ s.progress_height }}px;
+
+  --anl-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.anl {
+  font-family: var(--anl-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.anl *,
+.anl *::before,
+.anl *::after { box-sizing: border-box; }
+
+/* Collant : le bandeau reste en haut, la barre de progression sous lui. */
+.anl--stick {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 9998;
+}
+
+.anl__bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 14px;
+  background: var(--anl-bg);
+  color: var(--anl-ink);
+  text-align: center;
+}
+
+.anl__texts {
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+}
+
+.anl__line1 {
+  font-size: {{ s.line1_size }}px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.anl__line2 {
+  font-size: {{ s.line2_size }}px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+/* Compte à rebours en pavés : deux chiffres et leur libellé. */
+.anl__clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.anl__cell {
+  display: inline-grid;
+  justify-items: center;
+  min-width: 34px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: var(--anl-cell-bg);
+  color: var(--anl-cell-ink);
+  line-height: 1.05;
+}
+
+.anl__cell b { font-size: 14px; font-weight: 800; }
+.anl__cell span { font-size: 8px; font-weight: 600; opacity: 0.72; }
+
+.anl__sep { opacity: 0.45; }
+
+/* Le texte de repli remplace les pavés sans les laisser en place. */
+.anl__over {
+  font-size: {{ s.line2_size }}px;
+  font-weight: 700;
+}
+
+/* Barre de progression de lecture. La piste est claire, le remplissage foncé,
+   et sa largeur suit la part de la page déjà parcourue. */
+.anl__track {
+  position: relative;
+  height: var(--anl-progress-h);
+  background: var(--anl-track);
+  overflow: hidden;
+}
+
+.anl__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 0 999px 999px 0;
+  background: var(--anl-fill);
+  transition: width 0.12s linear;
+}
+
+/* Réservé aux lecteurs d'écran : le compteur bat à la seconde, on n'annonce
+   qu'une fois par minute pour ne pas noyer l'utilisatrice. */
+.anl__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media screen and (min-width: 760px) {
+  .anl__bar { gap: 24px; padding: 10px 20px; }
+  .anl__texts { grid-auto-flow: column; gap: 12px; align-items: center; }
+  .anl__line1 { font-size: {{ s.line1_size | plus: 2 }}px; }
+  .anl__line2 { font-size: {{ s.line2_size | plus: 1 }}px; }
+}
+{% endstyle %}
+
+<div class="anl" {{ section.shopify_attributes }}>
+  {%- if s.line1 != blank or s.line2 != blank -%}
+    <div
+      class="anl{% if s.sticky %} anl--stick{% endif %}"
+      id="anl-{{ section.id }}"
+      data-anl
+      data-anl-hours="{{ s.hours }}"
+      data-anl-key="anl-{{ section.id }}"
+      data-anl-labels="{{ s.labels | escape }}"
+      data-anl-end="{{ s.end_text | escape }}"
+    >
+      <div class="anl__bar">
+        <span class="anl__texts">
+          {%- if s.line1 != blank -%}<span class="anl__line1">{{ s.line1 }}</span>{%- endif -%}
+          {%- if s.line2 != blank -%}<span class="anl__line2">{{ s.line2 }}</span>{%- endif -%}
+        </span>
+
+        {%- if s.show_clock -%}
+          <span class="anl__clock" data-anl-clock>
+            <span data-anl-clock-value></span>
+          </span>
+          <span class="anl__sr" aria-live="polite" data-anl-sr></span>
+        {%- endif -%}
+      </div>
+
+      {%- if s.show_progress -%}
+        <div
+          class="anl__track"
+          role="progressbar"
+          aria-label="{{ s.progress_label | escape }}"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          data-anl-track
+        >
+          <div class="anl__fill" data-anl-fill></div>
+        </div>
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+</div>
+
+<script>
+  (function () {
+    var root = document.getElementById('anl-{{ section.id }}');
+    if (!root || root.dataset.anlReady === '1') return;
+    root.dataset.anlReady = '1';
+
+    /* Le bandeau quitte la section pour le corps du document : voir le
+       commentaire d'en-tête. On retire d'abord un éventuel exemplaire laissé
+       par un rendu précédent de l'éditeur de thème. */
+    if (root.classList.contains('anl--stick')) {
+      var twin = document.getElementById(root.id);
+      if (twin && twin !== root && twin.parentNode === document.body) {
+        twin.parentNode.removeChild(twin);
+      }
+      document.body.appendChild(root);
+      /* La page est décalée d'autant, sinon le bandeau masque son début. */
+      var pad = function () {
+        document.body.style.paddingTop = root.offsetHeight + 'px';
+      };
+      pad();
+      window.addEventListener('resize', pad);
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Compte à rebours
+     * ---------------------------------------------------------------- */
+
+    var host = root.querySelector('[data-anl-clock-value]');
+    var srCell = root.querySelector('[data-anl-sr]');
+    var lastMinute = -1;
+    var timer = null;
+
+    function deadline() {
+      var key = root.dataset.anlKey + ':deadline';
+      var hours = parseFloat(root.dataset.anlHours) || 9;
+      var stored = null;
+      try {
+        stored = window.localStorage.getItem(key);
+      } catch (e) {}
+
+      var at = stored ? parseInt(stored, 10) : NaN;
+      if (!isNaN(at) && at > 0) return at;
+
+      /* Première visite seulement : une fois posée, l'échéance ne bouge plus. */
+      at = Date.now() + hours * 3600 * 1000;
+      try {
+        window.localStorage.setItem(key, String(at));
+      } catch (e) {}
+      return at;
+    }
+
+    function pad2(n) {
+      return n < 10 ? '0' + n : String(n);
+    }
+
+    /* Les nœuds sont construits une fois, seuls les chiffres changent :
+       reconstruire le balisage chaque seconde ferait clignoter le bandeau. */
+    function cells(parts) {
+      var labels = (root.dataset.anlLabels || '').split(',');
+      if (!host.__cells) {
+        host.textContent = '';
+        host.__cells = [];
+        for (var i = 0; i < parts.length; i++) {
+          if (i > 0) {
+            var sep = document.createElement('span');
+            sep.className = 'anl__sep';
+            sep.textContent = ':';
+            host.appendChild(sep);
+          }
+          var box = document.createElement('span');
+          box.className = 'anl__cell';
+          var digits = document.createElement('b');
+          var label = document.createElement('span');
+          label.textContent = (labels[i] || '').trim();
+          box.appendChild(digits);
+          box.appendChild(label);
+          host.appendChild(box);
+          host.__cells.push(digits);
+        }
+      }
+      for (var k = 0; k < parts.length; k++) host.__cells[k].textContent = parts[k];
+    }
+
+    var endsAt = host ? deadline() : 0;
+
+    function tick() {
+      var left = endsAt - Date.now();
+
+      if (left <= 0) {
+        host.__cells = null;
+        host.textContent = '';
+        var over = document.createElement('span');
+        over.className = 'anl__over';
+        over.textContent = root.dataset.anlEnd || '';
+        host.appendChild(over);
+        if (srCell) srCell.textContent = root.dataset.anlEnd || '';
+        if (timer) window.clearInterval(timer);
+        return;
+      }
+
+      var total = Math.floor(left / 1000);
+      var h = Math.floor(total / 3600);
+      var m = Math.floor((total % 3600) / 60);
+      var sec = total % 60;
+      cells([pad2(h), pad2(m), pad2(sec)]);
+
+      if (srCell && m !== lastMinute) {
+        lastMinute = m;
+        srCell.textContent = pad2(h) + ' heures ' + pad2(m) + ' minutes';
+      }
+    }
+
+    if (host) {
+      tick();
+      timer = window.setInterval(tick, 1000);
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Barre de progression de lecture
+     * ---------------------------------------------------------------- */
+
+    var track = root.querySelector('[data-anl-track]');
+    var fill = root.querySelector('[data-anl-fill]');
+    var waiting = false;
+
+    function paint() {
+      if (waiting) return;
+      waiting = true;
+      window.requestAnimationFrame(function () {
+        waiting = false;
+        var doc = document.documentElement;
+        var scrollable = doc.scrollHeight - window.innerHeight;
+        var pct = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+        if (pct < 0) pct = 0;
+        if (pct > 100) pct = 100;
+        fill.style.width = pct.toFixed(1) + '%';
+        track.setAttribute('aria-valuenow', String(Math.round(pct)));
+      });
+    }
+
+    if (track && fill) {
+      window.addEventListener('scroll', paint, { passive: true });
+      window.addEventListener('resize', paint);
+      paint();
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Annonce listicle",
+  "tag": "section",
+  "class": "section-annonce-listicle",
+  "settings": [
+    { "type": "header", "content": "Textes" },
+    { "type": "text", "id": "line1", "label": "Première ligne", "default": "OFFRE DE LANCEMENT" },
+    { "type": "text", "id": "line2", "label": "Seconde ligne", "default": "JUSQU'À -40% + LIVRAISON OFFERTE" },
+    { "type": "range", "id": "line1_size", "label": "Taille de la première ligne", "min": 9, "max": 20, "step": 1, "unit": "px", "default": 13 },
+    { "type": "range", "id": "line2_size", "label": "Taille de la seconde ligne", "min": 8, "max": 18, "step": 1, "unit": "px", "default": 11 },
+    { "type": "checkbox", "id": "sticky", "label": "Rester en haut au défilement", "default": true },
+
+    { "type": "header", "content": "Compte à rebours" },
+    { "type": "checkbox", "id": "show_clock", "label": "Afficher le compte à rebours", "default": true },
+    { "type": "range", "id": "hours", "label": "Durée", "info": "Décomptée depuis la première visite. Ne repart jamais à zéro.", "min": 1, "max": 72, "step": 1, "unit": "h", "default": 9 },
+    { "type": "text", "id": "labels", "label": "Libellés des pavés", "info": "Trois libellés séparés par des virgules.", "default": "HRS, MIN, SEC" },
+    { "type": "text", "id": "end_text", "label": "Texte une fois terminé", "default": "Offre terminée" },
+
+    { "type": "header", "content": "Barre de progression" },
+    { "type": "checkbox", "id": "show_progress", "label": "Afficher la barre de lecture", "default": true },
+    { "type": "range", "id": "progress_height", "label": "Épaisseur", "min": 2, "max": 16, "step": 1, "unit": "px", "default": 6 },
+    { "type": "text", "id": "progress_label", "label": "Libellé (accessibilité)", "default": "Progression de lecture" },
+
+    { "type": "header", "content": "Couleurs" },
+    { "type": "color", "id": "color_bg", "label": "Fond du bandeau", "default": "#2B3A24" },
+    { "type": "color", "id": "color_text", "label": "Texte du bandeau", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_cell_bg", "label": "Pavés du compteur — fond", "default": "#3D5033" },
+    { "type": "color", "id": "color_cell_text", "label": "Pavés du compteur — texte", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_track", "label": "Barre de lecture — piste", "default": "#DFE8D6" },
+    { "type": "color", "id": "color_fill", "label": "Barre de lecture — remplissage", "default": "#3F6B34" }
+  ],
+  "presets": [{ "name": "Annonce listicle" }]
+}
+{% endschema %}

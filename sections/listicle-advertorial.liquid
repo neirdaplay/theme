@@ -51,10 +51,22 @@
   --lad-pill-bg: {{ s.color_pill_bg }};
   --lad-pill-ink: {{ s.color_pill_text }};
   --lad-card-bg: {{ s.color_card_bg }};
+  --lad-h1-accent: {{ s.color_h1_accent }};
+  {%- comment -%}
+    L'interligne est réglé en pourcentage entier : Shopify refuse un pas de
+    curseur inférieur au dixième, et les décimales d'un curseur sont une
+    source d'erreurs à l'enregistrement. On divise ici.
+  {%- endcomment -%}
+  --lad-lead: {{ s.line_height | divided_by: 100.0 }};
   --lad-cta-fit: {{ s.cta_media_fit }};
   --lad-cta-pad: {% if s.cta_media_fit == 'cover' %}0{% else %}28px{% endif %};
   --lad-panel-bg: {{ s.color_panel_bg }};
   --lad-line: color-mix(in srgb, {{ s.color_text }} 14%, transparent);
+  --lad-check: {{ s.color_check }};
+  /* Le gras est plus foncé que le texte courant : c'est ce qui le fait
+     ressortir sans changer de graisse. La variable était appelée sans être
+     définie, la déclaration était donc simplement ignorée. */
+  --lad-strong: {{ s.color_strong }};
 
   --lad-max: {{ s.container_width }}px;
   --lad-size: {{ s.font_size }}px;
@@ -70,7 +82,7 @@
   font-family: var(--lad-font);
   /* Audience 45-65 ans : la base ne descend pas sous 17 px. */
   font-size: var(--lad-size);
-  line-height: 1.62;
+  line-height: var(--lad-lead);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -163,18 +175,35 @@
    -------------------------------------------------------------------------- */
 
 .lad__h1 {
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   font-size: calc(var(--lad-size) * 1.75);
-  font-weight: 700;
-  line-height: 1.18;
+  font-weight: 800;
+  line-height: 1.2;
   letter-spacing: -0.015em;
 }
 
-.lad__lede { margin: 0 0 18px; }
-.lad__lede p { margin: 0 0 0.9em; }
+/* Le passage encadré de <b> prend la seconde couleur. Un seul champ suffit
+   donc au titre bicolore, et le marchand choisit lui-même où la bascule se
+   fait — pas de découpe imposée en deux réglages. */
+.lad__h1 b {
+  color: var(--lad-h1-accent);
+  font-weight: inherit;
+}
+
+.lad__lede { margin: 0 0 22px; }
+.lad__lede p { margin: 0 0 1.25em; }
 .lad__lede > *:last-child { margin-bottom: 0; }
-.lad__lede ul { margin: 0 0 1em; padding-left: 1.2em; }
-.lad__lede li { margin-bottom: 0.35em; }
+.lad__lede ul { margin: 0 0 1.25em; padding-left: 1.2em; }
+.lad__lede li { margin-bottom: 0.5em; }
+
+/* Les mots importants ressortent partout de la même façon. */
+.lad__lede strong,
+.lad__lede b,
+.lad__point-text strong,
+.lad__point-text b {
+  color: var(--lad-strong);
+  font-weight: 700;
+}
 
 .lad__note {
   margin: 0 0 20px;
@@ -196,13 +225,17 @@
    Badge auteur
    -------------------------------------------------------------------------- */
 
+/* Carte encadrée plutôt qu'une ligne entre deux filets : c'est ce qui donne
+   à la signature son air de mention vérifiée. */
 .lad__author {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 32px;
-  padding: 12px 0;
-  border-block: 1px solid color-mix(in srgb, var(--lad-ink) 12%, transparent);
+  margin: 0 0 34px;
+  padding: 12px 14px;
+  border: 1px solid var(--lad-line);
+  border-radius: 12px;
+  background: var(--lad-card-bg);
 }
 
 .lad__author-photo {
@@ -233,15 +266,19 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--lad-accent);
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--lad-check) 12%, transparent);
+  color: var(--lad-check);
   font-size: calc(var(--lad-size) * 0.76);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .lad__author-check svg { width: 1.1em; height: 1.1em; fill: currentColor; }
 
 .lad__author-role {
-  color: var(--lad-muted);
+  color: var(--lad-accent);
+  font-weight: 600;
   font-size: calc(var(--lad-size) * 0.84);
   line-height: 1.3;
 }
@@ -298,7 +335,7 @@
   border-radius: 12px;
 }
 
-.lad__point-text p { margin: 0 0 0.9em; }
+.lad__point-text p { margin: 0 0 1.25em; }
 .lad__point-text > *:last-child { margin-bottom: 0; }
 
 .lad__micro {
@@ -1400,6 +1437,7 @@
     { "type": "url", "id": "cta_url", "label": "Destination des boutons", "info": "L'avatar et les UTM présents dans l'URL y sont ajoutés automatiquement." },
     { "type": "range", "id": "container_width", "label": "Largeur maximale du contenu", "info": "Plus large, le texte tient sur moins de lignes et les points paraissent moins hauts.", "min": 320, "max": 1200, "step": 10, "unit": "px", "default": 1040 },
     { "type": "range", "id": "font_size", "label": "Taille du texte de base", "info": "17 px minimum recommandé pour une audience de 45 à 65 ans.", "min": 15, "max": 22, "step": 1, "unit": "px", "default": 17 },
+    { "type": "range", "id": "line_height", "label": "Interligne", "info": "En % de la taille du texte. Plus il est grand, plus le texte est aéré.", "min": 130, "max": 220, "step": 5, "unit": "%", "default": 180 },
     { "type": "range", "id": "point_media_width", "label": "Largeur de l'image des points (bureau)", "info": "En % de la largeur du point. Sur mobile, l'image est toujours au-dessus du texte.", "min": 25, "max": 60, "step": 1, "unit": "%", "default": 46 },
     { "type": "range", "id": "point_column_gap", "label": "Espace entre l'image et le texte (bureau)", "min": 16, "max": 96, "step": 4, "unit": "px", "default": 48 },
     { "type": "range", "id": "point_space", "label": "Espace entre deux points", "min": 20, "max": 140, "step": 4, "unit": "px", "default": 60 },
@@ -1499,7 +1537,7 @@
     { "type": "text", "id": "countdown_end_text", "label": "Texte une fois terminé", "default": "Offre de lancement terminée" },
 
     { "type": "header", "content": "En-tête" },
-    { "type": "text", "id": "h1", "label": "Titre H1", "default": "J'ai essayé 7 paires de chaussures « confort ». Une seule a vraiment changé quelque chose." },
+    { "type": "text", "id": "h1", "label": "Titre H1", "info": "Le passage encadré de <b> et </b> prend la seconde couleur du titre.", "default": "J'ai essayé 7 paires de chaussures « confort ». <b>Une seule a vraiment changé quelque chose.</b>" },
     {
       "type": "richtext",
       "id": "lede",
@@ -1535,8 +1573,11 @@
     { "type": "checkbox", "id": "close_countdown", "label": "Reprendre le compte à rebours", "default": true },
 
     { "type": "header", "content": "Couleurs" },
-    { "type": "color", "id": "color_bg", "label": "Fond", "default": "#FFFFFF" },
-    { "type": "color", "id": "color_text", "label": "Texte", "default": "#1B1B1B" },
+    { "type": "color", "id": "color_bg", "label": "Fond", "default": "#FBFCF7" },
+    { "type": "color", "id": "color_text", "label": "Texte", "default": "#1B2A16" },
+    { "type": "color", "id": "color_h1_accent", "label": "Titre — seconde couleur", "info": "Appliquée au passage encadré de <b>.", "default": "#3F6B34" },
+    { "type": "color", "id": "color_check", "label": "Pastille « vérifié »", "default": "#1D9BF0" },
+    { "type": "color", "id": "color_strong", "label": "Mots en gras", "default": "#152210" },
     { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#5B5B5B" },
     { "type": "color", "id": "color_accent", "label": "Accent", "default": "#1F6B3A" },
     { "type": "color", "id": "color_cta_bg", "label": "Fond des boutons", "default": "#1F6B3A" },
