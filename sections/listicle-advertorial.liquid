@@ -28,6 +28,7 @@
     priorité, toutes les suivantes en différé.
   endcomment
   assign img_seen = 0
+  assign point_i = 0
 -%}
 
 {% style %}
@@ -35,7 +36,10 @@
    Listicle publicitaire — tout est porté par .lad
    ========================================================================== */
 
-#shopify-section-{{ section.id }} .lad {
+/* Les variables sont posées à la fois sur la section et sur la barre : celle-ci
+   est déplacée dans <body> au chargement et perd alors l'héritage. */
+#shopify-section-{{ section.id }} .lad,
+#lad-sticky-{{ section.id }} {
   --lad-bg: {{ s.color_bg }};
   --lad-ink: {{ s.color_text }};
   --lad-accent: {{ s.color_accent }};
@@ -46,6 +50,11 @@
   --lad-sticky-ink: {{ s.color_sticky_text }};
   --lad-pill-bg: {{ s.color_pill_bg }};
   --lad-pill-ink: {{ s.color_pill_text }};
+  --lad-card-bg: {{ s.color_card_bg }};
+  --lad-cta-fit: {{ s.cta_media_fit }};
+  --lad-cta-pad: {% if s.cta_media_fit == 'cover' %}0{% else %}28px{% endif %};
+  --lad-panel-bg: {{ s.color_panel_bg }};
+  --lad-line: color-mix(in srgb, {{ s.color_text }} 14%, transparent);
 
   --lad-max: {{ s.container_width }}px;
   --lad-size: {{ s.font_size }}px;
@@ -79,21 +88,29 @@
    Barre haute
    -------------------------------------------------------------------------- */
 
+/* La barre est déplacée dans <body> au chargement. Un ancêtre porteur d'un
+   `transform`, d'un `filter` ou d'un `will-change` suffit à faire de
+   `position: fixed` un positionnement relatif à cet ancêtre : la barre se
+   posait alors sur le titre au lieu de coiffer la fenêtre. Beaucoup de thèmes
+   animent leurs sections à l'apparition, c'est donc un piège courant.
+   Rattachée au corps du document, plus rien ne peut s'interposer. */
 .lad__sticky {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 40;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
-  padding: 10px 14px;
+  padding: 9px 14px;
   background: var(--lad-sticky-bg);
   color: var(--lad-sticky-ink);
-  font-size: 14px;
+  font-family: var(--lad-font);
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   text-align: center;
   transform: translateY(-100%);
   transition: transform 0.22s ease;
@@ -101,7 +118,28 @@
 
 .lad__sticky.is-on { transform: none; }
 
-.lad__sticky-clock { font-variant-numeric: tabular-nums; }
+.lad__sticky-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Affichage en pavés, comme sur la référence : deux chiffres et leur libellé. */
+.lad__clock-cell {
+  display: inline-grid;
+  justify-items: center;
+  min-width: 34px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--lad-sticky-ink) 18%, transparent);
+  line-height: 1.05;
+}
+
+.lad__clock-cell b { font-size: 14px; font-weight: 700; }
+.lad__clock-cell span { font-size: 8px; font-weight: 600; opacity: 0.75; }
+
+.lad__clock-sep { opacity: 0.5; }
 
 /* Réservé aux lecteurs d'écran : le compte à rebours visuel bat à la seconde,
    celui-ci n'est mis à jour qu'une fois par minute pour ne pas noyer
@@ -212,26 +250,32 @@
 
 .lad__point { margin: 0 0 38px; }
 
-.lad__point-head {
+.lad__point-head { margin: 0 0 14px; }
+
+.lad__point-title {
+  margin: 0;
+  font-size: calc(var(--lad-size) * 1.32);
+  font-weight: 700;
+  line-height: 1.26;
+  letter-spacing: -0.01em;
+}
+
+/* Numéro dans le fil du titre — « 4. Titre » — comme sur la référence. */
+.lad__point-num { color: inherit; }
+
+/* L'autre traitement : un gros chiffre coloré détaché du titre. */
+.lad__point--bignum .lad__point-head {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  margin: 0 0 14px;
 }
 
-.lad__point-num {
+.lad__point--bignum .lad__point-num {
   flex: 0 0 auto;
   color: var(--lad-accent);
   font-size: calc(var(--lad-size) * 2.2);
   font-weight: 700;
   line-height: 1;
-}
-
-.lad__point-title {
-  margin: 0;
-  font-size: calc(var(--lad-size) * 1.18);
-  font-weight: 700;
-  line-height: 1.28;
 }
 
 /* Rapport imposé et recadrage par le centre : les photos du marchand
@@ -276,25 +320,41 @@
 .lad__cta {
   position: relative;
   margin: 0 0 38px;
-  padding: 24px 18px;
+  border: 1px solid var(--lad-line);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--lad-cta-bg) 10%, transparent);
+  background: var(--lad-card-bg);
   text-align: center;
 }
 
-.lad__cta-media { margin: 0 0 16px; }
+/* Le panneau du visuel a son propre fond : c'est lui qui donne à la carte ses
+   deux moitiés. Sur mobile il coiffe la carte, sur bureau il l'habille à
+   gauche. Les rayons sont posés côté par côté plutôt qu'avec overflow:hidden,
+   qui couperait la pastille débordant du bord haut. */
+.lad__cta-media {
+  margin: 0;
+  padding: var(--lad-cta-pad);
+  border-radius: 15px 15px 0 0;
+  background: var(--lad-panel-bg);
+  overflow: hidden;
+}
 
 .lad__cta-media img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 12px;
+  object-fit: var(--lad-cta-fit);
 }
 
+.lad__cta-body { padding: 24px 18px; }
+
 .lad__cta-pill {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
   display: inline-block;
-  margin: 0 0 10px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border-radius: 999px;
   background: var(--lad-pill-bg);
   color: var(--lad-pill-ink);
@@ -302,6 +362,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .lad__cta-over {
@@ -313,6 +374,10 @@
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
+
+/* Le passage mis en gras par le marchand prend la couleur d'accent : c'est
+   le titre à deux tons de la référence, sans champ supplémentaire. */
+.lad__cta-title b { color: var(--lad-accent); }
 
 .lad__cta-title {
   margin: 0 0 10px;
@@ -377,13 +442,15 @@
 }
 
 .lad__cta-line {
-  margin: 10px 0 0;
+  margin: 14px 0 0;
+  padding: 10px 0;
+  border-block: 1px solid var(--lad-line);
   font-size: calc(var(--lad-size) * 0.86);
   font-weight: 600;
 }
 
 .lad__cta-sub {
-  margin: 8px 0 0;
+  margin: 12px 0 0;
   color: var(--lad-muted);
   font-size: calc(var(--lad-size) * 0.84);
 }
@@ -556,7 +623,6 @@
 @media screen and (min-width: 760px) {
   .lad__wrap { padding: 36px 24px 80px; }
   .lad__h1 { font-size: calc(var(--lad-size) * 2.3); }
-  .lad__cta { padding: 32px 28px; }
   .lad__btn { display: inline-block; width: auto; min-width: 320px; }
   .lad__finder-fields { grid-template-columns: 1fr 1fr; }
   .lad__btn--finder { min-width: 260px; }
@@ -586,48 +652,51 @@
   /* Un point sans image reprend toute la largeur. */
   .lad__point--nomedia { display: block; }
 
-  /* Carte CTA en deux colonnes : visuel à gauche, argumentaire à droite. La
-     pastille sort alors du flux et se pose à cheval sur le bord haut. */
+  /* Carte en deux panneaux : le visuel à gauche sur son propre fond, le texte
+     à droite sur le fond de la carte. `stretch` donne au panneau la hauteur
+     entière — c'est ce qui fait que le visuel « fait la taille de la carte ». */
   .lad__cta--split {
     display: flex;
-    align-items: center;
-    gap: 28px;
-    padding: 28px;
-    text-align: left;
+    align-items: stretch;
+    padding: 0;
   }
 
   .lad__cta--split .lad__cta-media {
-    flex: 0 0 42%;
-    margin: 0;
+    flex: 0 0 {{ s.cta_media_width }}%;
+    padding: var(--lad-cta-pad);
+    border-radius: 15px 0 0 15px;
+    /* La grille donne au visuel une zone aux deux dimensions connues : il peut
+       alors occuper tout le panneau. `height: 100%` seul ne résolvait rien,
+       faute de hauteur définie sur le parent. */
+    display: grid;
+    place-items: stretch;
+    overflow: hidden;
   }
 
-  .lad__cta--split .lad__cta-body { flex: 1 1 auto; }
-
-  /* Un enfant absolu d'une grille prend pour référence SA zone de grille dès
-     qu'il en a une — placé en colonne 2, `left` partait du bord de la colonne
-     de droite. Sans aucun placement, la référence redevient la boîte de la
-     carte, rembourrage compris : c'est ce qu'il faut pour déborder de l'angle.
-     D'où l'absence volontaire de grid-column ici. */
-  .lad__cta--split .lad__cta-pill {
-    position: absolute;
-    top: -13px;
-    left: 24px;
-    margin: 0;
-    z-index: 1;
-  }
-
-  .lad__cta--split .lad__btn {
+  /* « Remplir » convient à une photo d'ambiance, qu'on peut rogner ; « en
+     entier » à un packshot, qu'on ne peut pas. */
+  .lad__cta--split .lad__cta-media img {
     width: 100%;
-    min-width: 0;
-    max-width: 340px;
+    height: 100%;
+    object-fit: var(--lad-cta-fit);
   }
 
-  .lad__cta--split .lad__cta-line,
-  .lad__cta--split .lad__cta-sub,
-  .lad__cta--split .lad__cta-clock { text-align: left; }
+  .lad__cta--split .lad__cta-body {
+    flex: 1 1 auto;
+    padding: 34px 32px;
+  }
+
+  .lad__cta--split .lad__btn { width: 100%; min-width: 0; }
 
   /* Sans visuel, l'enveloppe occupe seule toute la carte. */
   .lad__cta--split.lad__cta--nomedia { display: block; }
+
+  /* Image à droite : les colonnes s'échangent, l'ordre du DOM ne bouge pas. */
+  .lad__point--rev { grid-template-columns: 1fr var(--lad-media-col); }
+  .lad__point--rev .lad__point-media { grid-column: 2; }
+  .lad__point--rev .lad__point-head,
+  .lad__point--rev .lad__point-text,
+  .lad__point--rev .lad__micro { grid-column: 1; }
 }
 {% endstyle %}
 
@@ -694,12 +763,14 @@
   </script>
 
   {%- if s.show_sticky and s.sticky_text != blank -%}
-    <div class="lad__sticky" data-lad-sticky>
+    <div class="lad__sticky" id="lad-sticky-{{ section.id }}" data-lad-sticky>
       <span>{{ s.sticky_text | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</span>
       {%- if s.sticky_countdown -%}
         <span
           class="lad__sticky-clock"
           data-lad-clock
+          data-lad-clock-style="{{ s.countdown_style }}"
+          data-lad-clock-labels="{{ s.countdown_labels | escape }}"
           data-lad-clock-end="{{ s.countdown_end_text | escape }}"
         >
           <span data-lad-clock-value>--h --m --s</span>
@@ -773,18 +844,52 @@
     {%- for block in section.blocks -%}
       {%- case block.type -%}
         {%- when 'point' -%}
-          {%- assign b = block.settings -%}
+          {%- liquid
+            assign b = block.settings
+            assign point_i = point_i | plus: 1
+
+            comment
+              Côté de l'image. « Alterner » fait basculer un point sur deux,
+              ce qui donne la succession de sections image + texte voulue.
+            endcomment
+            assign reversed = false
+            if s.point_media_side == 'right'
+              assign reversed = true
+            elsif s.point_media_side == 'alternate'
+              assign parity = point_i | modulo: 2
+              if parity == 0
+                assign reversed = true
+              endif
+            endif
+          -%}
           <article
-            class="lad__point{% if b.image == blank %} lad__point--nomedia{% endif %}"
+            class="lad__point{% if b.image == blank %} lad__point--nomedia{% endif %}{% if reversed %} lad__point--rev{% endif %}{% if s.point_number_style == 'big' %} lad__point--bignum{% endif %}"
             {{ block.shopify_attributes }}
           >
             {%- if b.numero != blank or b.titre != blank -%}
               <div class="lad__point-head">
-                {%- if b.numero != blank -%}
-                  <span class="lad__point-num">{{ b.numero }}</span>
-                {%- endif -%}
-                {%- if b.titre != blank -%}
-                  <h2 class="lad__point-title">{{ b.titre | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</h2>
+                {%- if s.point_number_style == 'big' -%}
+                  {%- if b.numero != blank -%}
+                    <span class="lad__point-num">{{ b.numero }}</span>
+                  {%- endif -%}
+                  {%- if b.titre != blank -%}
+                    <h2 class="lad__point-title">{{ b.titre | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}</h2>
+                  {%- endif -%}
+                {%- else -%}
+                  {%- comment -%}
+                    Le numéro entre dans le fil du titre — « 4. Titre ». Le
+                    point final est ajouté ici, et retiré au préalable pour ne
+                    pas en obtenir deux si le marchand l'a déjà saisi.
+                  {%- endcomment -%}
+                  <h2 class="lad__point-title">
+                    {%- if b.numero != blank -%}
+                      <span class="lad__point-num">{{ b.numero | strip | replace: '.', '' }}.</span>
+                      {{ ' ' }}
+                    {%- endif -%}
+                    {%- if b.titre != blank -%}
+                      {{ b.titre | replace: '[prix]', s.prix | replace: '[remise]', s.remise | replace: '[poids]', s.poids }}
+                    {%- endif -%}
+                  </h2>
                 {%- endif -%}
               </div>
             {%- endif -%}
@@ -858,6 +963,8 @@
               image_alt: block.settings.image_alt,
               compteur: block.settings.compteur,
               compteur_fin: s.countdown_end_text,
+              compteur_style: s.countdown_style,
+              compteur_labels: s.countdown_labels,
               prix: s.prix,
               remise: s.remise,
               poids: s.poids
@@ -930,6 +1037,8 @@
           image_alt: s.close_image_alt,
           compteur: s.close_countdown,
           compteur_fin: s.countdown_end_text,
+          compteur_style: s.countdown_style,
+          compteur_labels: s.countdown_labels,
           prix: s.prix,
           remise: s.remise,
           poids: s.poids
@@ -966,8 +1075,24 @@
      * Compte à rebours — une seule horloge pour toute la page
      * ---------------------------------------------------------------- */
 
+    /* La barre haute quitte la section pour le corps du document. Un ancêtre
+       porteur d'un `transform` fait de `position: fixed` un positionnement
+       relatif à cet ancêtre : la barre se posait alors sur le titre au lieu de
+       coiffer la fenêtre. Beaucoup de thèmes animent leurs sections à
+       l'apparition, c'est un piège fréquent et invisible en aperçu isolé. */
+    var bar = root.querySelector('[data-lad-sticky]');
+    if (bar) {
+      var twin = document.getElementById(bar.id);
+      if (twin && twin !== bar && twin.parentNode === document.body) {
+        // L'éditeur de thème rejoue la section : on retire l'exemplaire précédent.
+        twin.parentNode.removeChild(twin);
+      }
+      document.body.appendChild(bar);
+    }
+
     var clocks = root.querySelectorAll('[data-lad-clock]');
-    var srCell = root.querySelector('[data-lad-clock-sr]');
+    if (bar) clocks = [].slice.call(clocks).concat([].slice.call(bar.querySelectorAll('[data-lad-clock]')));
+    var srCell = (bar || root).querySelector('[data-lad-clock-sr]');
     var lastMinuteSpoken = -1;
 
     function deadline() {
@@ -997,6 +1122,35 @@
       return n < 10 ? '0' + n : String(n);
     }
 
+    /* Trois pavés séparés par deux deux-points. Les nœuds sont construits une
+       seule fois puis seuls les chiffres changent : reconstruire le balisage
+       à chaque seconde ferait clignoter la barre. */
+    function paintCells(host, clock, parts) {
+      var labels = (clock.getAttribute('data-lad-clock-labels') || '').split(',');
+      if (!host.__cells) {
+        host.textContent = '';
+        host.__cells = [];
+        for (var i = 0; i < parts.length; i++) {
+          if (i > 0) {
+            var sep = document.createElement('span');
+            sep.className = 'lad__clock-sep';
+            sep.textContent = ':';
+            host.appendChild(sep);
+          }
+          var box = document.createElement('span');
+          box.className = 'lad__clock-cell';
+          var digits = document.createElement('b');
+          var label = document.createElement('span');
+          label.textContent = (labels[i] || '').trim();
+          box.appendChild(digits);
+          box.appendChild(label);
+          host.appendChild(box);
+          host.__cells.push(digits);
+        }
+      }
+      for (var k = 0; k < parts.length; k++) host.__cells[k].textContent = parts[k];
+    }
+
     function tick() {
       var left = endsAt - Date.now();
 
@@ -1004,7 +1158,10 @@
         for (var i = 0; i < clocks.length; i++) {
           var over = clocks[i].getAttribute('data-lad-clock-end') || '';
           var slot = clocks[i].querySelector('[data-lad-clock-value]');
-          if (slot) slot.textContent = over;
+          if (slot) {
+            slot.__cells = null;
+            slot.textContent = over;
+          }
         }
         if (srCell) srCell.textContent = clocks.length ? clocks[0].getAttribute('data-lad-clock-end') || '' : '';
         if (timer) window.clearInterval(timer);
@@ -1019,7 +1176,13 @@
 
       for (var j = 0; j < clocks.length; j++) {
         var cell = clocks[j].querySelector('[data-lad-clock-value]');
-        if (cell) cell.textContent = text;
+        if (!cell) continue;
+
+        if (clocks[j].getAttribute('data-lad-clock-style') === 'cells') {
+          paintCells(cell, clocks[j], [pad(h), pad(m), pad(sec)]);
+        } else {
+          cell.textContent = text;
+        }
       }
 
       /* Le lecteur d'écran n'est prévenu qu'au changement de minute. */
@@ -1038,7 +1201,7 @@
      * Barre haute et profondeur de lecture
      * ---------------------------------------------------------------- */
 
-    var sticky = root.querySelector('[data-lad-sticky]');
+    var sticky = bar;
     var marks = [25, 50, 75, 100];
     var fired = {};
     var viewContentSent = false;
@@ -1226,6 +1389,28 @@
     { "type": "range", "id": "point_media_ratio", "label": "Hauteur de l'image des points", "info": "En % de sa largeur. 100 = carré. Les photos sont recadrées par le centre pour que tous les points aient la même allure.", "min": 50, "max": 160, "step": 5, "unit": "%", "default": 100 },
     {
       "type": "select",
+      "id": "point_media_side",
+      "label": "Côté de l'image des points (bureau)",
+      "info": "« Alterner » fait basculer un point sur deux, pour une succession de sections image + texte.",
+      "options": [
+        { "value": "left", "label": "Toujours à gauche" },
+        { "value": "right", "label": "Toujours à droite" },
+        { "value": "alternate", "label": "Alterner" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "select",
+      "id": "point_number_style",
+      "label": "Numéro des points",
+      "options": [
+        { "value": "inline", "label": "Dans le titre — « 4. Titre »" },
+        { "value": "big", "label": "Gros chiffre coloré à part" }
+      ],
+      "default": "inline"
+    },
+    {
+      "type": "select",
       "id": "point_media_align",
       "label": "Alignement vertical de l'image (bureau)",
       "options": [
@@ -1233,6 +1418,18 @@
         { "value": "start", "label": "En haut" }
       ],
       "default": "center"
+    },
+    { "type": "range", "id": "cta_media_width", "label": "Largeur du panneau visuel des CTA (bureau)", "min": 30, "max": 60, "step": 1, "unit": "%", "default": 45 },
+    {
+      "type": "select",
+      "id": "cta_media_fit",
+      "label": "Cadrage du visuel des CTA",
+      "info": "« Remplir » pour une photo d'ambiance, qu'on peut rogner. « En entier » pour un packshot détouré, qu'il ne faut pas couper.",
+      "options": [
+        { "value": "cover", "label": "Remplir le panneau" },
+        { "value": "contain", "label": "Afficher en entier" }
+      ],
+      "default": "cover"
     },
     {
       "type": "select",
@@ -1264,11 +1461,22 @@
 
     { "type": "header", "content": "Barre haute" },
     { "type": "checkbox", "id": "show_sticky", "label": "Afficher la barre haute", "default": true },
-    { "type": "text", "id": "sticky_text", "label": "Texte de la barre", "default": "OFFRE DE LANCEMENT · JUSQU'À [remise] · LIVRAISON OFFERTE" },
+    { "type": "text", "id": "sticky_text", "label": "Texte de la barre", "default": "OFFRE DE LANCEMENT | JUSQU'À [remise] + LIVRAISON OFFERTE" },
     { "type": "checkbox", "id": "sticky_countdown", "label": "Afficher le compte à rebours dans la barre", "default": true },
 
     { "type": "header", "content": "Compte à rebours" },
     { "type": "range", "id": "countdown_hours", "label": "Durée", "info": "Décomptée depuis la première visite. Ne repart jamais à zéro.", "min": 1, "max": 72, "step": 1, "unit": "h", "default": 9 },
+    {
+      "type": "select",
+      "id": "countdown_style",
+      "label": "Affichage",
+      "options": [
+        { "value": "cells", "label": "En pavés — 09 : 20 : 28" },
+        { "value": "text", "label": "En ligne — 09h 20m 28s" }
+      ],
+      "default": "cells"
+    },
+    { "type": "text", "id": "countdown_labels", "label": "Libellés des pavés", "info": "Trois libellés séparés par des virgules : heures, minutes, secondes.", "default": "HRS, MIN, SEC" },
     { "type": "text", "id": "countdown_end_text", "label": "Texte une fois terminé", "default": "Offre de lancement terminée" },
 
     { "type": "header", "content": "En-tête" },
@@ -1297,7 +1505,7 @@
     { "type": "product", "id": "close_produit", "label": "Produit", "info": "Le bouton mène vers ce produit et reprend son visuel." },
     { "type": "text", "id": "close_pastille", "label": "Pastille d'angle", "default": "OFFRE DE LANCEMENT" },
     { "type": "text", "id": "close_surtitre", "label": "Sur-titre" },
-    { "type": "text", "id": "close_cta_title", "label": "Titre du bloc d'achat", "default": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE" },
+    { "type": "text", "id": "close_cta_title", "label": "Titre du bloc d'achat", "info": "Le passage entre <b> et </b> prend la couleur d'accent.", "default": "JUSQU'À <b>[remise]</b> POUR UNE DURÉE LIMITÉE" },
     { "type": "richtext", "id": "close_cta_text", "label": "Texte du bloc d'achat" },
     { "type": "textarea", "id": "close_bullets", "label": "Liste à puces", "info": "Une puce par ligne.", "default": "Livraison offerte en France\n30 jours pour les essayer\nRenvoi gratuit, sans justification\nLargeur intérieure indiquée en cm pour chaque pointure" },
     { "type": "image_picker", "id": "close_image", "label": "Image du bloc d'achat" },
@@ -1316,8 +1524,10 @@
     { "type": "color", "id": "color_cta_text", "label": "Texte des boutons", "default": "#FFFFFF" },
     { "type": "color", "id": "color_sticky_bg", "label": "Fond de la barre haute", "default": "#1B1B1B" },
     { "type": "color", "id": "color_sticky_text", "label": "Texte de la barre haute", "default": "#FFFFFF" },
-    { "type": "color", "id": "color_pill_bg", "label": "Pastille d'angle — fond", "default": "#C86B9B" },
-    { "type": "color", "id": "color_pill_text", "label": "Pastille d'angle — texte", "default": "#FFFFFF" }
+    { "type": "color", "id": "color_pill_bg", "label": "Pastille des CTA — fond", "default": "#8B5CF6" },
+    { "type": "color", "id": "color_pill_text", "label": "Pastille des CTA — texte", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_card_bg", "label": "Carte CTA — fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_panel_bg", "label": "Carte CTA — panneau du visuel", "default": "#EFF4EC" }
   ],
   "blocks": [
     {
@@ -1346,7 +1556,7 @@
         { "type": "product", "id": "produit", "label": "Produit", "info": "Le bouton mène vers ce produit et reprend son visuel. Vide : la destination générale des boutons s'applique." },
         { "type": "text", "id": "pastille", "label": "Pastille d'angle", "default": "OFFRE DE LANCEMENT" },
         { "type": "text", "id": "surtitre", "label": "Sur-titre", "default": "PLUS VOUS EN PRENEZ, PLUS VOUS ÉCONOMISEZ" },
-        { "type": "text", "id": "titre", "label": "Titre", "default": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE" },
+        { "type": "text", "id": "titre", "label": "Titre", "info": "Le passage entre <b> et </b> prend la couleur d'accent.", "default": "JUSQU'À <b>[remise]</b> POUR UNE DURÉE LIMITÉE" },
         { "type": "richtext", "id": "texte", "label": "Sous-titre", "default": "<p>J'étais sceptique aussi. Mais avec la livraison offerte et 30 jours pour changer d'avis, il n'y a rien à perdre.</p>" },
         { "type": "textarea", "id": "puces", "label": "Liste à puces", "info": "Une puce par ligne. Laisse vide pour n'en afficher aucune." },
         { "type": "image_picker", "id": "image", "label": "Image" },

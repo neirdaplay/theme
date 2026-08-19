@@ -66,14 +66,15 @@
           "type": "cta",
           "settings": {
             "pastille": "OFFRE DE LANCEMENT",
-            "titre": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE",
+            "titre": "JUSQU'À <b>[remise]</b> POUR UNE DURÉE LIMITÉE",
             "texte": "<p>J'étais sceptique aussi. Mais avec la livraison offerte et 30 jours pour changer d'avis, il n'y a rien à perdre.</p>",
             "puces": "",
             "bouton": "ESSAYER SANS RISQUE →",
             "ligne": "Stock limité · Livraison offerte",
             "sous_texte": "30 jours pour les essayer. Si elles ne vont pas, renvoi gratuit.",
             "compteur": true,
-            "image_alt": ""
+            "image_alt": "",
+            "surtitre": "PLUS VOUS EN PRENEZ, PLUS VOUS ÉCONOMISEZ"
           }
         },
         "point-6": {
@@ -135,14 +136,15 @@
           "type": "cta",
           "settings": {
             "pastille": "OFFRE DE LANCEMENT",
-            "titre": "JUSQU'À [remise] POUR UNE DURÉE LIMITÉE",
+            "titre": "JUSQU'À <b>[remise]</b> POUR UNE DURÉE LIMITÉE",
             "texte": "<p>J'étais sceptique aussi. Mais avec la livraison offerte et 30 jours pour changer d'avis, il n'y a rien à perdre.</p>",
             "puces": "",
             "bouton": "ESSAYER SANS RISQUE →",
             "ligne": "Stock limité · Livraison offerte",
             "sous_texte": "30 jours pour les essayer. Si elles ne vont pas, renvoi gratuit.",
             "compteur": true,
-            "image_alt": ""
+            "image_alt": "",
+            "surtitre": "PLUS VOUS EN PRENEZ, PLUS VOUS ÉCONOMISEZ"
           }
         },
         "size-36": {

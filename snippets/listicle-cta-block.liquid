@@ -21,6 +21,9 @@
     image_alt     texte alternatif de cette image
     compteur      booléen : reprendre le compte à rebours dans le bloc
     compteur_fin  texte affiché une fois le compte à rebours terminé
+    compteur_style, compteur_labels
+                  reprennent le réglage d'affichage de la section, pour que
+                  toutes les instances de la page se ressemblent
     prix, remise, poids
                   les trois valeurs répétées, substituées aux jetons [prix],
                   [remise] et [poids] pour n'avoir qu'un endroit à modifier
@@ -113,6 +116,8 @@
       <p
         class="lad__cta-clock"
         data-lad-clock
+        data-lad-clock-style="{{ compteur_style }}"
+        data-lad-clock-labels="{{ compteur_labels | escape }}"
         data-lad-clock-end="{{ compteur_fin | escape }}"
       >
         <span data-lad-clock-value>--h --m --s</span>
