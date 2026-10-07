@@ -18,6 +18,19 @@
   only thing that needs to exist in the theme.
 {% endcomment %}
 
+{%- comment -%}
+  Les réglages sont lus avant la feuille de style : celle-ci en a besoin pour
+  les dimensions qui ne peuvent pas passer par une variable CSS — un nombre
+  de colonnes de grille, par exemple.
+{%- endcomment -%}
+{%- liquid
+  assign s = section.settings
+  assign tiers = section.blocks | where: 'type', 'tier'
+  assign crosses = section.blocks | where: 'type', 'cross'
+  assign atouts = section.blocks | where: 'type', 'atout'
+  assign avis = section.blocks | where: 'type', 'avis'
+-%}
+
 {% style %}
 /* ==========================================================================
    Panier coulissant — scoped under .pnc so the rest of the theme is untouched.
@@ -136,16 +149,68 @@
   }
 }
 
-/* ---- En-tête ---- */
+/* ---- En-tête ----
+   Il accepte une image de fond. Elle est posée en couche séparée, avec son
+   propre voile : l'opacité de l'une et la densité de l'autre se règlent
+   indépendamment, et le texte ne perd jamais son contraste. */
 
 .pnc__head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   flex: 0 0 auto;
+  min-height: var(--pn-head-min);
   padding: 16px var(--pn-pad) 14px;
   border-bottom: 1px solid var(--pn-line);
   background: var(--pn-head-bg);
+  overflow: hidden;
+}
+
+.pnc__head--image {
+  border-bottom: 0;
+  color: var(--pn-head-ink);
+}
+
+.pnc__head-bg,
+.pnc__head-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.pnc__head-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: {{ s.head_focus }};
+  opacity: {{ s.head_image_opacity | divided_by: 100.0 }};
+}
+
+.pnc__head-veil {
+  background: var(--pn-head-veil);
+  opacity: {{ s.head_overlay | divided_by: 100.0 }};
+}
+
+/* Tout le contenu repasse devant les deux couches. */
+.pnc__head > *:not(.pnc__head-bg):not(.pnc__head-veil) {
+  position: relative;
+  z-index: 1;
+}
+
+.pnc__head--image .pnc__close {
+  color: var(--pn-head-ink);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.pnc__head--image .pnc__close:hover {
+  background: rgba(0, 0, 0, 0.38);
+  color: var(--pn-head-ink);
+}
+
+.pnc__head--image .pnc__head-icon,
+.pnc__head--image .pnc__subtitle {
+  color: var(--pn-head-ink);
 }
 
 .pnc__head-icon {
@@ -184,8 +249,8 @@
 }
 
 .pnc__title {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: {{ s.head_title_size }}px;
+  font-weight: {{ s.head_title_weight }};
   line-height: 1.2;
 }
 
@@ -218,6 +283,75 @@
   width: 17px;
   height: 17px;
 }
+
+/* ---- Bandeau de confiance ----
+   Une ligne pleine largeur, juste sous l'en-tête : note, étoiles et nombre
+   d'avis. Elle ne défile pas avec le corps. */
+
+.pnc__proof {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 8px;
+  flex: 0 0 auto;
+  padding: 9px 12px;
+  background: var(--pn-proof-bg);
+  color: var(--pn-proof-ink);
+  font-size: 11.5px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.pnc__proof-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+}
+
+.pnc__proof-logo img {
+  max-height: {{ s.proof_logo_height }}px;
+  width: auto;
+}
+
+.pnc__proof-logo svg {
+  width: 14px;
+  height: 14px;
+  color: var(--pn-proof-star);
+  fill: currentColor;
+}
+
+/* Les étoiles sur tuiles, à la manière des plateformes d'avis. */
+.pnc__proof-stars {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pnc__proof-star {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  color: #fff;
+  background: var(--pn-proof-star);
+}
+
+.pnc__proof-star--off { background: var(--pn-line); }
+.pnc__proof-star svg { width: 10px; height: 10px; fill: currentColor; }
+
+.pnc__proof--nues .pnc__proof-star {
+  width: auto;
+  height: auto;
+  background: none;
+  color: var(--pn-proof-star);
+}
+
+.pnc__proof--nues .pnc__proof-star--off { color: var(--pn-line); }
+.pnc__proof--nues .pnc__proof-star svg { width: 13px; height: 13px; }
+
+.pnc__proof-score { font-weight: 700; }
+.pnc__proof-sep { opacity: 0.45; }
 
 /* ---- Corps défilant ---- */
 
@@ -298,10 +432,17 @@
 
 .pnc__goals-track {
   position: relative;
-  height: 8px;
+  height: {{ s.goal_track_height }}px;
   margin: 0 var(--pn-goal-edge) 44px;
   border-radius: 999px;
   background: var(--pn-line);
+}
+
+/* À pas réguliers, les pastilles occupent toute la largeur : le trait ne
+   doit plus déborder de la première ni de la dernière. */
+.pnc__goals--regulier .pnc__goals-track {
+  margin-left: calc(var(--pn-goal-size) / 2);
+  margin-right: calc(var(--pn-goal-size) / 2);
 }
 
 .pnc__goals-fill {
@@ -331,10 +472,11 @@
 }
 
 .pnc__goal-dot {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: var(--pn-goal-size);
+  height: var(--pn-goal-size);
   border-radius: 50%;
   border: 2px solid var(--pn-line);
   background: var(--pn-bg);
@@ -343,9 +485,25 @@
 }
 
 .pnc__goal-dot svg {
-  width: 15px;
-  height: 15px;
+  width: 50%;
+  height: 50%;
 }
+
+/* Une fois le palier franchi, la coche remplace l'icône : d'un coup d'œil
+   on voit ce qui est acquis et ce qui reste à atteindre. */
+.pnc__goal-check {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.pnc__goal-check svg { width: 52%; height: 52%; }
+.pnc__goal.is-reached .pnc__goal-ico { opacity: 0; }
+.pnc__goal.is-reached .pnc__goal-check { opacity: 1; }
+.pnc__goal-ico { display: grid; place-items: center; transition: opacity 0.25s ease; }
 
 .pnc__goal-label {
   position: absolute;
@@ -354,7 +512,7 @@
   transform: translateX(-50%);
   width: max-content;
   max-width: 92px;
-  font-size: 10.5px;
+  font-size: {{ s.goal_label_size }}px;
   line-height: 1.25;
   text-align: center;
   color: var(--pn-muted);
@@ -404,14 +562,28 @@
   background: var(--pn-card);
 }
 
+/* En liste, les articles ne sont plus des cartes : un simple filet les
+   sépare, et le panneau respire. */
+.pnc__lines--liste { gap: 0; }
+
+.pnc__lines--liste .pnc__line {
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--pn-line);
+  border-radius: 0;
+  background: none;
+}
+
+.pnc__lines--liste .pnc__line:first-child { border-top: 0; padding-top: 4px; }
+
 /* align-self est indispensable : sans lui la boîte s'étire sur toute la
    hauteur de la carte — c'est le comportement par défaut d'un élément
    flex — alors que l'image n'en occupe que le carré du haut, laissant du
    fond gris en dessous. */
 .pnc__line-img {
   flex: 0 0 auto;
-  align-self: center;
-  width: 82px;
+  align-self: {{ s.line_img_align }};
+  width: {{ s.line_img_size }}px;
   border-radius: 10px;
   overflow: hidden;
   background: var(--pn-soft);
@@ -483,6 +655,13 @@
   color: var(--pn-muted);
 }
 
+.pnc__opts-line {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--pn-muted);
+}
+
 .pnc__line-note {
   font-size: 11px;
   font-weight: 700;
@@ -522,11 +701,19 @@
   gap: 4px;
   padding: 3px 9px;
   border-radius: 999px;
-  background: var(--pn-green-soft);
-  color: var(--pn-green);
-  font-size: 10.5px;
+  background: var(--pn-ribbon-bg);
+  color: var(--pn-ribbon-ink);
+  font-size: {{ s.ribbon_size }}px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+/* Sans pastille : le gain se lit comme une mention, au plus près du prix
+   barré, sans fond qui vienne concurrencer le reste de la ligne. */
+.pnc__ribbon--texte {
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .pnc__ribbon svg {
@@ -598,14 +785,28 @@
   text-align: center;
 }
 
+/* Les prix s'empilent à droite : le montant payé sur la première ligne, le
+   prix barré et la pastille de remise juste dessous — c'est la lecture la
+   plus directe de « avant / après ». */
 .pnc__line-prices {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   margin-left: auto;
-  font-size: 14px;
+  text-align: right;
+  font-size: {{ s.line_price_size }}px;
   font-weight: 700;
 }
+
+.pnc__line-under {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pnc__line-under:empty { display: none; }
 
 .pnc__line-was {
   font-size: 11.5px;
@@ -703,6 +904,13 @@
   gap: 10px;
 }
 
+.pnc__cross-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .pnc__cross-title {
   display: flex;
   align-items: center;
@@ -716,6 +924,113 @@
   height: 17px;
   color: var(--pn-green);
 }
+
+/* Le compte à rebours : une durée d'offre, tenue dans la session pour ne
+   pas repartir de zéro à chaque ouverture du panneau. */
+.pnc__timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--pn-soft);
+  color: var(--pn-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pnc__timer svg { width: 12px; height: 12px; }
+.pnc__timer[hidden] { display: none; }
+
+/* ---- Combinaison, version sombre (carte mise en avant) ---- */
+
+.pnc__cross--sombre {
+  padding: 13px;
+  border-radius: var(--pn-card-radius);
+  background: var(--pn-cross-bg);
+  color: var(--pn-cross-ink);
+}
+
+.pnc__cross--sombre .pnc__cross-title {
+  color: var(--pn-cross-accent);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pnc__cross--sombre .pnc__cross-title svg { color: var(--pn-cross-accent); }
+
+.pnc__cross--sombre .pnc__timer {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pn-cross-ink);
+}
+
+.pnc__cross--sombre .pnc__cross-item {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: transparent;
+}
+
+.pnc__cross--sombre .pnc__cross-was { color: rgba(255, 255, 255, 0.6); }
+
+.pnc__cross--sombre .pnc__cross-save {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--pn-cross-ink);
+}
+
+.pnc__cross--sombre .pnc__cross-add {
+  border-color: var(--pn-cross-accent);
+  background: var(--pn-cross-accent);
+  color: var(--pn-cross-bg);
+}
+
+.pnc__cross--sombre .pnc__cross-add:hover { filter: brightness(1.08); }
+.pnc__cross--sombre .pnc__stars { color: rgba(255, 255, 255, 0.28); }
+
+/* ---- Combinaison en carrousel ---- */
+
+.pnc__cross-rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin: 0 calc(var(--pn-pad) * -1);
+  padding: 0 var(--pn-pad);
+}
+
+.pnc__cross--sombre .pnc__cross-rail { margin: 0; padding: 0; }
+.pnc__cross-rail::-webkit-scrollbar { display: none; }
+
+.pnc__cross-rail .pnc__cross-item {
+  flex: 0 0 calc(100% - 2px);
+  scroll-snap-align: start;
+}
+
+/* La jauge de défilement : la part visible du rail, largeur et position
+   recalculées au défilement. */
+.pnc__cross-bar {
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.22);
+  overflow: hidden;
+}
+
+.pnc__cross--sombre .pnc__cross-bar { background: rgba(255, 255, 255, 0.14); }
+.pnc__cross-bar[hidden] { display: none; }
+
+.pnc__cross-bar i {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: var(--pn-accent);
+  transition: transform 0.12s linear;
+}
+
+.pnc__cross--sombre .pnc__cross-bar i { background: var(--pn-cross-accent); }
 
 .pnc__cross-item {
   display: flex;
@@ -844,7 +1159,7 @@
 }
 
 /* Sur un panneau étroit, le bouton passe sous le produit. */
-@media (max-width: 419px) {
+@media (max-width: 359px) {
   .pnc__cross-item {
     flex-wrap: wrap;
   }
@@ -852,6 +1167,134 @@
   .pnc__cross-add {
     width: 100%;
   }
+}
+
+/* ---- Rangée d'atouts ----
+   Une colonne par bloc : le nombre de colonnes suit le nombre de blocs,
+   sans que le marchand ait à y penser. */
+
+.pnc__atouts {
+  display: grid;
+  grid-template-columns: repeat({{ atouts.size | at_least: 1 | at_most: 4 }}, 1fr);
+  gap: 10px;
+  padding: {{ s.atouts_padding }}px 4px;
+  border-top: 1px solid var(--pn-line);
+  text-align: center;
+}
+
+.pnc__atout {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Un titre sur deux lignes décalerait son texte secondaire par rapport aux
+   colonnes voisines. La grille interne est donc partagée : icônes, titres et
+   textes s'alignent entre eux quelle que soit la longueur. */
+@supports (grid-template-rows: subgrid) {
+  .pnc__atouts { grid-template-rows: auto auto auto; }
+
+  .pnc__atout {
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+  }
+}
+
+.pnc__atout-ico {
+  display: grid;
+  place-items: center;
+  width: {{ s.atouts_icon_size }}px;
+  height: {{ s.atouts_icon_size }}px;
+  color: var(--pn-atout-ico);
+}
+
+.pnc__atout-ico svg { width: 100%; height: 100%; }
+.pnc__atout-ico img { width: 100%; height: 100%; object-fit: contain; }
+
+.pnc__atout-title {
+  font-size: {{ s.atouts_title_size }}px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--pn-ink);
+}
+
+.pnc__atout-text {
+  font-size: {{ s.atouts_text_size }}px;
+  line-height: 1.25;
+  color: var(--pn-atout-sub);
+}
+
+/* ---- Bandeau d'avis clients ----
+   Tout en bas du panneau, hors du pied : il défile horizontalement et ne
+   mange jamais la place du bouton de paiement. */
+
+.pnc__avis {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: {{ s.avis_padding }}px var(--pn-pad);
+  background: var(--pn-avis-bg);
+  color: var(--pn-avis-ink);
+}
+
+.pnc__avis::-webkit-scrollbar { display: none; }
+
+.pnc__avis-item {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 88%;
+}
+
+.pnc__avis-photo {
+  flex: 0 0 auto;
+  width: {{ s.avis_photo_size }}px;
+  height: {{ s.avis_photo_size }}px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(128, 128, 128, 0.25);
+}
+
+.pnc__avis-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.pnc__avis-body { min-width: 0; }
+
+.pnc__avis-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pnc__avis-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--pn-green);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pnc__avis-badge svg { width: 9px; height: 9px; }
+
+.pnc__avis-text {
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.88;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ---- Pied ---- */
@@ -898,6 +1341,14 @@
   background: var(--pn-green-soft);
   color: var(--pn-green);
   font-weight: 700;
+}
+
+/* Version sans fond : la ligne se fond dans le pied, seul le vert la
+   distingue. */
+.pnc__row--discount.pnc__row--plain {
+  padding: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .pnc__row--discount .pnc__row-value {
@@ -1049,9 +1500,9 @@
   padding: 12px clamp(12px, 3vw, 20px);
   border: 0;
   border-radius: var(--pn-cta-radius);
-  background: var(--pn-green);
-  color: var(--pn-white);
-  font-size: 14.5px;
+  background: var(--pn-cta-bg);
+  color: var(--pn-cta-ink);
+  font-size: {{ s.cta_size }}px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -1059,6 +1510,10 @@
   text-decoration: none;
   transition: transform 0.16s ease, filter 0.16s ease;
 }
+
+.pnc__cta-sep { opacity: 0.5; }
+.pnc__cta-total { white-space: nowrap; }
+.pnc__cta-total[hidden] { display: none; }
 
 .pnc__cta:hover {
   transform: translateY(-1px);
@@ -1114,10 +1569,6 @@
 {% endstyle %}
 
 {%- liquid
-  assign s = section.settings
-  assign tiers = section.blocks | where: 'type', 'tier'
-  assign crosses = section.blocks | where: 'type', 'cross'
-
   comment
     Les paliers sont saisis en euros : on passe en centimes une bonne fois
     pour toutes, et on retient le plus haut, qui fixe l'échelle de la barre.
@@ -1144,6 +1595,15 @@
 {%- capture pn_shield -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2.9l7.4 2.9v6c0 4.3-3.1 8.2-7.4 9.3-4.3-1.1-7.4-5-7.4-9.3v-6z"/><path d="M8.9 12.1l2.2 2.2 4-4.4"/></svg>{%- endcapture -%}
 {%- capture pn_lock -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4.6" y="10.4" width="14.8" height="10.2" rx="2.2"/><path d="M8.2 10.4V7.6a3.8 3.8 0 017.6 0v2.8"/></svg>{%- endcapture -%}
 {%- capture pn_arrow -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.4 10h13M11.6 5.2L16.4 10l-4.8 4.8"/></svg>{%- endcapture -%}
+{%- capture pn_check -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.6 10.4l3.6 3.6 7.2-8"/></svg>{%- endcapture -%}
+{%- capture pn_check_fill -%}<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false"><path d="M10 1.6a8.4 8.4 0 110 16.8 8.4 8.4 0 010-16.8zm-1.1 11.9l5.1-5.6-1.4-1.3-3.8 4.2-1.9-1.8-1.3 1.4z"/></svg>{%- endcapture -%}
+{%- capture pn_clock -%}<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="7.6"/><path d="M10 5.6V10l2.9 1.9"/></svg>{%- endcapture -%}
+{%- capture pn_book -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 4.4h5.2A2.8 2.8 0 0112 7.2v12.4a2.2 2.2 0 00-2.2-2.2H4zM20 4.4h-5.2A2.8 2.8 0 0012 7.2v12.4a2.2 2.2 0 012.2-2.2H20z"/></svg>{%- endcapture -%}
+{%- capture pn_card -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.2"/><path d="M2.8 10h18.4M6.4 14.6h3.4"/></svg>{%- endcapture -%}
+{%- capture pn_spoon -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9.2 13.4L4.6 20.4M13.6 3.4c2.4 0 4 2 4 4.4s-1.8 4.6-4 4.6-4-2-4-4.6 1.6-4.4 4-4.4z"/><path d="M11.8 12.2l-2.6 2.6"/></svg>{%- endcapture -%}
+{%- capture pn_leaf -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.2 3.8c.6 5.4-.5 9.6-3.2 12.3-2.8 2.8-6.6 2.9-9 1.1-2.2-1.7-2.6-5.6.2-8.4 2.7-2.7 6.9-3.7 12-3.4"/><path d="M4.2 20.2L12 12.4"/></svg>{%- endcapture -%}
+{%- capture pn_heart -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20.4S3.4 15.2 3.4 9.4a4.6 4.6 0 018.6-2.3 4.6 4.6 0 018.6 2.3c0 5.8-8.6 11-8.6 11z"/></svg>{%- endcapture -%}
+{%- capture pn_infinity -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12c1.7-2.3 3-3.6 5-3.6a3.6 3.6 0 010 7.2c-2 0-3.3-1.3-5-3.6zm0 0c-1.7 2.3-3 3.6-5 3.6a3.6 3.6 0 010-7.2c2 0 3.3 1.3 5 3.6z"/></svg>{%- endcapture -%}
 
 <div
   class="pnc"
@@ -1170,7 +1630,25 @@
     --pn-card-radius: {{ s.card_radius }}px;
     --pn-cta-radius: {{ s.cta_radius }}px;
     --pn-goal-edge: {{ s.goal_edge }}px;
+    --pn-goal-size: {{ s.goal_dot_size }}px;
     --pn-ins-icon: {{ s.insurance_icon_size }}px;
+    --pn-ribbon-bg: {{ s.color_ribbon_bg }};
+    --pn-ribbon-ink: {{ s.color_ribbon_ink }};
+    --pn-head-ink: {{ s.color_head_ink }};
+    --pn-head-veil: {{ s.color_head_veil }};
+    --pn-head-min: {{ s.head_height }}px;
+    --pn-proof-bg: {{ s.color_proof_bg }};
+    --pn-proof-ink: {{ s.color_proof_ink }};
+    --pn-proof-star: {{ s.color_proof_star }};
+    --pn-cross-bg: {{ s.color_cross_bg }};
+    --pn-cross-ink: {{ s.color_cross_ink }};
+    --pn-cross-accent: {{ s.color_cross_accent }};
+    --pn-cta-bg: {{ s.color_cta_bg }};
+    --pn-cta-ink: {{ s.color_cta_ink }};
+    --pn-atout-ico: {{ s.color_atout_ico }};
+    --pn-atout-sub: {{ s.color_atout_sub }};
+    --pn-avis-bg: {{ s.color_avis_bg }};
+    --pn-avis-ink: {{ s.color_avis_ink }};
   "
 >
   <script type="application/json" data-pnc-config>
@@ -1189,6 +1667,7 @@
       "showLineCompare": {{ s.show_line_compare | json }},
       "showQty": {{ s.show_qty | json }},
       "showPills": {{ s.show_pills | json }},
+      "optsStyle": {{ s.opts_style | json }},
       "goalMax": {{ goal_max | json }},
       "insuranceId": {{ s.insurance_product.selected_or_first_available_variant.id | default: 0 | json }},
       "insuranceAuto": {{ s.insurance_auto | json }},
@@ -1244,7 +1723,19 @@
     data-pnc-panel
   >
     {%- comment -%} ---------- En-tête ---------- {%- endcomment -%}
-    <div class="pnc__head">
+    <div class="pnc__head{% if s.head_image != blank %} pnc__head--image{% endif %}">
+      {%- if s.head_image != blank -%}
+        {%- comment -%}
+          L'image et son voile sont deux couches distinctes : régler l'une ne
+          touche pas l'autre, et le titre garde son contraste quelle que soit
+          la photo déposée.
+        {%- endcomment -%}
+        <span class="pnc__head-bg" aria-hidden="true">
+          {{ s.head_image | image_url: width: 1200 | image_tag: widths: '400, 700, 1000, 1200', loading: 'lazy', alt: '' }}
+        </span>
+        <span class="pnc__head-veil" aria-hidden="true"></span>
+      {%- endif -%}
+
       {%- if s.show_head_icon -%}
         <span class="pnc__head-icon">
           {{ pn_bag }}
@@ -1262,6 +1753,45 @@
       </button>
     </div>
 
+    {%- comment -%} ---------- Bandeau de confiance ---------- {%- endcomment -%}
+    {%- if s.show_proof -%}
+      {%- liquid
+        comment
+          La note commande le nombre d'étoiles pleines : une seule valeur à
+          tenir à jour, et l'affichage suit.
+        endcomment
+        assign proof_full = s.proof_stars | round
+      -%}
+      <div class="pnc__proof{% if s.proof_star_style == 'nues' %} pnc__proof--nues{% endif %}">
+        {%- if s.proof_logo != blank or s.proof_text != blank -%}
+          <span class="pnc__proof-logo">
+            {%- if s.proof_logo != blank -%}
+              {{ s.proof_logo | image_url: width: 300 | image_tag: widths: '100, 200, 300', loading: 'lazy', alt: s.proof_text }}
+            {%- else -%}
+              {{ pn_star }}<span>{{ s.proof_text }}</span>
+            {%- endif -%}
+          </span>
+        {%- endif -%}
+
+        {%- if s.proof_stars > 0 -%}
+          <span class="pnc__proof-stars" role="img" aria-label="{{ s.proof_score | escape }}">
+            {%- for i in (1..5) -%}
+              <span class="pnc__proof-star{% if forloop.index > proof_full %} pnc__proof-star--off{% endif %}">{{ pn_star }}</span>
+            {%- endfor -%}
+          </span>
+        {%- endif -%}
+
+        {%- if s.proof_score != blank -%}
+          <span class="pnc__proof-score">{{ s.proof_score }}</span>
+        {%- endif -%}
+
+        {%- if s.proof_count != blank -%}
+          <span class="pnc__proof-sep" aria-hidden="true">·</span>
+          <span>{{ s.proof_count }}</span>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
     {%- comment -%} ---------- Corps ---------- {%- endcomment -%}
     <div class="pnc__body" data-pnc-body>
       <p class="pnc__error" role="alert" data-pnc-error hidden></p>
@@ -1274,7 +1804,16 @@
       {%- endif -%}
 
       {%- if s.show_goals and tiers.size > 0 and goal_max > 0 -%}
-        <div class="pnc__goals" data-pnc-goals>
+        {%- liquid
+          comment
+            Deux dispositions. « Proportionnel » place chaque palier à son
+            montant réel : la distance se lit. « Régulier » les espace à pas
+            égaux : six récompenses tiennent alors sans se chevaucher, et
+            c'est la disposition de la maquette.
+          endcomment
+          assign last_index = tiers.size | minus: 1
+        -%}
+        <div class="pnc__goals pnc__goals--{{ s.goals_layout }}" data-pnc-goals data-pnc-goals-layout="{{ s.goals_layout }}">
           <p class="pnc__goals-msg" data-pnc-goals-msg></p>
           <div class="pnc__goals-track">
             <span class="pnc__goals-fill" data-pnc-goals-fill></span>
@@ -1283,7 +1822,14 @@
                 assign b = block.settings
                 assign raw = b.amount | strip | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
                 assign cents = raw | times: 100 | round
-                assign pct = cents | times: 100.0 | divided_by: goal_max
+
+                if s.goals_layout == 'regulier' and last_index > 0
+                  assign pct = forloop.index0 | times: 100.0 | divided_by: last_index
+                elsif s.goals_layout == 'regulier'
+                  assign pct = 50
+                else
+                  assign pct = cents | times: 100.0 | divided_by: goal_max
+                endif
 
                 case b.icon
                   when 'gift'
@@ -1294,11 +1840,18 @@
                     assign g_icon = pn_box
                   when 'star'
                     assign g_icon = pn_star
+                  when 'book'
+                    assign g_icon = pn_book
+                  when 'card'
+                    assign g_icon = pn_card
+                  when 'spoon'
+                    assign g_icon = pn_spoon
+                  when 'heart'
+                    assign g_icon = pn_heart
                   else
                     assign g_icon = pn_truck
                 endcase
-              -%}
-              {%- liquid
+
                 assign goal_edge_class = ''
                 if pct >= 99
                   assign goal_edge_class = ' pnc__goal--end'
@@ -1309,10 +1862,16 @@
               <span
                 class="pnc__goal{{ goal_edge_class }}"
                 data-pnc-goal="{{ cents }}"
+                data-pnc-goal-pct="{{ pct }}"
                 style="left: {{ pct }}%;"
                 {{ block.shopify_attributes }}
               >
-                <span class="pnc__goal-dot">{{ g_icon }}</span>
+                <span class="pnc__goal-dot">
+                  <span class="pnc__goal-ico">{{ g_icon }}</span>
+                  {%- if s.goal_check -%}
+                    <span class="pnc__goal-check">{{ pn_check }}</span>
+                  {%- endif -%}
+                </span>
                 {%- if b.label != blank -%}
                   <span class="pnc__goal-label">{{ b.label }}</span>
                 {%- endif -%}
@@ -1322,7 +1881,7 @@
         </div>
       {%- endif -%}
 
-      <ul class="pnc__lines" data-pnc-lines></ul>
+      <ul class="pnc__lines pnc__lines--{{ s.line_style }}" data-pnc-lines></ul>
 
       {%- comment -%}
         Le panier vide : il remplace les lignes, pas le panneau entier, pour
@@ -1345,11 +1904,32 @@
 
       {%- comment -%} ---------- Combinaison parfaite ---------- {%- endcomment -%}
       {%- if s.show_cross and crosses.size > 0 -%}
-        <div class="pnc__cross" data-pnc-cross>
-          {%- if s.cross_title != blank -%}
-            <h3 class="pnc__cross-title">{{ pn_box }}<span>{{ s.cross_title }}</span></h3>
+        <div class="pnc__cross pnc__cross--{{ s.cross_style }}" data-pnc-cross>
+          {%- if s.cross_title != blank or s.cross_timer -%}
+            <div class="pnc__cross-head">
+              {%- if s.cross_title != blank -%}
+                <h3 class="pnc__cross-title">
+                  {%- if s.cross_title_icon -%}{{ pn_box }}{%- endif -%}
+                  <span>{{ s.cross_title }}</span>
+                </h3>
+              {%- else -%}
+                <span></span>
+              {%- endif -%}
+
+              {%- if s.cross_timer -%}
+                {%- comment -%}
+                  Le compte à rebours est tenu dans la session du navigateur :
+                  il ne repart pas de zéro à chaque ouverture du panneau, ce
+                  qui serait une promesse en trompe-l'œil.
+                {%- endcomment -%}
+                <span class="pnc__timer" data-pnc-timer data-pnc-minutes="{{ s.cross_timer_minutes }}" hidden>
+                  {{ pn_clock }}<span data-pnc-timer-value>--:--</span>
+                </span>
+              {%- endif -%}
+            </div>
           {%- endif -%}
 
+          <div class="{% if s.cross_layout == 'carrousel' %}pnc__cross-rail{% else %}pnc__cross-list{% endif %}" data-pnc-cross-rail>
           {%- for block in crosses -%}
             {%- liquid
               assign b = block.settings
@@ -1395,7 +1975,7 @@
 
                   <span class="pnc__cross-prices">
                     <span>{{ cv.price | money }}</span>
-                    {%- if cv.compare_at_price > cv.price -%}
+                    {%- if s.cross_show_compare and cv.compare_at_price > cv.price -%}
                       <s class="pnc__cross-was">{{ cv.compare_at_price | money }}</s>
                       {%- if save_pct > 0 -%}
                         <span class="pnc__cross-save">
@@ -1416,6 +1996,63 @@
               </div>
             {%- endif -%}
           {%- endfor -%}
+          </div>
+
+          {%- if s.cross_layout == 'carrousel' -%}
+            {%- comment -%}
+              La jauge remplace la barre de défilement, masquée : elle dit où
+              l'on en est dans la série sans ajouter de chrome au panneau.
+            {%- endcomment -%}
+            <div class="pnc__cross-bar" data-pnc-cross-bar hidden><i data-pnc-cross-bar-fill></i></div>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ---------- Atouts ---------- {%- endcomment -%}
+      {%- if s.show_atouts and atouts.size > 0 -%}
+        <div class="pnc__atouts">
+          {%- for block in atouts -%}
+            {%- liquid
+              assign a = block.settings
+              case a.icone
+                when 'shield'
+                  assign a_icon = pn_shield
+                when 'leaf'
+                  assign a_icon = pn_leaf
+                when 'truck'
+                  assign a_icon = pn_truck
+                when 'infinity'
+                  assign a_icon = pn_infinity
+                when 'heart'
+                  assign a_icon = pn_heart
+                when 'gift'
+                  assign a_icon = pn_gift
+                when 'box'
+                  assign a_icon = pn_box
+                when 'lock'
+                  assign a_icon = pn_lock
+                else
+                  assign a_icon = ''
+              endcase
+            -%}
+            <div class="pnc__atout" {{ block.shopify_attributes }}>
+              {%- if a.image != blank or a_icon != blank -%}
+                <span class="pnc__atout-ico" aria-hidden="true">
+                  {%- if a.image != blank -%}
+                    {{ a.image | image_url: width: 120 | image_tag: loading: 'lazy', alt: '' }}
+                  {%- else -%}
+                    {{ a_icon }}
+                  {%- endif -%}
+                </span>
+              {%- endif -%}
+              {%- if a.titre != blank -%}
+                <span class="pnc__atout-title">{{ a.titre }}</span>
+              {%- endif -%}
+              {%- if a.texte != blank -%}
+                <span class="pnc__atout-text">{{ a.texte }}</span>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
         </div>
       {%- endif -%}
     </div>
@@ -1430,7 +2067,7 @@
       {%- endif -%}
 
       {%- if s.show_discount_row -%}
-        <p class="pnc__row pnc__row--discount" data-pnc-discount-row hidden>
+        <p class="pnc__row pnc__row--discount{% if s.discount_style == 'simple' %} pnc__row--plain{% endif %}" data-pnc-discount-row hidden>
           <span class="pnc__row-label">
             {{ pn_tag }}<span data-pnc-discount-name>{{ s.discount_label }}</span>
           </span>
@@ -1495,6 +2132,10 @@
         <button type="submit" name="checkout" class="pnc__cta" data-pnc-cta>
           {%- if s.show_lock -%}{{ pn_lock }}{%- endif -%}
           <span class="pnc__cta-label">{{ s.cta_label }}</span>
+          {%- if s.cta_show_total -%}
+            <span class="pnc__cta-sep" aria-hidden="true">·</span>
+            <span class="pnc__cta-total" data-pnc-cta-total></span>
+          {%- endif -%}
           {%- if s.show_cta_arrow -%}{{ pn_arrow }}{%- endif -%}
         </button>
       </form>
@@ -1511,6 +2152,37 @@
         <p class="pnc__note">{{ s.foot_note }}</p>
       {%- endif -%}
     </div>
+
+    {%- comment -%}
+      ---------- Avis clients ----------
+      Tout en bas, hors du pied : la bande défile horizontalement et ne prend
+      jamais la place du bouton de paiement.
+    {%- endcomment -%}
+    {%- if s.show_avis and avis.size > 0 -%}
+      <div class="pnc__avis" data-pnc-avis data-pnc-avis-auto="{{ s.avis_auto }}">
+        {%- for block in avis -%}
+          {%- assign r = block.settings -%}
+          <div class="pnc__avis-item" {{ block.shopify_attributes }}>
+            {%- if r.photo != blank -%}
+              <span class="pnc__avis-photo">
+                {{ r.photo | image_url: width: 160 | image_tag: widths: '60, 120, 160', loading: 'lazy', alt: '' }}
+              </span>
+            {%- endif -%}
+            <div class="pnc__avis-body">
+              <span class="pnc__avis-top">
+                {%- if r.nom != blank -%}<span>{{ r.nom }}</span>{%- endif -%}
+                {%- if r.badge != blank -%}
+                  <span class="pnc__avis-badge">{{ pn_check_fill }}{{ r.badge }}</span>
+                {%- endif -%}
+              </span>
+              {%- if r.texte != blank -%}
+                <span class="pnc__avis-text">{{ r.texte }}</span>
+              {%- endif -%}
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
   </div>
 
   {%- comment -%}
@@ -1527,11 +2199,18 @@
         <div class="pnc__line-top">
           <a class="pnc__line-title" data-pnc-line-title></a>
           <button type="button" class="pnc__line-remove" data-pnc-line-remove aria-label="{{ s.remove_label | escape }}">
-            {{- pn_trash -}}
+            {%- if s.remove_icon == 'croix' -%}{{ pn_close }}{%- else -%}{{ pn_trash }}{%- endif -%}
           </button>
         </div>
         <div class="pnc__line-meta">
-          <span class="pnc__ribbon" data-pnc-ribbon hidden>{{ pn_tag }}<span data-pnc-ribbon-text></span></span>
+          {%- comment -%}
+            La pastille de remise se range là où le marchand l'attend : près
+            du titre, ou sous le prix avec le montant barré. Elle n'existe
+            qu'une fois, à une seule de ces deux places.
+          {%- endcomment -%}
+          {%- if s.ribbon_place == 'titre' -%}
+            <span class="pnc__ribbon pnc__ribbon--{{ s.ribbon_style }}" data-pnc-ribbon hidden>{% if s.ribbon_icon %}{{ pn_tag }}{% endif %}<span data-pnc-ribbon-text></span></span>
+          {%- endif -%}
           <div class="pnc__line-opts" data-pnc-line-opts></div>
         </div>
         {%- comment -%}
@@ -1548,8 +2227,16 @@
             <button type="button" data-pnc-qty-plus aria-label="{{ s.qty_plus_label | escape }}">+</button>
           </span>
           <span class="pnc__line-prices">
-            <s class="pnc__line-was" data-pnc-line-was hidden></s>
             <span data-pnc-line-price></span>
+            <span class="pnc__line-under">
+              <s class="pnc__line-was" data-pnc-line-was hidden></s>
+              {%- if s.ribbon_place == 'prix' -%}
+                <span class="pnc__ribbon pnc__ribbon--{{ s.ribbon_style }}" data-pnc-ribbon hidden>
+                  {%- if s.ribbon_icon -%}{{ pn_tag }}{%- endif -%}
+                  <span data-pnc-ribbon-text></span>
+                </span>
+              {%- endif -%}
+            </span>
           </span>
         </div>
         <button type="button" class="pnc__swap-open" data-pnc-swap-open hidden></button>
@@ -1813,6 +2500,16 @@
       if (subtotalEl) subtotalEl.textContent = formatMoney(full);
       if (totalEl) totalEl.textContent = formatMoney(paid);
 
+      /* Le montant sur le bouton : la dernière chose lue avant le clic, donc
+         celle qui doit coïncider avec le total à l'euro près. */
+      var ctaTotal = $('[data-pnc-cta-total]');
+      if (ctaTotal) {
+        ctaTotal.textContent = formatMoney(paid);
+        ctaTotal.hidden = paid <= 0;
+      }
+      var ctaSep = $('.pnc__cta-sep');
+      if (ctaSep) ctaSep.hidden = paid <= 0;
+
       if (discountRow) {
         discountRow.hidden = saved <= 0;
         if (discountEl) discountEl.textContent = '−' + formatMoney(saved);
@@ -1937,14 +2634,28 @@
         title.href = item.url;
       }
 
+      /* Les déclinaisons : en pastilles, ou sur une seule ligne de texte —
+         « 20CM — PETITE ». Le texte tient moins de place et se lit d'un
+         trait quand il y a deux ou trois options. */
       var opts = frag.querySelector('[data-pnc-line-opts]');
       if (opts) {
+        var values = [];
         if (config.showPills && item.options_with_values) {
           item.options_with_values.forEach(function (opt) {
             if (!opt.value || opt.value === 'Default Title') return;
+            values.push(opt.value);
+          });
+        }
+        if (values.length && config.optsStyle === 'texte') {
+          var line = document.createElement('span');
+          line.className = 'pnc__opts-line';
+          line.textContent = values.join(' — ');
+          opts.appendChild(line);
+        } else {
+          values.forEach(function (value) {
             var pill = document.createElement('span');
             pill.className = 'pnc__pill';
-            pill.textContent = opt.value;
+            pill.textContent = value;
             opts.appendChild(pill);
           });
         }
@@ -2029,13 +2740,47 @@
       var max = config.goalMax || 0;
       if (!max) return;
 
-      var pct = Math.min(100, (total / max) * 100);
-      if (goalsFill) goalsFill.style.width = pct + '%';
-
-      $$('[data-pnc-goal]', goalsBox).forEach(function (marker) {
+      var markers = $$('[data-pnc-goal]', goalsBox);
+      markers.forEach(function (marker) {
         var amount = Number(marker.getAttribute('data-pnc-goal')) || 0;
         marker.classList.toggle('is-reached', total >= amount);
       });
+
+      /* Le remplissage.
+         À pas réguliers, les pastilles ne sont plus à leur montant : la
+         jauge doit donc avancer d'un cran à l'autre, et interpoler à
+         l'intérieur du cran en cours. Sinon elle dépasserait largement la
+         pastille atteinte, ou resterait loin derrière. */
+      var pct;
+      if (goalsBox.getAttribute('data-pnc-goals-layout') === 'regulier' && markers.length > 1) {
+        var steps = markers
+          .map(function (marker) {
+            return {
+              amount: Number(marker.getAttribute('data-pnc-goal')) || 0,
+              pos: parseFloat(marker.getAttribute('data-pnc-goal-pct')) || 0
+            };
+          })
+          .sort(function (a, b) {
+            return a.amount - b.amount;
+          });
+
+        pct = 0;
+        for (var i = 0; i < steps.length; i += 1) {
+          if (total >= steps[i].amount) {
+            pct = steps[i].pos;
+            continue;
+          }
+          var from = i === 0 ? { amount: 0, pos: 0 } : steps[i - 1];
+          var span = steps[i].amount - from.amount;
+          var part = span > 0 ? (total - from.amount) / span : 0;
+          pct = from.pos + Math.max(0, Math.min(1, part)) * (steps[i].pos - from.pos);
+          break;
+        }
+      } else {
+        pct = Math.min(100, (total / max) * 100);
+      }
+
+      if (goalsFill) goalsFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
 
       /* Le message vise toujours le prochain palier non atteint ; une fois
          tous franchis, il félicite au lieu de rester muet. */
@@ -2368,6 +3113,92 @@
       });
     }
 
+    /* ---------------- Compte à rebours de l'offre ----------------
+       L'échéance est posée une fois et gardée dans la session : rouvrir le
+       panneau ne relance pas la minuterie, qui annoncerait sinon une urgence
+       qui ne s'épuise jamais. */
+
+    (function () {
+      var timer = $('[data-pnc-timer]');
+      if (!timer) return;
+      var value = timer.querySelector('[data-pnc-timer-value]');
+      var minutes = Number(timer.getAttribute('data-pnc-minutes')) || 0;
+      if (!value || minutes <= 0) return;
+
+      var KEY = 'pnc:offer-end';
+      var end = 0;
+      try {
+        end = Number(window.sessionStorage.getItem(KEY)) || 0;
+      } catch (e) {
+        end = 0;
+      }
+      if (!end || end < Date.now()) {
+        end = Date.now() + minutes * 60000;
+        try {
+          window.sessionStorage.setItem(KEY, String(end));
+        } catch (e) {
+          /* Navigation privée : la minuterie tient alors le temps de la page. */
+        }
+      }
+
+      function tick() {
+        var left = Math.max(0, Math.round((end - Date.now()) / 1000));
+        if (left <= 0) {
+          timer.hidden = true;
+          window.clearInterval(handle);
+          return;
+        }
+        var m = Math.floor(left / 60);
+        var sec = left % 60;
+        value.textContent = (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+        timer.hidden = false;
+      }
+
+      var handle = window.setInterval(tick, 1000);
+      tick();
+    })();
+
+    /* ---------------- Jauge du carrousel ----------------
+       La barre de défilement native est masquée : cette jauge la remplace,
+       et dit en un coup d'œil combien de suggestions restent à droite. */
+
+    (function () {
+      var rail = $('.pnc__cross-rail');
+      var bar = $('[data-pnc-cross-bar]');
+      var fill = $('[data-pnc-cross-bar-fill]');
+      if (!rail || !bar || !fill) return;
+
+      function paint() {
+        var visible = rail.clientWidth;
+        var total = rail.scrollWidth;
+        if (total <= visible + 1) {
+          bar.hidden = true;
+          return;
+        }
+        bar.hidden = false;
+        var share = visible / total;
+        fill.style.width = share * 100 + '%';
+        var travel = rail.scrollLeft / (total - visible);
+        fill.style.transform = 'translateX(' + travel * ((1 / share - 1) * 100) + '%)';
+      }
+
+      rail.addEventListener('scroll', paint, { passive: true });
+      window.addEventListener('resize', paint);
+
+      /* Au chargement, le panneau est encore masqué : le rail mesure zéro et
+         la jauge se croirait inutile. Elle se recalcule donc dès que le rail
+         prend sa taille, c'est-à-dire à la première ouverture. */
+      if (typeof window.ResizeObserver === 'function') {
+        new window.ResizeObserver(paint).observe(rail);
+      } else {
+        document.addEventListener('pnc:open', function () {
+          window.setTimeout(paint, 60);
+        });
+      }
+
+      paint();
+    })();
+
     /* ---------------- Points d'entrée ---------------- */
 
     /* Le drapeau dit à l'appelant que quelqu'un a pris la main : sans lui,
@@ -2516,7 +3347,7 @@
   "name": "Panier coulissant",
   "tag": "section",
   "class": "panier-coulissant-section",
-  "max_blocks": 20,
+  "max_blocks": 40,
   "settings": [
     {
       "type": "header",
@@ -2555,10 +3386,68 @@
     { "type": "range", "id": "cta_radius", "label": "Arrondi du bouton", "min": 0, "max": 30, "step": 2, "unit": "px", "default": 8 },
     { "type": "checkbox", "id": "show_head_icon", "label": "Afficher l'icône panier", "default": true },
     { "type": "text", "id": "panel_title", "label": "Titre", "default": "Votre panier" },
+    { "type": "range", "id": "head_title_size", "label": "Taille du titre", "min": 13, "max": 34, "step": 1, "unit": "px", "default": 20 },
+    {
+      "type": "select",
+      "id": "head_title_weight",
+      "label": "Graisse du titre",
+      "options": [
+        { "value": "400", "label": "Normale" },
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" },
+        { "value": "800", "label": "Très grasse" }
+      ],
+      "default": "700"
+    },
     { "type": "checkbox", "id": "show_subtitle", "label": "Afficher le compte d'articles", "default": true },
     { "type": "text", "id": "subtitle_one", "label": "Compte au singulier", "info": "[n] est remplacé par le nombre.", "default": "[n] article dans le panier" },
     { "type": "text", "id": "subtitle_many", "label": "Compte au pluriel", "default": "[n] articles dans le panier" },
     { "type": "text", "id": "close_label", "label": "Fermer (accessibilité)", "default": "Fermer le panier" },
+
+    {
+      "type": "header",
+      "content": "Image de l'en-tête"
+    },
+    { "type": "image_picker", "id": "head_image", "label": "Image de fond", "info": "Vide : l'en-tête garde sa couleur unie." },
+    { "type": "range", "id": "head_image_opacity", "label": "Opacité de l'image", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 100 },
+    { "type": "range", "id": "head_overlay", "label": "Densité du voile", "info": "Le voile sombre posé par-dessus l'image, pour que le titre reste lisible.", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 45 },
+    { "type": "range", "id": "head_height", "label": "Hauteur minimale", "min": 48, "max": 220, "step": 4, "unit": "px", "default": 76 },
+    {
+      "type": "select",
+      "id": "head_focus",
+      "label": "Cadrage de l'image",
+      "options": [
+        { "value": "center", "label": "Centré" },
+        { "value": "top", "label": "Haut" },
+        { "value": "bottom", "label": "Bas" },
+        { "value": "left", "label": "Gauche" },
+        { "value": "right", "label": "Droite" }
+      ],
+      "default": "center"
+    },
+
+    {
+      "type": "header",
+      "content": "Bandeau de confiance"
+    },
+    { "type": "checkbox", "id": "show_proof", "label": "Afficher le bandeau", "default": true },
+    { "type": "image_picker", "id": "proof_logo", "label": "Logo", "info": "Vide : le texte ci-dessous est affiché à la place." },
+    { "type": "range", "id": "proof_logo_height", "label": "Hauteur du logo", "min": 8, "max": 40, "step": 1, "unit": "px", "default": 14 },
+    { "type": "text", "id": "proof_text", "label": "Texte à défaut de logo", "default": "Avis vérifiés" },
+    { "type": "range", "id": "proof_stars", "label": "Étoiles pleines", "info": "0 masque les étoiles.", "min": 0, "max": 5, "step": 1, "default": 5 },
+    {
+      "type": "select",
+      "id": "proof_star_style",
+      "label": "Style des étoiles",
+      "options": [
+        { "value": "tuiles", "label": "Sur tuiles colorées" },
+        { "value": "nues", "label": "Étoiles simples" }
+      ],
+      "default": "tuiles"
+    },
+    { "type": "text", "id": "proof_score", "label": "Note", "default": "4,9/5" },
+    { "type": "text", "id": "proof_count", "label": "Nombre d'avis", "default": "2 847 avis vérifiés" },
 
     {
       "type": "header",
@@ -2586,35 +3475,114 @@
       "default": "Plus que [montant] pour avoir [objectif]"
     },
     { "type": "text", "id": "goals_done", "label": "Tous les paliers atteints", "default": "Bravo, toutes les récompenses sont débloquées !" },
+    {
+      "type": "select",
+      "id": "goals_layout",
+      "label": "Disposition des paliers",
+      "info": "« À pas réguliers » les espace également : c'est ce qu'il faut au-delà de trois récompenses. « Proportionnel » les place à leur montant réel.",
+      "options": [
+        { "value": "regulier", "label": "À pas réguliers" },
+        { "value": "proportionnel", "label": "Proportionnel au montant" }
+      ],
+      "default": "regulier"
+    },
+    { "type": "checkbox", "id": "goal_check", "label": "Coche sur un palier atteint", "info": "L'icône laisse la place à une coche une fois le palier franchi.", "default": true },
+    { "type": "range", "id": "goal_dot_size", "label": "Taille des pastilles", "min": 20, "max": 52, "step": 2, "unit": "px", "default": 32 },
+    { "type": "range", "id": "goal_track_height", "label": "Épaisseur du trait", "min": 2, "max": 14, "step": 1, "unit": "px", "default": 4 },
+    { "type": "range", "id": "goal_label_size", "label": "Taille des étiquettes", "min": 8, "max": 16, "step": 1, "unit": "px", "default": 10 },
     { "type": "range", "id": "goal_edge", "label": "Marge des extrémités", "info": "De l'espace de chaque côté pour que les étiquettes ne soient pas coupées.", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 52 },
 
     {
       "type": "header",
       "content": "Articles"
     },
+    {
+      "type": "select",
+      "id": "line_style",
+      "label": "Présentation",
+      "options": [
+        { "value": "liste", "label": "Liste séparée par un filet" },
+        { "value": "carte", "label": "Cartes encadrées" }
+      ],
+      "default": "liste"
+    },
+    { "type": "range", "id": "line_img_size", "label": "Taille de l'image", "min": 48, "max": 140, "step": 2, "unit": "px", "default": 60 },
+    {
+      "type": "select",
+      "id": "line_img_align",
+      "label": "Position de l'image",
+      "options": [
+        { "value": "center", "label": "Centrée" },
+        { "value": "flex-start", "label": "En haut" }
+      ],
+      "default": "flex-start"
+    },
+    { "type": "range", "id": "line_price_size", "label": "Taille du prix", "min": 11, "max": 22, "step": 1, "unit": "px", "default": 14 },
+    {
+      "type": "select",
+      "id": "remove_icon",
+      "label": "Icône pour retirer",
+      "options": [
+        { "value": "croix", "label": "Croix" },
+        { "value": "corbeille", "label": "Corbeille" }
+      ],
+      "default": "croix"
+    },
     { "type": "checkbox", "id": "show_qty", "label": "Afficher les quantités", "default": true },
-    { "type": "checkbox", "id": "show_pills", "label": "Afficher les variantes en pastilles", "default": true },
+    { "type": "checkbox", "id": "show_pills", "label": "Afficher les variantes", "default": true },
+    {
+      "type": "select",
+      "id": "opts_style",
+      "label": "Présentation des variantes",
+      "options": [
+        { "value": "texte", "label": "Sur une ligne de texte" },
+        { "value": "pastilles", "label": "En pastilles" }
+      ],
+      "default": "texte"
+    },
     { "type": "checkbox", "id": "show_line_compare", "label": "Afficher le prix barré", "default": true },
     { "type": "checkbox", "id": "show_ribbon", "label": "Ruban d'économie sur l'article", "default": true },
+    {
+      "type": "select",
+      "id": "ribbon_place",
+      "label": "Place du ruban",
+      "options": [
+        { "value": "prix", "label": "Sous le prix, à droite" },
+        { "value": "titre", "label": "Près du titre" }
+      ],
+      "default": "prix"
+    },
+    {
+      "type": "select",
+      "id": "ribbon_style",
+      "label": "Habillage du ruban",
+      "options": [
+        { "value": "texte", "label": "Simple mention" },
+        { "value": "pastille", "label": "Pastille colorée" }
+      ],
+      "default": "texte"
+    },
+    { "type": "range", "id": "ribbon_size", "label": "Taille du ruban", "min": 8, "max": 16, "step": 1, "unit": "px", "default": 11 },
+    { "type": "checkbox", "id": "ribbon_icon", "label": "Étiquette devant le ruban", "default": false },
     {
       "type": "select",
       "id": "ribbon_content",
       "label": "Contenu de la pastille",
       "info": "Le nom vient de la réduction Shopify appliquée à l'article. Sans réduction nommée — un simple prix barré, par exemple — c'est le pourcentage qui s'affiche.",
       "options": [
-        { "value": "name_or_percent", "label": "Automatique (évite de répéter le détail)" },
+        { "value": "percent", "label": "Pourcentage économisé" },
         { "value": "name", "label": "Nom de la réduction" },
-        { "value": "percent", "label": "Pourcentage économisé" }
+        { "value": "name_or_percent", "label": "Automatique (évite de répéter le détail)" }
       ],
-      "default": "name_or_percent"
+      "default": "percent"
     },
-    { "type": "text", "id": "ribbon_label", "label": "Texte du ruban", "info": "Utilisé pour le pourcentage. [x] est remplacé par la valeur calculée.", "default": "Économisez [x] %" },
+    { "type": "text", "id": "ribbon_label", "label": "Texte du ruban", "info": "Utilisé pour le pourcentage. [x] est remplacé par la valeur calculée.", "default": "−[x] %" },
     {
       "type": "checkbox",
       "id": "show_sold",
       "label": "Mention « X achetés dans les dernières 24 h »",
       "info": "Nombre décoratif, tiré entre les deux bornes ci-dessous et stable pour un même produit. Ce n'est pas une donnée de vente réelle.",
-      "default": true
+      "default": false
     },
     { "type": "text", "id": "sold_label", "label": "Texte de la mention", "info": "[n] est remplacé par le nombre.", "default": "[n]+ achetés dans les dernières 24 h" },
     { "type": "range", "id": "sold_from", "label": "Nombre minimum", "min": 0, "max": 2000, "step": 20, "default": 120 },
@@ -2624,9 +3592,9 @@
       "id": "show_deals",
       "label": "Détailler les promotions appliquées",
       "info": "Reprend le nom des réductions Shopify sur l'article, avec le montant gagné.",
-      "default": true
+      "default": false
     },
-    { "type": "checkbox", "id": "show_swap", "label": "Permettre de changer de variante", "default": true },
+    { "type": "checkbox", "id": "show_swap", "label": "Permettre de changer de variante", "default": false },
     { "type": "text", "id": "swap_label", "label": "Lien de changement", "default": "Changer de couleur ou de taille" },
     { "type": "text", "id": "remove_label", "label": "Retirer (accessibilité)", "default": "Retirer cet article" },
     { "type": "text", "id": "qty_minus_label", "label": "Diminuer (accessibilité)", "default": "Diminuer la quantité" },
@@ -2652,8 +3620,32 @@
       "info": "Ajoute un bloc « Produit complémentaire » par suggestion. Un produit déjà au panier disparaît de la liste.",
       "default": true
     },
-    { "type": "text", "id": "cross_title", "label": "Titre", "default": "La combinaison parfaite :" },
-    { "type": "checkbox", "id": "show_cross_rating", "label": "Afficher les étoiles", "default": true },
+    { "type": "text", "id": "cross_title", "label": "Titre", "default": "Idéal pour votre panier" },
+    { "type": "checkbox", "id": "cross_title_icon", "label": "Icône devant le titre", "default": false },
+    {
+      "type": "select",
+      "id": "cross_style",
+      "label": "Habillage",
+      "options": [
+        { "value": "sombre", "label": "Carte sombre mise en avant" },
+        { "value": "clair", "label": "Cartes claires" }
+      ],
+      "default": "sombre"
+    },
+    {
+      "type": "select",
+      "id": "cross_layout",
+      "label": "Disposition",
+      "options": [
+        { "value": "carrousel", "label": "Carrousel horizontal" },
+        { "value": "liste", "label": "Les unes sous les autres" }
+      ],
+      "default": "carrousel"
+    },
+    { "type": "checkbox", "id": "cross_timer", "label": "Afficher un compte à rebours", "info": "Il est posé une fois par session de navigation : rouvrir le panier ne le relance pas.", "default": true },
+    { "type": "range", "id": "cross_timer_minutes", "label": "Durée du compte à rebours", "min": 1, "max": 60, "step": 1, "unit": "min", "default": 10 },
+    { "type": "checkbox", "id": "show_cross_rating", "label": "Afficher les étoiles", "default": false },
+    { "type": "checkbox", "id": "cross_show_compare", "label": "Afficher le prix barré et l'économie", "default": false },
     { "type": "text", "id": "cross_add_label", "label": "Bouton d'ajout", "default": "Ajouter" },
     { "type": "text", "id": "cross_save_label", "label": "Mention d'économie", "info": "[x] est remplacé par le pourcentage.", "default": "Économisez [x] %" },
 
@@ -2665,6 +3657,16 @@
     { "type": "text", "id": "subtotal_label", "label": "Libellé du sous-total", "info": "Montant avant réductions.", "default": "Sous-total" },
     { "type": "checkbox", "id": "show_discount_row", "label": "Afficher la ligne de réduction", "info": "N'apparaît que s'il y a vraiment une remise.", "default": true },
     { "type": "text", "id": "discount_label", "label": "Libellé de la réduction", "info": "Remplacé par le nom de la remise Shopify quand celle-ci porte sur la commande entière.", "default": "Réductions appliquées" },
+    {
+      "type": "select",
+      "id": "discount_style",
+      "label": "Habillage de la réduction",
+      "options": [
+        { "value": "bandeau", "label": "Sur un fond vert" },
+        { "value": "simple", "label": "Simple ligne verte" }
+      ],
+      "default": "bandeau"
+    },
     { "type": "text", "id": "total_label", "label": "Libellé du total", "default": "Total" },
 
     {
@@ -2695,12 +3697,45 @@
       "info": "Ajoutée automatiquement au panier. Le client peut la retirer, et elle ne revient pas ensuite.",
       "default": true
     },
-    { "type": "text", "id": "cta_label", "label": "Texte du bouton", "default": "Finaliser ma commande" },
+    { "type": "text", "id": "cta_label", "label": "Texte du bouton", "default": "Paiement sécurisé" },
+    { "type": "range", "id": "cta_size", "label": "Taille du texte du bouton", "min": 11, "max": 22, "step": 1, "unit": "px", "default": 14 },
+    { "type": "checkbox", "id": "cta_show_total", "label": "Afficher le total sur le bouton", "default": true },
     { "type": "checkbox", "id": "show_lock", "label": "Cadenas devant le texte", "default": true },
-    { "type": "checkbox", "id": "show_cta_arrow", "label": "Flèche après le texte", "default": true },
+    { "type": "checkbox", "id": "show_cta_arrow", "label": "Flèche après le texte", "default": false },
     { "type": "checkbox", "id": "show_payment", "label": "Afficher les moyens de paiement", "default": true },
     { "type": "text", "id": "foot_note", "label": "Mention sous le bouton", "default": "Taxes et livraison calculées au paiement." },
     { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Une erreur est survenue. Réessaie dans un instant." },
+
+    {
+      "type": "header",
+      "content": "Rangée d'atouts"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_atouts",
+      "label": "Afficher la rangée",
+      "info": "Ajoute un bloc « Atout » par colonne, sous les suggestions.",
+      "default": true
+    },
+    { "type": "range", "id": "atouts_icon_size", "label": "Taille des icônes", "min": 14, "max": 48, "step": 2, "unit": "px", "default": 22 },
+    { "type": "range", "id": "atouts_title_size", "label": "Taille du titre", "min": 8, "max": 16, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "atouts_text_size", "label": "Taille du texte", "min": 7, "max": 15, "step": 1, "unit": "px", "default": 10 },
+    { "type": "range", "id": "atouts_padding", "label": "Marge haute et basse", "min": 0, "max": 36, "step": 2, "unit": "px", "default": 14 },
+
+    {
+      "type": "header",
+      "content": "Avis clients en bas"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_avis",
+      "label": "Afficher le bandeau d'avis",
+      "info": "Ajoute un bloc « Avis client » par témoignage. La bande défile horizontalement.",
+      "default": true
+    },
+    { "type": "checkbox", "id": "avis_auto", "label": "Faire défiler tout seul", "default": true },
+    { "type": "range", "id": "avis_photo_size", "label": "Taille des photos", "min": 0, "max": 64, "step": 2, "unit": "px", "default": 34 },
+    { "type": "range", "id": "avis_padding", "label": "Marge haute et basse", "min": 2, "max": 28, "step": 2, "unit": "px", "default": 10 },
 
     {
       "type": "header",
@@ -2718,7 +3753,38 @@
     { "type": "color", "id": "color_green_soft", "label": "Vert clair", "default": "#EAF3E8" },
     { "type": "color", "id": "color_star", "label": "Étoiles", "default": "#F5B32D" },
     { "type": "color", "id": "color_red", "label": "Rouge", "default": "#D94A4A" },
-    { "type": "color", "id": "color_red_soft", "label": "Rouge pâle", "default": "#FDF0F0" }
+    { "type": "color", "id": "color_red_soft", "label": "Rouge pâle", "default": "#FDF0F0" },
+    { "type": "color", "id": "color_ribbon_bg", "label": "Ruban d'économie — fond", "info": "Sans effet sur une simple mention.", "default": "#EAF3E8" },
+    { "type": "color", "id": "color_ribbon_ink", "label": "Ruban d'économie — texte", "default": "#8E2740" },
+
+    {
+      "type": "header",
+      "content": "Couleurs — en-tête et bandeau de confiance"
+    },
+    { "type": "color", "id": "color_head_ink", "label": "Texte sur l'image", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_head_veil", "label": "Voile sur l'image", "default": "#111A12" },
+    { "type": "color", "id": "color_proof_bg", "label": "Bandeau de confiance — fond", "default": "#F6F4EC" },
+    { "type": "color", "id": "color_proof_ink", "label": "Bandeau de confiance — texte", "default": "#16221B" },
+    { "type": "color", "id": "color_proof_star", "label": "Bandeau de confiance — étoiles", "default": "#2F5134" },
+
+    {
+      "type": "header",
+      "content": "Couleurs — suggestion, atouts, avis"
+    },
+    { "type": "color", "id": "color_cross_bg", "label": "Carte de suggestion — fond", "default": "#1E2219" },
+    { "type": "color", "id": "color_cross_ink", "label": "Carte de suggestion — texte", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_cross_accent", "label": "Carte de suggestion — accent", "default": "#D0A96A" },
+    { "type": "color", "id": "color_atout_ico", "label": "Atouts — icônes", "default": "#8A6D3B" },
+    { "type": "color", "id": "color_atout_sub", "label": "Atouts — texte secondaire", "default": "#7C8A81" },
+    { "type": "color", "id": "color_avis_bg", "label": "Avis — fond du bandeau", "default": "#1E2219" },
+    { "type": "color", "id": "color_avis_ink", "label": "Avis — texte", "default": "#FFFFFF" },
+
+    {
+      "type": "header",
+      "content": "Couleurs — bouton de paiement"
+    },
+    { "type": "color", "id": "color_cta_bg", "label": "Bouton — fond", "default": "#8E2740" },
+    { "type": "color", "id": "color_cta_ink", "label": "Bouton — texte", "default": "#FFFFFF" }
   ],
   "blocks": [
     {
@@ -2737,7 +3803,11 @@
             { "value": "gift", "label": "Cadeau" },
             { "value": "percent", "label": "Remise" },
             { "value": "box", "label": "Colis" },
-            { "value": "star", "label": "Étoile" }
+            { "value": "star", "label": "Étoile" },
+            { "value": "book", "label": "Livre" },
+            { "value": "card", "label": "Carte cadeau" },
+            { "value": "spoon", "label": "Ustensile" },
+            { "value": "heart", "label": "Cœur" }
           ],
           "default": "truck"
         }
@@ -2765,17 +3835,61 @@
         },
         { "type": "text", "id": "rating_count", "label": "Nombre d'avis", "info": "Laisse vide pour masquer les étoiles.", "default": "3 827" }
       ]
+    },
+    {
+      "type": "atout",
+      "name": "Atout",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icone",
+          "label": "Icône",
+          "options": [
+            { "value": "shield", "label": "Bouclier" },
+            { "value": "leaf", "label": "Feuille" },
+            { "value": "truck", "label": "Livraison" },
+            { "value": "infinity", "label": "Infini" },
+            { "value": "heart", "label": "Cœur" },
+            { "value": "gift", "label": "Cadeau" },
+            { "value": "box", "label": "Colis" },
+            { "value": "lock", "label": "Cadenas" },
+            { "value": "none", "label": "Aucune" }
+          ],
+          "default": "shield"
+        },
+        { "type": "image_picker", "id": "image", "label": "Image à la place de l'icône" },
+        { "type": "text", "id": "titre", "label": "Titre", "default": "Garanti à vie" },
+        { "type": "text", "id": "texte", "label": "Texte dessous", "default": "Sans condition" }
+      ]
+    },
+    {
+      "type": "avis",
+      "name": "Avis client",
+      "settings": [
+        { "type": "image_picker", "id": "photo", "label": "Photo" },
+        { "type": "text", "id": "nom", "label": "Nom", "default": "Nathalie R." },
+        { "type": "text", "id": "badge", "label": "Étiquette", "info": "Vide : aucune étiquette.", "default": "Client vérifié" },
+        { "type": "text", "id": "texte", "label": "Témoignage", "default": "Enfin une alternative en titane sans revêtement." }
+      ]
     }
   ],
   "presets": [
     {
       "name": "Panier coulissant",
       "blocks": [
-        { "type": "tier" },
-        { "type": "tier" },
+        { "type": "tier", "settings": { "amount": "60", "label": "Livraison", "reward": "la livraison gratuite", "icon": "truck" } },
+        { "type": "tier", "settings": { "amount": "90", "label": "E-book", "reward": "l'e-book offert", "icon": "book" } },
+        { "type": "tier", "settings": { "amount": "120", "label": "Guide", "reward": "le guide offert", "icon": "star" } },
+        { "type": "tier", "settings": { "amount": "150", "label": "Bon 10 €", "reward": "un bon d'achat de 10 € offert", "icon": "percent" } },
+        { "type": "tier", "settings": { "amount": "190", "label": "Spatule", "reward": "la spatule offerte", "icon": "spoon" } },
+        { "type": "tier", "settings": { "amount": "250", "label": "Carte 50 €", "reward": "une carte cadeau de 50 €", "icon": "card" } },
         { "type": "cross" },
         { "type": "cross" },
-        { "type": "cross" }
+        { "type": "atout", "settings": { "icone": "infinity", "titre": "Garanti à vie", "texte": "Sans condition" } },
+        { "type": "atout", "settings": { "icone": "leaf", "titre": "100 % sans toxine", "texte": "0 PFAS, 0 PFOA" } },
+        { "type": "atout", "settings": { "icone": "truck", "titre": "Livraison offerte", "texte": "Expédié sous 48 h" } },
+        { "type": "avis" },
+        { "type": "avis", "settings": { "nom": "Marc T.", "texte": "La cuisson est plus régulière, rien n'attache." } }
       ]
     }
   ]

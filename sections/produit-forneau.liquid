@@ -103,9 +103,13 @@
   --frn-radius: {{ s.radius }}px;
   --frn-size: {{ s.font_size }}px;
 
-  --frn-serif: {{ s.font_titre }};
   --frn-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Les titres suivent la police du reste par défaut. Le réglage reste là
+     pour qui voudrait y mettre une autre pile — un sérif, par exemple. */
+  --frn-serif: {% if s.font_titre != blank %}{{ s.font_titre }}{% else %}var(--frn-sans){% endif %};
+  --frn-titre-weight: {{ s.font_titre_weight }};
 
   background: var(--frn-bg);
   color: var(--frn-ink);
@@ -241,7 +245,7 @@
   margin: 0 0 10px;
   font-family: var(--frn-serif);
   font-size: {{ s.titre_size_mobile }}px;
-  font-weight: 500;
+  font-weight: var(--frn-titre-weight);
   line-height: 1.22;
   text-align: {{ s.align_mobile }};
 }
@@ -271,7 +275,7 @@
 .frn__price {
   font-family: var(--frn-serif);
   font-size: {{ s.prix_size_mobile }}px;
-  font-weight: 500;
+  font-weight: var(--frn-titre-weight);
   line-height: 1;
   color: var(--frn-price);
 }
@@ -666,7 +670,7 @@
   flex-wrap: wrap;
   font-family: var(--frn-serif);
   font-size: calc(var(--frn-size) * 1.02);
-  font-weight: 500;
+  font-weight: var(--frn-titre-weight);
 }
 
 .frn__offert {
@@ -1743,7 +1747,20 @@
     { "type": "range", "id": "column_gap", "label": "Espace entre les colonnes", "min": 16, "max": 120, "step": 4, "unit": "px", "default": 48 },
     { "type": "range", "id": "radius", "label": "Arrondi des cartes", "min": 0, "max": 28, "step": 2, "unit": "px", "default": 12 },
     { "type": "range", "id": "font_size", "label": "Taille du texte de base", "min": 13, "max": 20, "step": 1, "unit": "px", "default": 15 },
-    { "type": "text", "id": "font_titre", "label": "Police des titres", "info": "Pile CSS. Exemple : Georgia, serif.", "default": "Georgia, 'Times New Roman', serif" },
+    { "type": "text", "id": "font_titre", "label": "Police des titres", "info": "Vide : la police du thème (Poppins). Sinon une pile CSS, par exemple Georgia, serif." },
+    {
+      "type": "select",
+      "id": "font_titre_weight",
+      "label": "Graisse des titres",
+      "options": [
+        { "value": "400", "label": "Normale" },
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" },
+        { "value": "800", "label": "Très grasse" }
+      ],
+      "default": "700"
+    },
     {
       "type": "select",
       "id": "align",
