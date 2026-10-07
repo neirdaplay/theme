@@ -286,7 +286,10 @@
   color: var(--frn-award-line);
 }
 
-.frn__award-ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+/* Chaque icône décide elle-même de son remplissage et de son trait : la
+   couronne de laurier a besoin de feuilles pleines, la médaille d'un
+   contour. La feuille de style ne lui impose que sa taille et sa couleur. */
+.frn__award-ico svg { width: 100%; height: 100%; }
 .frn__award-ico img { width: 100%; height: 100%; object-fit: contain; }
 
 /* Filet : deux traits fins de part et d'autre du texte. C'est la version la
@@ -465,8 +468,29 @@
   background: var(--frn-size-off-bg);
 }
 
+/* Le fond de la taille retenue est une pièce à part, qui glisse d'une case
+   à l'autre. Les boutons restent transparents : sans cela, deux fonds se
+   superposeraient le temps du trajet. */
+.frn__size-glide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 0;
+  height: 100%;
+  background: var(--frn-size-on-bg);
+  opacity: 0;
+}
+
+.frn__sizes.is-ready .frn__size-glide {
+  opacity: 1;
+  transition: transform {{ s.anim_speed }}ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    width {{ s.anim_speed }}ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
 .frn__size {
   position: relative;
+  z-index: 1;
   padding: 12px 6px;
   min-height: 58px;
   border: 0;
@@ -476,13 +500,22 @@
   font-family: inherit;
   cursor: pointer;
   text-align: center;
+  transition: color 0.2s ease;
 }
 
-.frn__size:first-child { border-left: 0; }
+/* « of-type » et non « child » : le fond glissant occupe désormais la
+   première place dans le balisage. */
+.frn__size:first-of-type { border-left: 0; }
 
-.frn__size[aria-pressed="true"] {
-  background: var(--frn-size-on-bg);
-  color: var(--frn-size-on-ink);
+.frn__size[aria-pressed="true"] { color: var(--frn-size-on-ink); }
+
+/* Le trait de séparation disparaît de part et d'autre de la case retenue :
+   il barrerait le fond vert. */
+.frn__size[aria-pressed="true"],
+.frn__size[aria-pressed="true"] + .frn__size { border-left-color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  .frn__sizes.is-ready .frn__size-glide { transition: none; }
 }
 
 .frn__size[disabled] { opacity: 0.4; cursor: not-allowed; }
@@ -726,6 +759,61 @@
 
 .frn__buy-sep { opacity: 0.55; }
 .frn__buy-was { opacity: 0.7; text-decoration: line-through; font-weight: 600; }
+.frn__buy-was[hidden] { display: none; }
+
+/* La confirmation d'ajout : la coche se dessine, et les prix s'effacent le
+   temps du message. */
+.frn__buy-check {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.frn__buy-check svg {
+  width: 1.25em;
+  height: 1.25em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.frn__buy-check path {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+}
+
+/* Le bouton reste fermé le temps de la confirmation, mais il ne doit pas
+   pâlir : un succès affiché en grisé se lit comme une panne. */
+.frn__buy.is-added[disabled] { opacity: 1; cursor: default; }
+
+.frn__buy.is-added .frn__buy-check { display: inline-flex; }
+.frn__buy.is-added .frn__buy-money { display: none; }
+.frn__buy.is-added > svg:first-child { display: none; }
+
+.frn__buy.is-added .frn__buy-check path {
+  animation: frn-draw {{ s.anim_speed }}ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.frn__buy.is-added {
+  animation: frn-confirm {{ s.anim_speed }}ms cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes frn-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes frn-confirm {
+  0% { transform: scale(1); }
+  45% { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frn__buy.is-added { animation: none; }
+  .frn__buy.is-added .frn__buy-check path { animation: none; stroke-dashoffset: 0; }
+}
 
 .frn__urgent {
   display: flex;
@@ -1027,10 +1115,14 @@
   Deux branches symétriques, et rien d'autre : à seize pixels, un tracé plus
   détaillé se referme sur lui-même et ne se lit plus.
 {%- endcomment -%}
-{%- capture ico_laurel -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c-4.4-1.2-7-4.9-6.6-9.9C9.1 11.6 11.6 14.4 12 18.6"/><path d="M12 21c4.4-1.2 7-4.9 6.6-9.9-3.7.5-6.2 3.3-6.6 7.5"/><path d="M7 7.4c2.2-.3 3.9.5 5 2.4M17 7.4c-2.2-.3-3.9.5-5 2.4"/></svg>{%- endcapture -%}
-{%- capture ico_medal -%}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="15.2" r="5.6"/><path d="M12 12.8l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3zM8.4 10L6 3.2h4.2M15.6 10L18 3.2h-4.2"/></svg>{%- endcapture -%}
-{%- capture ico_star_line -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.4l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8-5.4 2.8 1-6L3.3 9.8l6-.9z"/></svg>{%- endcapture -%}
-{%- capture ico_crown -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 7.6l3.2 2.8L12 4.4l5.4 6 3.2-2.8-1.6 11.2H5z"/><path d="M5 18.4h14"/></svg>{%- endcapture -%}
+{%- comment -%}
+  Une vraie couronne de laurier : deux branches qui s'arquent et se
+  rejoignent en bas, avec leurs feuilles. Ouverte en haut, comme il se doit.
+{%- endcomment -%}
+{%- capture ico_laurel -%}<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M9.4 4.6C6.1 6.4 4.1 9.5 4.1 13c0 3.3 1.8 6.1 4.7 7.6"/><path d="M14.6 4.6c3.3 1.8 5.3 4.9 5.3 8.4 0 3.3-1.8 6.1-4.7 7.6"/></g><g fill="currentColor"><ellipse cx="7.0" cy="6.6" rx="1.9" ry="1.15" transform="rotate(-58 7.0 6.6)"/><ellipse cx="17.0" cy="6.6" rx="1.9" ry="1.15" transform="rotate(58 17.0 6.6)"/><ellipse cx="4.9" cy="9.6" rx="1.9" ry="1.15" transform="rotate(-36 4.9 9.6)"/><ellipse cx="19.1" cy="9.6" rx="1.9" ry="1.15" transform="rotate(36 19.1 9.6)"/><ellipse cx="4.0" cy="13.2" rx="1.9" ry="1.15" transform="rotate(-8 4.0 13.2)"/><ellipse cx="20.0" cy="13.2" rx="1.9" ry="1.15" transform="rotate(8 20.0 13.2)"/><ellipse cx="4.8" cy="16.6" rx="1.9" ry="1.15" transform="rotate(22 4.8 16.6)"/><ellipse cx="19.2" cy="16.6" rx="1.9" ry="1.15" transform="rotate(-22 19.2 16.6)"/><ellipse cx="6.9" cy="19.0" rx="1.9" ry="1.15" transform="rotate(48 6.9 19.0)"/><ellipse cx="17.1" cy="19.0" rx="1.9" ry="1.15" transform="rotate(-48 17.1 19.0)"/></g></svg>{%- endcapture -%}
+{%- capture ico_medal -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="15.2" r="5.6"/><path d="M12 12.8l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3zM8.4 10L6 3.2h4.2M15.6 10L18 3.2h-4.2"/></svg>{%- endcapture -%}
+{%- capture ico_star_line -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.4l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8-5.4 2.8 1-6L3.3 9.8l6-.9z"/></svg>{%- endcapture -%}
+{%- capture ico_crown -%}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.4 7.6l3.2 2.8L12 4.4l5.4 6 3.2-2.8-1.6 11.2H5z"/><path d="M5 18.4h14"/></svg>{%- endcapture -%}
 {%- capture ico_prev -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6L13.9 3 5 12l8.9 9 1.5-1.6L8 12z"/></svg>{%- endcapture -%}
 {%- capture ico_next -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 3L7.1 4.6 14.5 12l-7.4 7.4L8.6 21l9-9z"/></svg>{%- endcapture -%}
 {%- comment -%}
@@ -1238,7 +1330,12 @@
 
       {%- if s.show_sizes and tailles.size > 0 -%}
         <div class="frn__ideal-wrap">
-          <div class="frn__sizes" role="group" aria-label="{{ s.sizes_label | escape }}">
+          <div class="frn__sizes" role="group" aria-label="{{ s.sizes_label | escape }}" data-frn-sizes>
+            {%- comment -%}
+              Le fond glissant. Il est posé avant les boutons pour rester
+              dessous sans avoir à empiler les z-index.
+            {%- endcomment -%}
+            <span class="frn__size-glide" data-frn-glide aria-hidden="true"></span>
             {%- for block in tailles -%}
               {%- liquid
                 assign t = block.settings
@@ -1460,6 +1557,9 @@
           {% unless v.available %}disabled{% endunless %}
         >
           {%- if s.buy_lock -%}{{ ico_lock }}{%- endif -%}
+          <span class="frn__buy-check" data-frn-buy-check aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12.6l4.6 4.6L19 7.2"/></svg>
+          </span>
           <span data-frn-buy-label>{% if v.available %}{{ s.buy_label }}{% else %}{{ s.sold_out_label }}{% endif %}</span>
           {%- if s.buy_prices -%}
             <span class="frn__buy-money">
@@ -1589,6 +1689,10 @@
       "cartAddUrl": {{ routes.cart_add_url | json }},
       "cartUrl": {{ routes.cart_url | json }},
       "afterAdd": {{ s.after_add | json }},
+      "animPrices": {{ s.anim_prices | json }},
+      "animSpeed": {{ s.anim_speed | json }},
+      "confirmHold": {{ s.confirm_hold | json }},
+      "buyWasCompare": {{ s.buy_was_compare | json }},
       "setPriceMode": {{ s.set_price_mode | json }},
       "setPriceHighlight": {{ s.set_price_highlight | json }},
       "sizeProperty": {{ s.sizes_property | json }},
@@ -1688,7 +1792,41 @@
 
     var sizeBtns = [].slice.call(root.querySelectorAll('[data-frn-size]'));
     var badge = root.querySelector('[data-frn-ideal-badge]');
+    var sizesBox = root.querySelector('[data-frn-sizes]');
+    var glide = root.querySelector('[data-frn-glide]');
     var current = null;
+
+    /* Qui a demandé moins d'animation n'en aura aucune : ni glissement, ni
+       défilement de chiffres, ni coche qui se dessine. */
+    var calme =
+      window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /**
+     * Le fond vert, posé sur la case retenue. Il ne glisse qu'une fois en
+     * place : au premier passage il se contente d'apparaître, sans traverser
+     * le sélecteur depuis la gauche.
+     */
+    function placeGlide() {
+      if (!glide || !sizesBox) return;
+      var host = sizeBtns.filter(function (b) {
+        return b.getAttribute('aria-pressed') === 'true';
+      })[0];
+      if (!host) {
+        glide.style.width = '0px';
+        return;
+      }
+      glide.style.width = host.offsetWidth + 'px';
+      glide.style.transform = 'translateX(' + host.offsetLeft + 'px)';
+      if (!sizesBox.classList.contains('is-ready')) {
+        /* Deux images plus tard, la position est acquise : la transition peut
+           alors être armée sans produire de trajet au chargement. */
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(function () {
+            sizesBox.classList.add('is-ready');
+          });
+        });
+      }
+    }
 
     /* La taille retenue, et si elle correspond bien à une déclinaison. Sans
        déclinaison, le choix part quand même au panier, en mention de ligne :
@@ -1726,15 +1864,57 @@
       badge.style.left = host.offsetLeft + host.offsetWidth / 2 + 'px';
     }
 
+    /**
+     * Écrit un montant dans un élément, en faisant défiler les chiffres
+     * depuis celui qu'il affichait. Le premier passage se pose directement :
+     * un compteur qui part de zéro au chargement n'annonce rien.
+     */
+    function setMoney(el, cents) {
+      if (!el) return;
+      var to = Math.round(Number(cents) || 0);
+      var from = el.hasAttribute('data-frn-cents')
+        ? Number(el.getAttribute('data-frn-cents'))
+        : null;
+      el.setAttribute('data-frn-cents', to);
+
+      if (!cfg.animPrices || calme || from === null || from === to) {
+        el.textContent = money(to);
+        return;
+      }
+
+      window.cancelAnimationFrame(Number(el.getAttribute('data-frn-raf')) || 0);
+      var start = 0;
+      var dur = cfg.animSpeed || 340;
+
+      function frame(now) {
+        if (!start) start = now;
+        var t = Math.min(1, (now - start) / dur);
+        /* Sortie cubique : le défilement part vite et se pose doucement sur
+           le montant exact. */
+        var e = 1 - Math.pow(1 - t, 3);
+        el.textContent = money(Math.round(from + (to - from) * e));
+        if (t < 1) {
+          el.setAttribute('data-frn-raf', window.requestAnimationFrame(frame));
+        } else {
+          el.textContent = money(to);
+          /* L'attribut disparaît en même temps que le défilement : qui
+             regarde la page sait ainsi quand le montant est définitif. */
+          el.removeAttribute('data-frn-raf');
+        }
+      }
+
+      el.setAttribute('data-frn-raf', window.requestAnimationFrame(frame));
+    }
+
     function paintVariant() {
       if (!current) return;
       var priceEl = root.querySelector('[data-frn-price]');
       var wasEl = root.querySelector('[data-frn-was]');
-      if (priceEl) priceEl.textContent = money(current.price);
+      setMoney(priceEl, current.price);
       if (wasEl) {
         var hasWas = current.compare_at_price && current.compare_at_price > current.price;
         wasEl.hidden = !hasWas;
-        if (hasWas) wasEl.textContent = money(current.compare_at_price);
+        if (hasWas) setMoney(wasEl, current.compare_at_price);
       }
       var buy = root.querySelector('[data-frn-buy]');
       var label = root.querySelector('[data-frn-buy-label]');
@@ -1761,6 +1941,7 @@
       sizeHasVariant = !!found;
       if (found) current = found;
 
+      placeGlide();
       paintVariant();
       paintTotals();
     }
@@ -1785,7 +1966,11 @@
     if (!current) current = (cfg.variants || [])[0] || null;
 
     placeBadge();
-    window.addEventListener('resize', placeBadge);
+    placeGlide();
+    window.addEventListener('resize', function () {
+      placeBadge();
+      placeGlide();
+    });
 
     /* ---------------------------------------------------------------- *
      * Composeur de set
@@ -1815,19 +2000,32 @@
       var count = 1 + picked.length;
       var pct = tierPct(count);
 
+      /* Deux sommes, et il faut les deux.
+         `full` est ce qu'on paie avant le palier : le prix de vente de la
+         poêle, plus le plein tarif de chaque article retenu. C'est de lui
+         que découle le total.
+         `barre` est la valeur affichée comme étant celle d'avant : elle part
+         du prix barré de la déclinaison quand il y en a un, sinon du prix de
+         vente. Sans elle, le bouton n'affichait aucun prix barré tant qu'on
+         n'avait rien ajouté au set. */
       var full = current ? current.price : 0;
+      var barre = current ? Math.max(current.price, current.compare_at_price || 0) : 0;
+      if (!cfg.buyWasCompare) barre = full;
+
       picked.forEach(function (b) {
-        full += Number(b.getAttribute('data-frn-full')) || 0;
+        var f = Number(b.getAttribute('data-frn-full')) || 0;
+        full += f;
+        barre += f;
       });
 
       var total = Math.round(full * (1 - pct / 100));
 
       var totalEl = root.querySelector('[data-frn-buy-total]');
       var wasEl = root.querySelector('[data-frn-buy-was]');
-      if (totalEl) totalEl.textContent = money(total);
+      setMoney(totalEl, total);
       if (wasEl) {
-        wasEl.hidden = total >= full;
-        if (total < full) wasEl.textContent = money(full);
+        wasEl.hidden = total >= barre;
+        if (total < barre) setMoney(wasEl, barre);
       }
 
       // Les deux segments se remplissent l'un après l'autre.
@@ -1868,7 +2066,7 @@
         var on = b.getAttribute('aria-pressed') === 'true';
         var pct = tierPct(on ? count : count + 1);
         var price = Math.round(full * (1 - pct / 100));
-        priceEl.textContent = money(price);
+        setMoney(priceEl, price);
 
         /* Le prix barré n'est montré que lorsqu'il y a vraiment un écart :
            un produit sans prix barré en gagne un dès qu'un palier mord. */
@@ -1953,7 +2151,7 @@
           })
           .then(function () {
             document.dispatchEvent(new CustomEvent('frn:cart-added', { bubbles: true }));
-            if (label) label.textContent = cfg.addedLabel;
+            confirm();
 
             if (cfg.afterAdd === 'cart') {
               window.location.href = cfg.cartUrl;
@@ -1972,7 +2170,10 @@
                 for (var j = 0; j < found.length; j++) {
                   if (typeof found[j].open === 'function') {
                     found[j].open();
-                    reset();
+                    /* Le tiroir recouvre la page, mais le bouton reste là
+                       dessous : il garde sa confirmation le temps voulu
+                       plutôt que de la perdre dans l'image suivante. */
+                    window.setTimeout(reset, cfg.confirmHold || 1600);
                     return;
                   }
                 }
@@ -1980,14 +2181,23 @@
               window.location.href = cfg.cartUrl;
               return;
             }
-            reset();
+            /* On reste sur la page : la confirmation a le temps d'être vue
+               avant que le bouton ne reprenne son libellé. */
+            window.setTimeout(reset, cfg.confirmHold || 1600);
           })
           .catch(function () {
             if (label) label.textContent = cfg.errorLabel;
             window.setTimeout(reset, 2200);
           });
 
+        /** La coche se dessine, les prix s'effacent, le libellé confirme. */
+        function confirm() {
+          buy.classList.add('is-added');
+          if (label) label.textContent = cfg.addedLabel;
+        }
+
         function reset() {
+          buy.classList.remove('is-added');
           buy.disabled = false;
           if (label) label.textContent = before;
         }
@@ -2172,7 +2382,7 @@
       "default": "laurier"
     },
     { "type": "image_picker", "id": "award_image", "label": "Image à la place de l'icône", "info": "Pour un drapeau, par exemple : un émoji s'affiche « FR » sur Windows." },
-    { "type": "range", "id": "award_icon_size", "label": "Taille de l'icône", "min": 8, "max": 40, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "award_icon_size", "label": "Taille de l'icône", "min": 8, "max": 40, "step": 2, "unit": "px", "default": 18 },
     { "type": "range", "id": "award_size", "label": "Taille du texte", "min": 8, "max": 22, "step": 1, "unit": "px", "default": 11 },
     { "type": "range", "id": "award_tracking", "label": "Espacement des lettres", "min": 0, "max": 30, "step": 1, "unit": "%", "default": 12 },
     { "type": "checkbox", "id": "award_caps", "label": "Tout en majuscules", "default": true },
@@ -2261,6 +2471,7 @@
     { "type": "text", "id": "buy_label", "label": "Libellé", "default": "Ajouter au panier" },
     { "type": "checkbox", "id": "buy_lock", "label": "Afficher le cadenas", "default": true },
     { "type": "checkbox", "id": "buy_prices", "label": "Afficher les prix sur le bouton", "default": true },
+    { "type": "checkbox", "id": "buy_was_compare", "label": "Inclure le prix barré du produit", "info": "Le montant barré sur le bouton part du prix barré de la déclinaison. Décoché, il ne compte que les articles du set.", "default": true },
     { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
     { "type": "text", "id": "added_label", "label": "Texte de confirmation", "default": "Ajouté" },
     { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Ajout impossible, réessaie" },
@@ -2276,6 +2487,11 @@
       ],
       "default": "drawer"
     },
+
+    { "type": "header", "content": "Animations" },
+    { "type": "checkbox", "id": "anim_prices", "label": "Faire défiler les chiffres des prix", "info": "Les montants montent ou descendent jusqu'à la valeur exacte au lieu de changer d'un coup.", "default": true },
+    { "type": "range", "id": "anim_speed", "label": "Durée des animations", "min": 120, "max": 900, "step": 20, "unit": "ms", "default": 340 },
+    { "type": "range", "id": "confirm_hold", "label": "Durée de la confirmation d'ajout", "min": 600, "max": 4000, "step": 100, "unit": "ms", "default": 1600 },
 
     { "type": "header", "content": "Mention d'urgence" },
     { "type": "checkbox", "id": "show_urgent", "label": "Afficher la mention", "default": true },
