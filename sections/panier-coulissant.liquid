@@ -1665,6 +1665,7 @@
       "replaceThemeDrawer": {{ s.replace_theme_drawer | json }},
       "showSwap": {{ s.show_swap | json }},
       "showLineCompare": {{ s.show_line_compare | json }},
+      "subtotalBase": {{ s.subtotal_base | json }},
       "showQty": {{ s.show_qty | json }},
       "showPills": {{ s.show_pills | json }},
       "optsStyle": {{ s.opts_style | json }},
@@ -2412,6 +2413,69 @@
       });
     }
 
+    /* ---------------- Prix barrés ----------------
+       /cart.js ne renvoie pas le prix barré des déclinaisons : il faut aller
+       le chercher sur la fiche de chaque produit du panier. Le résultat est
+       gardé, si bien qu'un produit n'est demandé qu'une fois par visite. */
+
+    var comparePar = {};
+    var produitsVus = {};
+
+    function chargerPrixBarres(items) {
+      /* Certains thèmes ou versions renvoient déjà le prix barré : dans ce
+         cas il n'y a rien à demander. */
+      var manquants = [];
+      (items || []).forEach(function (item) {
+        if (item.compare_at_price != null) {
+          comparePar[item.variant_id] = item.compare_at_price;
+          return;
+        }
+        var handle = item.handle;
+        if (!handle || produitsVus[handle] || comparePar[item.variant_id] != null) return;
+        produitsVus[handle] = true;
+        manquants.push(handle);
+      });
+
+      if (!manquants.length) return Promise.resolve();
+
+      return Promise.all(
+        manquants.map(function (handle) {
+          return fetch(config.rootUrl + 'products/' + handle + '.js', {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin'
+          })
+            .then(function (res) {
+              return res.ok ? res.json() : null;
+            })
+            .then(function (produit) {
+              if (!produit || !produit.variants) return;
+              produit.variants.forEach(function (variante) {
+                if (variante.compare_at_price) {
+                  comparePar[variante.id] = variante.compare_at_price;
+                }
+              });
+            })
+            .catch(function () {
+              /* Produit retiré, boutique en maintenance : on s'en passe, le
+                 panier reste juste, simplement sans prix barré. */
+            });
+        })
+      );
+    }
+
+    /**
+     * Le plein tarif d'une ligne : le prix barré multiplié par la quantité,
+     * ou à défaut ce que Shopify annonce avant ses propres remises. On garde
+     * le plus élevé des deux — un « avant » ne peut pas être inférieur.
+     */
+    function pleinTarif(item) {
+      var avant = item.original_line_price || 0;
+      if (config.subtotalBase !== 'tarif') return avant;
+      var barre = comparePar[item.variant_id];
+      if (!barre) return avant;
+      return Math.max(avant, barre * item.quantity);
+    }
+
     function refresh() {
       busy(true);
       return fetch(config.cartUrl + '.js', {
@@ -2421,7 +2485,11 @@
         .then(readJson)
         .then(function (data) {
           cart = data;
-          render();
+          /* Les prix barrés d'abord : sans eux le sous-total s'afficherait
+             une première fois trop bas, puis sauterait. */
+          return chargerPrixBarres(data.items).then(function () {
+            render();
+          });
         })
         .catch(function (error) {
           showError(error.message);
@@ -2479,10 +2547,14 @@
          la version de Shopify et le type de remise. On retient la plus haute :
          un montant « avant remise » ne peut, par définition, être inférieur
          à aucune des autres. La somme des lignes sert de filet quand
-         original_total_price manque. */
+         original_total_price manque.
+
+         En mode « tarif », cette somme part des prix barrés : le sous-total
+         annonce alors ce que le panier vaudrait au prix fort, et l'écart
+         avec le total dit l'économie réalisée. */
       var fromLines = 0;
       (cart.items || []).forEach(function (item) {
-        fromLines += item.original_line_price || 0;
+        fromLines += pleinTarif(item);
       });
       var full = Math.max(
         cart.original_total_price || 0,
@@ -2687,12 +2759,11 @@
         }
       }
 
-      /* La pastille ne reflète que ce que Shopify a réellement remisé. Un
-         simple prix barré de fiche produit n'est pas une remise de panier :
-         l'afficher comme telle donnait un pourcentage plus flatteur pour une
-         paire que pour trois, ce qui laissait croire à une meilleure affaire
-         sur la plus petite quantité. */
-      paintSavings(row, item.original_line_price, item.final_line_price, item);
+      /* Le prix barré de la ligne part du même plein tarif que le sous-total :
+         les deux racontent alors la même économie. La pastille, elle, ne
+         reflète toujours que ce que Shopify a réellement remisé — un prix
+         barré de fiche produit n'est pas une remise de panier. */
+      paintSavings(row, pleinTarif(item), item.final_line_price, item);
 
       /* Les promotions nommées, telles que Shopify les a appliquées. */
       var deals = frag.querySelector('[data-pnc-deals]');
@@ -3654,6 +3725,17 @@
       "content": "Total et paiement"
     },
     { "type": "checkbox", "id": "show_subtotal", "label": "Afficher le sous-total", "default": true },
+    {
+      "type": "select",
+      "id": "subtotal_base",
+      "label": "Base du sous-total",
+      "info": "« Prix barrés » additionne le plein tarif de chaque article : l'écart avec le total montre alors l'économie réalisée. « Avant remises Shopify » ne compte que les réductions réellement appliquées.",
+      "options": [
+        { "value": "tarif", "label": "Prix barrés des produits" },
+        { "value": "panier", "label": "Avant remises Shopify" }
+      ],
+      "default": "tarif"
+    },
     { "type": "text", "id": "subtotal_label", "label": "Libellé du sous-total", "info": "Montant avant réductions.", "default": "Sous-total" },
     { "type": "checkbox", "id": "show_discount_row", "label": "Afficher la ligne de réduction", "info": "N'apparaît que s'il y a vraiment une remise.", "default": true },
     { "type": "text", "id": "discount_label", "label": "Libellé de la réduction", "info": "Remplacé par le nom de la remise Shopify quand celle-ci porte sur la commande entière.", "default": "Réductions appliquées" },
