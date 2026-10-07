@@ -27,7 +27,6 @@
   assign tailles = section.blocks | where: 'type', 'taille'
   assign garanties = section.blocks | where: 'type', 'garantie'
   assign articles = section.blocks | where: 'type', 'set_item'
-  assign cadeaux = section.blocks | where: 'type', 'cadeau'
   assign videos = section.blocks | where: 'type', 'ugc'
 
   comment
@@ -1335,9 +1334,32 @@
         {%- endif -%}
       {%- endif -%}
 
-      {%- comment -%} ---------- Cadeaux ---------- {%- endcomment -%}
-      {%- if s.show_gifts -%}
-        {%- for block in cadeaux -%}
+      {%- comment -%}
+        ---------- Cadeaux et vidéos clientes ----------
+        Ces deux-là se suivent dans l'ordre de l'éditeur, et non par type :
+        glisser le carrousel vidéo entre deux cadeaux doit se voir.
+
+        Les vidéos qui se suivent forment une seule rangée. On regarde donc
+        le bloc d'avant et celui d'après pour savoir s'il faut ouvrir ou
+        refermer la rangée — plutôt que de porter un drapeau d'un tour de
+        boucle à l'autre, qui se lit mal.
+      {%- endcomment -%}
+      {%- for block in section.blocks -%}
+        {%- liquid
+          assign prev_type = ''
+          if forloop.index0 > 0
+            assign pi = forloop.index0 | minus: 1
+            assign prev_type = section.blocks[pi].type
+          endif
+
+          assign next_type = ''
+          unless forloop.last
+            assign ni = forloop.index0 | plus: 1
+            assign next_type = section.blocks[ni].type
+          endunless
+        -%}
+
+        {%- if block.type == 'cadeau' and s.show_gifts -%}
           {%- assign c = block.settings -%}
           <div
             class="frn__gift frn__gift--{{ c.cote | default: 'droite' }}{% if c.debord %} frn__gift--debord{% endif %}"
@@ -1356,53 +1378,55 @@
               </span>
             {%- endif -%}
           </div>
-        {%- endfor -%}
-      {%- endif -%}
 
-      {%- comment -%} ---------- Vidéos clientes ---------- {%- endcomment -%}
+        {%- elsif block.type == 'ugc' and s.show_ugc -%}
+          {%- if prev_type != 'ugc' -%}<div class="frn__ugc" data-frn-ugc>{%- endif -%}
+          {%- liquid
+            assign u = block.settings
+            assign src = ''
+            assign kind = ''
+            if u.video != blank
+              assign kind = 'file'
+            elsif u.video_url != blank
+              assign kind = u.video_url.type
+              assign src = u.video_url.id
+            endif
+          -%}
+          <button
+            class="frn__ugc-item"
+            type="button"
+            data-frn-ugc-item
+            data-frn-kind="{{ kind }}"
+            data-frn-src="{{ src }}"
+            aria-label="{{ u.titre | default: s.ugc_label | escape }}"
+            {{ block.shopify_attributes }}
+          >
+            {%- if u.image != blank -%}
+              {{ u.image | image_url: width: 400 | image_tag: widths: '120, 240, 400', loading: 'lazy', alt: '' }}
+            {%- elsif u.video != blank -%}
+              {{ u.video.preview_image | image_url: width: 400 | image_tag: widths: '120, 240, 400', loading: 'lazy', alt: '' }}
+            {%- endif -%}
+            <span class="frn__play" aria-hidden="true">{{ ico_play }}</span>
+            {%- if u.video != blank -%}
+              {%- comment -%}
+                La vidéo hébergée est rendue ici, masquée, puis déplacée dans
+                le lecteur à l'ouverture : Shopify ne sait la produire qu'en
+                Liquid, pas depuis le script.
+              {%- endcomment -%}
+              <template data-frn-video>
+                {{ u.video | video_tag: image_size: '800x', controls: true, playsinline: true }}
+              </template>
+            {%- endif -%}
+          </button>
+          {%- if next_type != 'ugc' -%}</div>{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+
+      {%- comment -%}
+        Un seul lecteur pour toutes les rangées : il est vide tant qu'on n'a
+        pas cliqué, et se remplit de la vidéo demandée.
+      {%- endcomment -%}
       {%- if s.show_ugc and videos.size > 0 -%}
-        <div class="frn__ugc" data-frn-ugc>
-          {%- for block in videos -%}
-            {%- liquid
-              assign u = block.settings
-              assign src = ''
-              assign kind = ''
-              if u.video != blank
-                assign kind = 'file'
-              elsif u.video_url != blank
-                assign kind = u.video_url.type
-                assign src = u.video_url.id
-              endif
-            -%}
-            <button
-              class="frn__ugc-item"
-              type="button"
-              data-frn-ugc-item
-              data-frn-kind="{{ kind }}"
-              data-frn-src="{{ src }}"
-              aria-label="{{ u.titre | default: s.ugc_label | escape }}"
-              {{ block.shopify_attributes }}
-            >
-              {%- if u.image != blank -%}
-                {{ u.image | image_url: width: 400 | image_tag: widths: '120, 240, 400', loading: 'lazy', alt: '' }}
-              {%- elsif u.video != blank -%}
-                {{ u.video.preview_image | image_url: width: 400 | image_tag: widths: '120, 240, 400', loading: 'lazy', alt: '' }}
-              {%- endif -%}
-              <span class="frn__play" aria-hidden="true">{{ ico_play }}</span>
-              {%- if u.video != blank -%}
-                {%- comment -%}
-                  La vidéo hébergée est rendue ici, masquée, puis déplacée dans
-                  le lecteur à l'ouverture : Shopify ne sait la produire qu'en
-                  Liquid, pas depuis le script.
-                {%- endcomment -%}
-                <template data-frn-video>
-                  {{ u.video | video_tag: image_size: '800x', controls: true, playsinline: true }}
-                </template>
-              {%- endif -%}
-            </button>
-          {%- endfor -%}
-        </div>
-
         <div class="frn__player" data-frn-player hidden>
           <div class="frn__player-box" data-frn-player-box></div>
           <button class="frn__player-close" type="button" data-frn-player-close aria-label="{{ s.close_label | escape }}">&times;</button>
