@@ -128,9 +128,13 @@
 #shopify-section-{{ section.id }} .frn *::after { box-sizing: border-box; }
 
 .frn__wrap {
+  /* La marge latérale est une variable : la galerie s'en sert pour ressortir
+     exactement de ce qu'elle vaut, et les deux ne peuvent pas diverger. */
+  --frn-gutter: {{ s.gutter_mobile }}px;
+
   max-width: var(--frn-max);
   margin-inline: auto;
-  padding: {{ s.padding_top_mobile }}px 14px {{ s.padding_bottom_mobile }}px;
+  padding: {{ s.padding_top_mobile }}px var(--frn-gutter) {{ s.padding_bottom_mobile }}px;
 }
 
 .frn [hidden] { display: none !important; }
@@ -141,12 +145,29 @@
 
 .frn__gallery { margin: 0 0 14px; }
 
+/* Pleine largeur : la galerie ressort de la marge latérale du bloc, des deux
+   côtés. Les vignettes, elles, restent alignées sur le reste du texte — une
+   rangée collée aux bords de l'écran se lirait mal. */
+.frn__gallery--bord {
+  margin-left: calc(var(--frn-gutter) * -1);
+  margin-right: calc(var(--frn-gutter) * -1);
+}
+
+.frn__gallery--bord .frn__thumbs {
+  margin-left: var(--frn-gutter);
+  margin-right: var(--frn-gutter);
+}
+
 .frn__stage {
   position: relative;
   border-radius: var(--frn-radius);
   overflow: hidden;
   background: var(--frn-card);
 }
+
+/* Collée aux bords, une scène arrondie laisserait quatre petits coins de
+   fond : elle devient donc franche. */
+.frn__gallery--bord .frn__stage { border-radius: 0; }
 
 .frn__slides {
   display: flex;
@@ -162,15 +183,26 @@
   position: relative;
   flex: 0 0 100%;
   scroll-snap-align: center;
+  {%- if s.gallery_shape == 'ratio' %}
   aspect-ratio: 100 / {{ s.gallery_ratio }};
+  {%- endif %}
 }
 
 .frn__slide img {
   display: block;
   width: 100%;
+}
+
+{%- if s.gallery_shape == 'ratio' %}
+/* Hauteur imposée : l'image remplit le cadre, quitte à être recadrée. */
+.frn__slide img {
   height: 100%;
   object-fit: {{ s.gallery_fit }};
 }
+{%- else %}
+/* Format d'origine : rien n'est recadré, la hauteur suit l'image. */
+.frn__slide img { height: auto; }
+{%- endif %}
 
 /* Flèches : masquées sur mobile, où le glissement suffit. */
 .frn__arrow {
@@ -226,19 +258,64 @@
    Bandeau récompense
    -------------------------------------------------------------------------- */
 
+/* Trois habillages pour la même mention : un filet discret, une pastille,
+   ou le cadre plein. Le contenu, lui, ne change pas. */
+
 .frn__award {
-  display: block;
-  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 0 0 16px;
+  color: var(--frn-award-ink);
+  font-size: {{ s.award_size }}px;
+  font-weight: 700;
+  letter-spacing: {{ s.award_tracking | divided_by: 100.0 }}em;
+  line-height: 1.2;
+  text-align: center;
+  {%- if s.award_caps %}
+  text-transform: uppercase;
+  {%- endif %}
+}
+
+.frn__award-ico {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: {{ s.award_icon_size }}px;
+  height: {{ s.award_icon_size }}px;
+  color: var(--frn-award-line);
+}
+
+.frn__award-ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.frn__award-ico img { width: 100%; height: 100%; object-fit: contain; }
+
+/* Filet : deux traits fins de part et d'autre du texte. C'est la version la
+   plus sobre, et celle qui respire le mieux au-dessus d'un titre. */
+.frn__award--filet::before,
+.frn__award--filet::after {
+  content: "";
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--frn-award-line);
+  opacity: 0.55;
+}
+
+/* Pastille : un fond doux, juste à la taille du texte. */
+.frn__award--pastille {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: var(--frn-award-bg);
+}
+
+/* Cadre : le rectangle bordé d'origine. */
+.frn__award--cadre {
   padding: 9px 12px;
   border: 1px solid var(--frn-award-line);
   border-radius: 6px;
   background: var(--frn-award-bg);
-  color: var(--frn-award-ink);
-  font-size: calc(var(--frn-size) * 0.82);
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-align: center;
-  text-transform: uppercase;
 }
 
 /* --------------------------------------------------------------------------
@@ -267,12 +344,16 @@
 .frn__stars { display: inline-flex; gap: 1px; color: var(--frn-star); }
 .frn__stars svg { width: 14px; height: 14px; fill: currentColor; }
 
+/* Les trois éléments n'ont ni la même hauteur ni la même nature : un grand
+   nombre, un prix barré, une pastille rembourrée. Alignés sur la ligne de
+   base, ils partaient dans tous les sens ; centrés les uns sur les autres,
+   ils forment une seule ligne. */
 .frn__pricerow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: {% if s.align_mobile == 'center' %}center{% else %}flex-start{% endif %};
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px 10px;
   margin: 0 0 16px;
 }
 
@@ -285,19 +366,25 @@
 }
 
 .frn__was {
-  font-size: calc(var(--frn-size) * 0.94);
+  font-size: {{ s.was_size }}px;
+  font-weight: 500;
+  line-height: 1;
   color: var(--frn-was);
   text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 .frn__tag {
+  display: inline-flex;
+  align-items: center;
   padding: 5px 11px;
   border-radius: 999px;
   background: var(--frn-tag-bg);
   color: var(--frn-tag-ink);
-  font-size: calc(var(--frn-size) * 0.72);
+  font-size: {{ s.tag_size }}px;
   font-weight: 800;
   letter-spacing: 0.05em;
+  line-height: 1.15;
   text-transform: uppercase;
 }
 
@@ -886,13 +973,18 @@
     padding: {{ s.padding_top }}px 24px {{ s.padding_bottom }}px;
   }
 
-  /* La galerie reste visible pendant qu'on parcourt la colonne de droite. */
+  /* La galerie reste visible pendant qu'on parcourt la colonne de droite.
+     Elle y est une colonne parmi deux : la pleine largeur n'a plus de sens,
+     et la marge négative la ferait déborder sur le texte. */
   .frn__gallery {
     grid-column: 1;
     position: sticky;
     top: {{ s.gallery_sticky_top }}px;
     margin: 0;
   }
+
+  .frn__gallery--bord .frn__thumbs { margin-inline: 0; }
+  .frn__gallery--bord .frn__stage { border-radius: var(--frn-radius); }
 
   .frn__col { grid-column: 2; }
 
@@ -928,6 +1020,17 @@
 {%- capture ico_plus -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>{%- endcapture -%}
 {%- capture ico_lock -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 9V7a5 5 0 10-10 0v2H5v12h14V9h-2zm-8-2a3 3 0 116 0v2H9V7z"/></svg>{%- endcapture -%}
 {%- capture ico_play -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>{%- endcapture -%}
+{%- comment -%}
+  Icônes du bandeau récompense : au trait, pour rester discrètes.
+{%- endcomment -%}
+{%- comment -%}
+  Deux branches symétriques, et rien d'autre : à seize pixels, un tracé plus
+  détaillé se referme sur lui-même et ne se lit plus.
+{%- endcomment -%}
+{%- capture ico_laurel -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21c-4.4-1.2-7-4.9-6.6-9.9C9.1 11.6 11.6 14.4 12 18.6"/><path d="M12 21c4.4-1.2 7-4.9 6.6-9.9-3.7.5-6.2 3.3-6.6 7.5"/><path d="M7 7.4c2.2-.3 3.9.5 5 2.4M17 7.4c-2.2-.3-3.9.5-5 2.4"/></svg>{%- endcapture -%}
+{%- capture ico_medal -%}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="15.2" r="5.6"/><path d="M12 12.8l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3zM8.4 10L6 3.2h4.2M15.6 10L18 3.2h-4.2"/></svg>{%- endcapture -%}
+{%- capture ico_star_line -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.4l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8-5.4 2.8 1-6L3.3 9.8l6-.9z"/></svg>{%- endcapture -%}
+{%- capture ico_crown -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 7.6l3.2 2.8L12 4.4l5.4 6 3.2-2.8-1.6 11.2H5z"/><path d="M5 18.4h14"/></svg>{%- endcapture -%}
 {%- capture ico_prev -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6L13.9 3 5 12l8.9 9 1.5-1.6L8 12z"/></svg>{%- endcapture -%}
 {%- capture ico_next -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 3L7.1 4.6 14.5 12l-7.4 7.4L8.6 21l9-9z"/></svg>{%- endcapture -%}
 {%- comment -%}
@@ -952,7 +1055,7 @@
   <div class="frn__wrap{% unless has_gallery %} frn__wrap--nogallery{% endunless %}">
     {%- comment -%} ---------- Galerie ---------- {%- endcomment -%}
     {%- if has_gallery -%}
-      <div class="frn__gallery">
+      <div class="frn__gallery{% if s.gallery_bleed %} frn__gallery--bord{% endif %}">
         <div class="frn__stage">
           <div class="frn__slides" data-frn-slides>
             {%- for media in p.media -%}
@@ -1017,7 +1120,34 @@
 
     <div class="frn__col">
       {%- if s.show_award and s.award_text != blank -%}
-        <p class="frn__award">{{ s.award_text }}</p>
+        {%- liquid
+          case s.award_icon
+            when 'laurier'
+              assign aw_icon = ico_laurel
+            when 'medaille'
+              assign aw_icon = ico_medal
+            when 'etoile'
+              assign aw_icon = ico_star_line
+            when 'couronne'
+              assign aw_icon = ico_crown
+            else
+              assign aw_icon = ''
+          endcase
+        -%}
+        <p class="frn__award frn__award--{{ s.award_style }}">
+          {%- comment -%}
+            Une image vaut mieux qu'un drapeau en émoji : Windows ne sait pas
+            les dessiner et affiche « FR » à la place.
+          {%- endcomment -%}
+          {%- if s.award_image != blank -%}
+            <span class="frn__award-ico">
+              {{ s.award_image | image_url: width: 120 | image_tag: loading: 'lazy', alt: '' }}
+            </span>
+          {%- elsif aw_icon != blank -%}
+            <span class="frn__award-ico" aria-hidden="true">{{ aw_icon }}</span>
+          {%- endif -%}
+          <span>{{ s.award_text }}</span>
+        </p>
       {%- endif -%}
 
       {%- if s.show_title -%}
@@ -1978,6 +2108,7 @@
     },
     { "type": "range", "id": "padding_top", "label": "Marge haute (bureau)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 32 },
     { "type": "range", "id": "padding_bottom", "label": "Marge basse (bureau)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "gutter_mobile", "label": "Marge latérale (mobile)", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 14 },
     { "type": "range", "id": "padding_top_mobile", "label": "Marge haute (mobile)", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 12 },
     { "type": "range", "id": "padding_bottom_mobile", "label": "Marge basse (mobile)", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 28 },
 
@@ -1985,6 +2116,18 @@
     { "type": "checkbox", "id": "show_gallery", "label": "Afficher la galerie", "default": true },
     { "type": "checkbox", "id": "show_thumbs", "label": "Afficher les vignettes", "default": true },
     { "type": "checkbox", "id": "show_arrows", "label": "Afficher les flèches (bureau)", "default": true },
+    { "type": "checkbox", "id": "gallery_bleed", "label": "Image pleine largeur", "info": "La galerie ressort de la marge du bloc et touche les deux bords de l'écran.", "default": true },
+    {
+      "type": "select",
+      "id": "gallery_shape",
+      "label": "Hauteur de l'image",
+      "info": "« Format d'origine » n'impose rien : l'image garde ses proportions et rien n'est recadré. « Hauteur imposée » utilise le curseur ci-dessous.",
+      "options": [
+        { "value": "image", "label": "Format d'origine" },
+        { "value": "ratio", "label": "Hauteur imposée" }
+      ],
+      "default": "image"
+    },
     { "type": "range", "id": "gallery_ratio", "label": "Hauteur de l'image", "info": "En % de sa largeur. 100 = carré.", "min": 60, "max": 160, "step": 5, "unit": "%", "default": 100 },
     {
       "type": "select",
@@ -2003,7 +2146,36 @@
 
     { "type": "header", "content": "Bandeau récompense" },
     { "type": "checkbox", "id": "show_award", "label": "Afficher le bandeau", "default": true },
-    { "type": "text", "id": "award_text", "label": "Texte", "default": "#1 Poêle santé 2026 🇫🇷" },
+    {
+      "type": "select",
+      "id": "award_style",
+      "label": "Habillage",
+      "options": [
+        { "value": "filet", "label": "Filets de part et d'autre (discret)" },
+        { "value": "pastille", "label": "Pastille" },
+        { "value": "cadre", "label": "Cadre" }
+      ],
+      "default": "filet"
+    },
+    { "type": "text", "id": "award_text", "label": "Texte", "default": "#1 Poêle santé 2026" },
+    {
+      "type": "select",
+      "id": "award_icon",
+      "label": "Icône",
+      "options": [
+        { "value": "laurier", "label": "Laurier" },
+        { "value": "medaille", "label": "Médaille" },
+        { "value": "couronne", "label": "Couronne" },
+        { "value": "etoile", "label": "Étoile" },
+        { "value": "aucune", "label": "Aucune" }
+      ],
+      "default": "laurier"
+    },
+    { "type": "image_picker", "id": "award_image", "label": "Image à la place de l'icône", "info": "Pour un drapeau, par exemple : un émoji s'affiche « FR » sur Windows." },
+    { "type": "range", "id": "award_icon_size", "label": "Taille de l'icône", "min": 8, "max": 40, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "award_size", "label": "Taille du texte", "min": 8, "max": 22, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "award_tracking", "label": "Espacement des lettres", "min": 0, "max": 30, "step": 1, "unit": "%", "default": 12 },
+    { "type": "checkbox", "id": "award_caps", "label": "Tout en majuscules", "default": true },
 
     { "type": "header", "content": "Titre et avis" },
     { "type": "checkbox", "id": "show_title", "label": "Afficher le titre", "default": true },
@@ -2017,7 +2189,9 @@
     { "type": "checkbox", "id": "show_price", "label": "Afficher le prix", "default": true },
     { "type": "range", "id": "prix_size", "label": "Taille du prix (bureau)", "min": 18, "max": 56, "step": 1, "unit": "px", "default": 34 },
     { "type": "range", "id": "prix_size_mobile", "label": "Taille du prix (mobile)", "min": 16, "max": 44, "step": 1, "unit": "px", "default": 29 },
+    { "type": "range", "id": "was_size", "label": "Taille du prix barré", "min": 9, "max": 26, "step": 1, "unit": "px", "default": 15 },
     { "type": "text", "id": "tag_text", "label": "Pastille à côté du prix", "default": "Octobre rose" },
+    { "type": "range", "id": "tag_size", "label": "Taille de la pastille", "min": 8, "max": 18, "step": 1, "unit": "px", "default": 10 },
 
     { "type": "header", "content": "Garanties" },
     { "type": "checkbox", "id": "show_trust", "label": "Afficher la rangée", "default": true },
