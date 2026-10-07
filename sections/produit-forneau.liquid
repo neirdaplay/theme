@@ -1,0 +1,2045 @@
+{% comment %}
+  produit-forneau.liquid
+  Fiche produit complète : galerie, bandeau récompense, titre, avis, prix,
+  rangée de garanties, sélecteur de taille, composeur de set, bouton d'achat,
+  mention d'urgence, cadeaux inclus, vidéos clients.
+
+  Mobile d'abord. Au-delà du point de bascule, la galerie passe à gauche et
+  tout le reste tient dans une colonne à droite.
+
+  Chaque partie se coupe par une case à cocher et porte ses propres couleurs.
+  Les parties qui se répètent — garanties, tailles, articles du set, cadeaux,
+  vidéos — sont des blocs réordonnables.
+
+  Le thème ne crée aucune remise : il affiche les pourcentages saisis ici.
+  La vraie remise est une remise automatique réglée dans Shopify, qui doit
+  reprendre les mêmes paliers.
+
+  Fichier autonome : styles et comportement sont en ligne, rien à déposer
+  dans assets/.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign p = product
+  assign v = product.selected_or_first_available_variant
+
+  assign tailles = section.blocks | where: 'type', 'taille'
+  assign garanties = section.blocks | where: 'type', 'garantie'
+  assign articles = section.blocks | where: 'type', 'set_item'
+  assign cadeaux = section.blocks | where: 'type', 'cadeau'
+  assign videos = section.blocks | where: 'type', 'ugc'
+
+  comment
+    Le nom de l'option qui porte les tailles. Vide, on prend la première
+    option du produit — le cas courant d'un produit à une seule déclinaison.
+  endcomment
+  assign option_name = s.option_taille
+  if option_name == blank and p.options.size > 0
+    assign option_name = p.options.first
+  endif
+
+  assign option_index = 0
+  for name in p.options
+    if name == option_name
+      assign option_index = forloop.index0
+    endif
+  endfor
+-%}
+
+{% style %}
+/* ==========================================================================
+   Fiche produit Forneau — tout est porté par .frn
+   ========================================================================== */
+
+#shopify-section-{{ section.id }} .frn {
+  --frn-bg: {{ s.color_bg }};
+  --frn-ink: {{ s.color_text }};
+  --frn-muted: {{ s.color_muted }};
+  --frn-line: {{ s.color_line }};
+  --frn-accent: {{ s.color_accent }};
+  --frn-card: {{ s.color_card }};
+  --frn-trust-ico: {{ s.color_trust_ico }};
+  --frn-check-bg: {{ s.color_check_bg }};
+  --frn-check-ink: {{ s.color_check_text }};
+
+  --frn-award-bg: {{ s.color_award_bg }};
+  --frn-award-ink: {{ s.color_award_text }};
+  --frn-award-line: {{ s.color_award_line }};
+
+  --frn-star: {{ s.color_star }};
+  --frn-price: {{ s.color_price }};
+  --frn-was: {{ s.color_was }};
+  --frn-tag-bg: {{ s.color_tag_bg }};
+  --frn-tag-ink: {{ s.color_tag_text }};
+
+  --frn-size-on-bg: {{ s.color_size_on_bg }};
+  --frn-size-on-ink: {{ s.color_size_on_text }};
+  --frn-size-off-bg: {{ s.color_size_off_bg }};
+  --frn-size-off-ink: {{ s.color_size_off_text }};
+  --frn-ideal-bg: {{ s.color_ideal_bg }};
+  --frn-ideal-ink: {{ s.color_ideal_text }};
+
+  --frn-set-bg: {{ s.color_set_bg }};
+  --frn-set-pill-bg: {{ s.color_set_pill_bg }};
+  --frn-set-pill-ink: {{ s.color_set_pill_text }};
+  --frn-set-fill: {{ s.color_set_fill }};
+  --frn-set-track: {{ s.color_set_track }};
+
+  --frn-buy-bg: {{ s.color_buy_bg }};
+  --frn-buy-ink: {{ s.color_buy_text }};
+
+  --frn-urgent-bg: {{ s.color_urgent_bg }};
+  --frn-urgent-ink: {{ s.color_urgent_text }};
+  --frn-urgent-dot: {{ s.color_urgent_dot }};
+
+  --frn-gift-bg: {{ s.color_gift_bg }};
+  --frn-offert-bg: {{ s.color_offert_bg }};
+  --frn-offert-ink: {{ s.color_offert_text }};
+
+  --frn-ring: {{ s.color_ugc_ring }};
+
+  --frn-max: {{ s.container_width }}px;
+  --frn-radius: {{ s.radius }}px;
+  --frn-size: {{ s.font_size }}px;
+
+  --frn-serif: {{ s.font_titre }};
+  --frn-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  background: var(--frn-bg);
+  color: var(--frn-ink);
+  font-family: var(--frn-sans);
+  font-size: var(--frn-size);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#shopify-section-{{ section.id }} .frn *,
+#shopify-section-{{ section.id }} .frn *::before,
+#shopify-section-{{ section.id }} .frn *::after { box-sizing: border-box; }
+
+.frn__wrap {
+  max-width: var(--frn-max);
+  margin-inline: auto;
+  padding: {{ s.padding_top_mobile }}px 14px {{ s.padding_bottom_mobile }}px;
+}
+
+.frn [hidden] { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   Galerie
+   -------------------------------------------------------------------------- */
+
+.frn__gallery { margin: 0 0 14px; }
+
+.frn__stage {
+  position: relative;
+  border-radius: var(--frn-radius);
+  overflow: hidden;
+  background: var(--frn-card);
+}
+
+.frn__slides {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.frn__slides::-webkit-scrollbar { display: none; }
+
+.frn__slide {
+  position: relative;
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  aspect-ratio: 100 / {{ s.gallery_ratio }};
+}
+
+.frn__slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: {{ s.gallery_fit }};
+}
+
+/* Flèches : masquées sur mobile, où le glissement suffit. */
+.frn__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--frn-ink);
+  cursor: pointer;
+}
+
+.frn__arrow svg { width: 22px; height: 22px; fill: currentColor; }
+.frn__arrow--prev { left: 4px; }
+.frn__arrow--next { right: 4px; }
+
+.frn__thumbs {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.frn__thumbs::-webkit-scrollbar { display: none; }
+
+.frn__thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: {{ s.thumb_size }}px;
+  height: {{ s.thumb_size }}px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--frn-card);
+  cursor: pointer;
+}
+
+.frn__thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.frn__thumb[aria-current="true"] { border-color: var(--frn-ink); }
+
+/* --------------------------------------------------------------------------
+   Bandeau récompense
+   -------------------------------------------------------------------------- */
+
+.frn__award {
+  display: block;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--frn-award-line);
+  border-radius: 6px;
+  background: var(--frn-award-bg);
+  color: var(--frn-award-ink);
+  font-size: calc(var(--frn-size) * 0.82);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   Titre, avis, prix
+   -------------------------------------------------------------------------- */
+
+.frn__title {
+  margin: 0 0 10px;
+  font-family: var(--frn-serif);
+  font-size: {{ s.titre_size_mobile }}px;
+  font-weight: 500;
+  line-height: 1.22;
+  text-align: {{ s.align_mobile }};
+}
+
+.frn__rating {
+  display: flex;
+  align-items: center;
+  justify-content: {% if s.align_mobile == 'center' %}center{% else %}flex-start{% endif %};
+  gap: 7px;
+  margin: 0 0 10px;
+  font-size: calc(var(--frn-size) * 0.84);
+  color: var(--frn-muted);
+}
+
+.frn__stars { display: inline-flex; gap: 1px; color: var(--frn-star); }
+.frn__stars svg { width: 14px; height: 14px; fill: currentColor; }
+
+.frn__pricerow {
+  display: flex;
+  align-items: baseline;
+  justify-content: {% if s.align_mobile == 'center' %}center{% else %}flex-start{% endif %};
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.frn__price {
+  font-family: var(--frn-serif);
+  font-size: {{ s.prix_size_mobile }}px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--frn-price);
+}
+
+.frn__was {
+  font-size: calc(var(--frn-size) * 0.94);
+  color: var(--frn-was);
+  text-decoration: line-through;
+}
+
+.frn__tag {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--frn-tag-bg);
+  color: var(--frn-tag-ink);
+  font-size: calc(var(--frn-size) * 0.72);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   Rangée de garanties
+   -------------------------------------------------------------------------- */
+
+.frn__trust {
+  display: grid;
+  grid-template-columns: repeat({{ garanties.size | at_least: 1 | at_most: 4 }}, 1fr);
+  gap: 6px;
+  margin: 0 0 18px;
+  text-align: center;
+}
+
+.frn__trust-item { display: grid; justify-items: center; gap: 5px; }
+
+.frn__trust-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: {{ s.trust_icon_size }}px;
+  height: {{ s.trust_icon_size }}px;
+  color: var(--frn-trust-ico);
+  font-size: calc({{ s.trust_icon_size }}px * 0.7);
+}
+
+/* Les icônes de garantie sont dessinées au trait, comme sur la référence :
+   le remplissage les rendrait beaucoup plus lourdes à cette taille. */
+.frn__trust-ico svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: {{ s.trust_icon_stroke }};
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.frn__trust-ico img { width: 100%; height: 100%; object-fit: contain; }
+
+.frn__trust-txt {
+  font-size: {{ s.trust_text_size_mobile }}px;
+  line-height: 1.25;
+  color: var(--frn-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Guide des tailles et sélecteur
+   -------------------------------------------------------------------------- */
+
+.frn__guide {
+  display: block;
+  /* L'écart laisse passer la pastille « idéale », qui déborde du sélecteur
+     par le haut. */
+  margin: 0 0 16px;
+  color: var(--frn-ink);
+  font-size: calc(var(--frn-size) * 0.72);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-align: right;
+  text-decoration: underline;
+  text-transform: uppercase;
+  text-underline-offset: 3px;
+}
+
+.frn__sizes {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin: 0 0 18px;
+  border: 1px solid var(--frn-line);
+  border-radius: 10px;
+  /* Les coins des boutons sont coupés par le cadre : pas de rayon à répéter
+     sur chacun d'eux, et aucun liseré ne dépasse. */
+  overflow: hidden;
+  background: var(--frn-size-off-bg);
+}
+
+.frn__size {
+  position: relative;
+  padding: 12px 6px;
+  min-height: 58px;
+  border: 0;
+  border-left: 1px solid var(--frn-line);
+  background: transparent;
+  color: var(--frn-size-off-ink);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.frn__size:first-child { border-left: 0; }
+
+.frn__size[aria-pressed="true"] {
+  background: var(--frn-size-on-bg);
+  color: var(--frn-size-on-ink);
+}
+
+.frn__size[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.frn__size-v { display: block; font-size: calc(var(--frn-size) * 0.98); font-weight: 700; }
+.frn__size-s { display: block; font-size: calc(var(--frn-size) * 0.76); opacity: 0.85; }
+
+/* Pastille « idéale » : posée au-dessus du cadre, elle ne doit pas être
+   coupée par son overflow — elle vit donc en dehors. */
+.frn__ideal-wrap { position: relative; }
+
+.frn__ideal {
+  position: absolute;
+  top: -9px;
+  z-index: 2;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--frn-ideal-bg);
+  color: var(--frn-ideal-ink);
+  font-size: calc(var(--frn-size) * 0.64);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Composeur de set
+   -------------------------------------------------------------------------- */
+
+.frn__set {
+  margin: 0 0 16px;
+  /* Serré sur téléphone : chaque pixel repris ici va au nom des articles,
+     qui tiennent alors sur une ligne comme sur la référence. */
+  padding: 12px 10px;
+  border-radius: var(--frn-radius);
+  background: var(--frn-set-bg);
+}
+
+.frn__set-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.frn__set-title {
+  margin: 0;
+  font-size: calc(var(--frn-size) * 0.8);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.frn__set-pill {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--frn-set-pill-bg);
+  color: var(--frn-set-pill-ink);
+  font-size: calc(var(--frn-size) * 0.72);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.frn__steps { margin: 0 0 12px; }
+
+.frn__bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.frn__bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--frn-set-track);
+  overflow: hidden;
+}
+
+.frn__bar i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--frn-set-fill);
+  transition: width 0.2s ease;
+}
+
+.frn__steps-lab {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: calc(var(--frn-size) * 0.72);
+  font-weight: 700;
+}
+
+.frn__items { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.frn__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* La marge à droite dégage la coche, qui est posée dans le coin plutôt
+     que dans le flux : le nom de l'article récupère toute la largeur. */
+  padding: 8px 30px 8px 8px;
+  border: 2px solid var(--frn-line);
+  border-radius: 10px;
+  background: var(--frn-card);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+
+.frn__item[aria-pressed="true"] { border-color: var(--frn-ink); }
+.frn__item[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.frn__item-img {
+  flex: 0 0 auto;
+  width: {{ s.set_img_size }}px;
+  height: {{ s.set_img_size }}px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--frn-set-bg);
+}
+
+.frn__item-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.frn__item-txt { flex: 1 1 auto; min-width: 0; }
+
+.frn__item-name {
+  display: block;
+  font-size: {{ s.set_name_size }}px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.frn__item-price {
+  display: block;
+  margin-top: 2px;
+  font-size: calc(var(--frn-size) * 0.82);
+  font-weight: 700;
+}
+
+.frn__item-was {
+  display: block;
+  font-size: calc(var(--frn-size) * 0.72);
+  color: var(--frn-was);
+  text-decoration: line-through;
+}
+
+.frn__item-mark {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--frn-line);
+  background: var(--frn-card);
+  color: var(--frn-muted);
+}
+
+.frn__item-mark svg { width: 13px; height: 13px; fill: currentColor; }
+
+.frn__item[aria-pressed="true"] .frn__item-mark {
+  border-color: var(--frn-check-bg);
+  background: var(--frn-check-bg);
+  color: var(--frn-check-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Bouton d'achat
+   -------------------------------------------------------------------------- */
+
+.frn__buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  /* Une seule ligne de boîtes : c'est le libellé qui passe à la ligne, pas
+     les prix, qui restent à sa droite comme sur la référence. */
+  flex-wrap: nowrap;
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--frn-buy-bg);
+  color: var(--frn-buy-ink);
+  font-family: inherit;
+  font-size: calc(var(--frn-size) * 0.98);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.frn__buy[disabled] { opacity: 0.55; cursor: not-allowed; }
+.frn__buy svg { width: 17px; height: 17px; fill: currentColor; flex: 0 0 auto; }
+
+.frn__buy-money {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.frn__buy-sep { opacity: 0.55; }
+.frn__buy-was { opacity: 0.7; text-decoration: line-through; font-weight: 600; }
+
+.frn__urgent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--frn-urgent-bg);
+  color: var(--frn-urgent-ink);
+  font-size: calc(var(--frn-size) * 0.78);
+  font-weight: 600;
+}
+
+.frn__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--frn-urgent-dot);
+}
+
+{%- if s.urgent_pulse %}
+/* Le battement signale une information vivante. Il s'arrête pour qui a
+   demandé moins d'animation. */
+.frn__dot { animation: frn-pulse 1.8s ease-in-out infinite; }
+
+@keyframes frn-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frn__dot { animation: none; }
+}
+{%- endif %}
+
+/* --------------------------------------------------------------------------
+   Cadeaux inclus
+   -------------------------------------------------------------------------- */
+
+.frn__gift {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--frn-line);
+  border-radius: var(--frn-radius);
+  background: var(--frn-gift-bg);
+  overflow: hidden;
+}
+
+.frn__gift-txt { flex: 1 1 auto; min-width: 0; }
+
+.frn__gift-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--frn-serif);
+  font-size: calc(var(--frn-size) * 1.02);
+  font-weight: 500;
+}
+
+.frn__offert {
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: var(--frn-offert-bg);
+  color: var(--frn-offert-ink);
+  font-family: var(--frn-sans);
+  font-size: calc(var(--frn-size) * 0.66);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.frn__gift-sub {
+  display: block;
+  margin: 3px 0 0;
+  font-size: calc(var(--frn-size) * 0.78);
+  line-height: 1.35;
+  color: var(--frn-muted);
+}
+
+.frn__gift-sub b { color: var(--frn-ink); }
+
+.frn__gift-img {
+  flex: 0 0 auto;
+  width: {{ s.gift_img_size }}px;
+  height: {{ s.gift_img_size }}px;
+  overflow: hidden;
+}
+
+.frn__gift-img img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Visuel rond ou carré, à gauche ou à droite, débordant ou non : quatre
+   réglages de bloc, parce que les deux cadeaux de la référence ne sont pas
+   présentés pareil. */
+.frn__gift-img--rond { border-radius: 50%; }
+.frn__gift-img--carre { border-radius: 8px; }
+.frn__gift--gauche { flex-direction: row-reverse; }
+
+/* Le visuel débordant sort du flux : la carte garde alors la hauteur de son
+   texte, et le visuel mord sur les quatre bords plutôt que d'étirer la
+   carte autour de lui. */
+.frn__gift--debord .frn__gift-img {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.frn__gift--debord.frn__gift--droite .frn__gift-img {
+  right: calc({{ s.gift_img_size }}px * -0.22);
+}
+
+.frn__gift--debord.frn__gift--gauche .frn__gift-img {
+  left: calc({{ s.gift_img_size }}px * -0.22);
+}
+
+/* La place réservée au visiteur pour que le texte ne passe pas dessous. */
+.frn__gift--debord.frn__gift--droite .frn__gift-txt {
+  padding-right: calc({{ s.gift_img_size }}px * 0.82);
+}
+
+.frn__gift--debord.frn__gift--gauche .frn__gift-txt {
+  padding-left: calc({{ s.gift_img_size }}px * 0.82);
+}
+
+/* --------------------------------------------------------------------------
+   Vidéos clientes
+   -------------------------------------------------------------------------- */
+
+.frn__ugc {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.frn__ugc::-webkit-scrollbar { display: none; }
+
+.frn__ugc-item {
+  position: relative;
+  flex: 0 0 auto;
+  width: {{ s.ugc_size }}px;
+  height: {{ s.ugc_size }}px;
+  padding: 0;
+  border: {{ s.ugc_ring_width }}px solid var(--frn-ring);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--frn-card);
+  cursor: pointer;
+}
+
+.frn__ugc-item img { width: 100%; height: 100%; object-fit: cover; }
+
+.frn__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.86);
+  color: #15200f;
+}
+
+.frn__play svg { width: 14px; height: 14px; fill: currentColor; margin-left: 2px; }
+
+/* Lecteur plein écran, ouvert au clic sur une vignette. */
+.frn__player {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(10, 14, 8, 0.86);
+}
+
+.frn__player[hidden] { display: none !important; }
+
+.frn__player-box {
+  position: relative;
+  width: min(480px, 100%);
+  max-height: 86vh;
+  aspect-ratio: 9 / 16;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+}
+
+.frn__player-box video,
+.frn__player-box iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+
+.frn__player-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #15200f;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Bureau : galerie à gauche, tout le reste à droite.
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: {{ s.breakpoint }}px) {
+  .frn__wrap {
+    display: grid;
+    grid-template-columns: {{ s.gallery_width }}fr {{ 100 | minus: s.gallery_width }}fr;
+    column-gap: {{ s.column_gap }}px;
+    align-items: start;
+    padding: {{ s.padding_top }}px 24px {{ s.padding_bottom }}px;
+  }
+
+  /* La galerie reste visible pendant qu'on parcourt la colonne de droite. */
+  .frn__gallery {
+    grid-column: 1;
+    position: sticky;
+    top: {{ s.gallery_sticky_top }}px;
+    margin: 0;
+  }
+
+  .frn__col { grid-column: 2; }
+
+  /* Galerie coupée : la colonne de droite reprend toute la largeur plutôt
+     que de laisser un vide à gauche. */
+  .frn__wrap--nogallery { grid-template-columns: 1fr; }
+  .frn__wrap--nogallery .frn__col { grid-column: 1; }
+
+  .frn__arrow { display: inline-flex; }
+
+  .frn__title { font-size: {{ s.titre_size }}px; text-align: {{ s.align }}; }
+  .frn__price { font-size: {{ s.prix_size }}px; }
+
+  .frn__rating,
+  .frn__pricerow {
+    justify-content: {% if s.align == 'center' %}center{% else %}flex-start{% endif %};
+  }
+
+  .frn__trust { gap: 10px; }
+  .frn__trust-txt { font-size: {{ s.trust_text_size }}px; }
+  .frn__set { padding: 18px; }
+  .frn__buy { font-size: calc(var(--frn-size) * 1.02); }
+}
+{% endstyle %}
+
+{%- comment -%}
+  ---------- Icônes ----------
+  Chacune est capturée une fois puis réutilisée, pour ne pas répéter le même
+  tracé à chaque bloc.
+{%- endcomment -%}
+{%- capture ico_star -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6.6 7 .8-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.8L12 2z"/></svg>{%- endcapture -%}
+{%- capture ico_check -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.6 17.2l-4.8-4.8 1.6-1.6 3.2 3.2 8-8 1.6 1.6z"/></svg>{%- endcapture -%}
+{%- capture ico_plus -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>{%- endcapture -%}
+{%- capture ico_lock -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 9V7a5 5 0 10-10 0v2H5v12h14V9h-2zm-8-2a3 3 0 116 0v2H9V7z"/></svg>{%- endcapture -%}
+{%- capture ico_play -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>{%- endcapture -%}
+{%- capture ico_prev -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.4 4.6L13.9 3 5 12l8.9 9 1.5-1.6L8 12z"/></svg>{%- endcapture -%}
+{%- capture ico_next -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.6 3L7.1 4.6 14.5 12l-7.4 7.4L8.6 21l9-9z"/></svg>{%- endcapture -%}
+{%- comment -%}
+  Les icônes de garantie sont au trait : elles héritent de `stroke`, pas de
+  `fill`, et ne portent donc aucune couleur en dur.
+{%- endcomment -%}
+{%- capture ico_shield -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l7.4 3v5.6c0 4.6-3.1 8.8-7.4 9.8-4.3-1-7.4-5.2-7.4-9.8V5.8z"/><path d="M8.8 11.9l2.2 2.2 4.2-4.2"/></svg>{%- endcapture -%}
+{%- capture ico_target -%}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="12" r="5.4"/><circle cx="12" cy="12" r="1.9"/></svg>{%- endcapture -%}
+{%- capture ico_infinity -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c1.7-2.3 3-3.6 5-3.6a3.6 3.6 0 010 7.2c-2 0-3.3-1.3-5-3.6zm0 0c-1.7 2.3-3 3.6-5 3.6a3.6 3.6 0 010-7.2c2 0 3.3 1.3 5 3.6z"/></svg>{%- endcapture -%}
+{%- capture ico_leaf -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 3.8c.6 5.4-.5 9.6-3.2 12.3-2.8 2.8-6.6 2.9-9 1.1-2.2-1.7-2.6-5.6.2-8.4 2.7-2.7 6.9-3.7 12-3.4"/><path d="M4.2 20.2L12 12.4"/></svg>{%- endcapture -%}
+{%- capture ico_flame -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.2 2.4c.6 2.6-.2 4.3-1.9 6-1.8 1.8-3.1 3.3-3.1 5.9a5 5 0 0010 0c0-1.9-.9-3.3-1.9-4.4"/><path d="M12 13.2c1 .9 1.6 1.8 1.6 2.9a1.7 1.7 0 11-3.3 0c0-1.1.6-2 1.7-2.9z"/></svg>{%- endcapture -%}
+{%- capture ico_gift -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.4 11.4h15.2v9.2H4.4zM3.4 7.8h17.2v3.6H3.4zM12 7.8v12.8"/><path d="M12 7.8H8.6a2.2 2.2 0 110-4.4C10.8 3.4 12 7.8 12 7.8zm0 0h3.4a2.2 2.2 0 100-4.4C13.2 3.4 12 7.8 12 7.8z"/></svg>{%- endcapture -%}
+
+{%- liquid
+  assign has_gallery = false
+  if s.show_gallery and p.media.size > 0
+    assign has_gallery = true
+  endif
+-%}
+
+<section class="frn" id="frn-{{ section.id }}" data-frn {{ section.shopify_attributes }}>
+  <div class="frn__wrap{% unless has_gallery %} frn__wrap--nogallery{% endunless %}">
+    {%- comment -%} ---------- Galerie ---------- {%- endcomment -%}
+    {%- if has_gallery -%}
+      <div class="frn__gallery">
+        <div class="frn__stage">
+          <div class="frn__slides" data-frn-slides>
+            {%- for media in p.media -%}
+              <div class="frn__slide" data-frn-slide="{{ forloop.index0 }}">
+                {%- comment -%}
+                  La première image est presque toujours le plus grand élément
+                  affiché d'emblée : elle part tout de suite et en priorité,
+                  les suivantes attendent d'approcher de l'écran.
+                {%- endcomment -%}
+                {%- if forloop.first -%}
+                  {{
+                    media.preview_image
+                    | image_url: width: 1400
+                    | image_tag:
+                      widths: '400, 600, 800, 1000, 1400',
+                      sizes: '(min-width: 990px) 52vw, 96vw',
+                      loading: 'eager',
+                      fetchpriority: 'high',
+                      alt: media.alt
+                  }}
+                {%- else -%}
+                  {{
+                    media.preview_image
+                    | image_url: width: 1400
+                    | image_tag:
+                      widths: '400, 600, 800, 1000, 1400',
+                      sizes: '(min-width: 990px) 52vw, 96vw',
+                      loading: 'lazy',
+                      alt: media.alt
+                  }}
+                {%- endif -%}
+              </div>
+            {%- endfor -%}
+          </div>
+
+          {%- if s.show_arrows -%}
+            <button class="frn__arrow frn__arrow--prev" type="button" data-frn-prev aria-label="{{ s.prev_label | escape }}">{{ ico_prev }}</button>
+            <button class="frn__arrow frn__arrow--next" type="button" data-frn-next aria-label="{{ s.next_label | escape }}">{{ ico_next }}</button>
+          {%- endif -%}
+        </div>
+
+        {%- if s.show_thumbs -%}
+          <div class="frn__thumbs" data-frn-thumbs>
+            {%- for media in p.media -%}
+              <button
+                class="frn__thumb"
+                type="button"
+                data-frn-thumb="{{ forloop.index0 }}"
+                aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+                aria-label="{{ forloop.index }}"
+              >
+                {{ media.preview_image | image_url: width: 240 | image_tag: widths: '80, 160, 240', loading: 'lazy', alt: '' }}
+                {%- if media.media_type != 'image' -%}
+                  <span class="frn__play" aria-hidden="true">{{ ico_play }}</span>
+                {%- endif -%}
+              </button>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    <div class="frn__col">
+      {%- if s.show_award and s.award_text != blank -%}
+        <p class="frn__award">{{ s.award_text }}</p>
+      {%- endif -%}
+
+      {%- if s.show_title -%}
+        <h1 class="frn__title">{{ s.titre | default: p.title }}</h1>
+      {%- endif -%}
+
+      {%- if s.show_rating -%}
+        <div class="frn__rating">
+          <span class="frn__stars" aria-hidden="true">
+            {%- for i in (1..5) -%}{{ ico_star }}{%- endfor -%}
+          </span>
+          <span>{{ s.rating_text }}</span>
+        </div>
+      {%- endif -%}
+
+      {%- if s.show_price -%}
+        <div class="frn__pricerow">
+          <span class="frn__price" data-frn-price>{{ v.price | money }}</span>
+          <s class="frn__was" data-frn-was {% unless v.compare_at_price > v.price %}hidden{% endunless %}>
+            {{- v.compare_at_price | money -}}
+          </s>
+          {%- if s.tag_text != blank -%}
+            <span class="frn__tag">{{ s.tag_text }}</span>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ---------- Garanties ---------- {%- endcomment -%}
+      {%- if s.show_trust and garanties.size > 0 -%}
+        <div class="frn__trust">
+          {%- for block in garanties -%}
+            {%- liquid
+              assign g = block.settings
+              case g.icone
+                when 'shield'
+                  assign svg = ico_shield
+                when 'target'
+                  assign svg = ico_target
+                when 'infinity'
+                  assign svg = ico_infinity
+                when 'leaf'
+                  assign svg = ico_leaf
+                when 'flame'
+                  assign svg = ico_flame
+                when 'gift'
+                  assign svg = ico_gift
+                else
+                  assign svg = ''
+              endcase
+            -%}
+            <div class="frn__trust-item" {{ block.shopify_attributes }}>
+              <span class="frn__trust-ico">
+                {%- if g.image != blank -%}
+                  {{ g.image | image_url: width: 120 | image_tag: loading: 'lazy', alt: '' }}
+                {%- elsif g.emoji != blank -%}
+                  {{ g.emoji }}
+                {%- elsif svg != blank -%}
+                  {{ svg }}
+                {%- endif -%}
+              </span>
+              {%- if g.texte != blank -%}
+                <span class="frn__trust-txt">{{ g.texte }}</span>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ---------- Guide et tailles ---------- {%- endcomment -%}
+      {%- if s.show_guide and s.guide_text != blank -%}
+        {%- liquid
+          comment
+            Le réglage « page » rend un objet page ; les thèmes plus anciens
+            rendaient son identifiant. Les deux sont acceptés pour qu'une
+            configuration reprise d'un autre thème continue de pointer juste.
+          endcomment
+          assign guide_url = s.guide_url
+          if guide_url == blank and s.guide_page != blank
+            if s.guide_page.url != blank
+              assign guide_url = s.guide_page.url
+            else
+              assign guide_url = pages[s.guide_page].url
+            endif
+          endif
+        -%}
+        <a class="frn__guide" href="{{ guide_url | default: '#' }}">{{ s.guide_text }}</a>
+      {%- endif -%}
+
+      {%- if s.show_sizes and tailles.size > 0 -%}
+        <div class="frn__ideal-wrap">
+          <div class="frn__sizes" role="group" aria-label="{{ s.sizes_label | escape }}">
+            {%- for block in tailles -%}
+              {%- liquid
+                assign t = block.settings
+                assign chosen = false
+                if v.options[option_index] == t.valeur
+                  assign chosen = true
+                endif
+              -%}
+              <button
+                class="frn__size"
+                type="button"
+                data-frn-size="{{ t.valeur | escape }}"
+                data-frn-ideal="{{ t.badge | escape }}"
+                aria-pressed="{% if chosen %}true{% else %}false{% endif %}"
+                {{ block.shopify_attributes }}
+              >
+                <span class="frn__size-v">{{ t.valeur }}</span>
+                {%- if t.sous_titre != blank -%}
+                  <span class="frn__size-s">{{ t.sous_titre }}</span>
+                {%- endif -%}
+              </button>
+            {%- endfor -%}
+          </div>
+          {%- comment -%}
+            La pastille est positionnée par le script au-dessus du bouton qui
+            la porte : sa place dépend du nombre de tailles, que le marchand
+            peut changer.
+          {%- endcomment -%}
+          <span class="frn__ideal" data-frn-ideal-badge hidden></span>
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ---------- Composeur de set ---------- {%- endcomment -%}
+      {%- if s.show_set and articles.size > 0 -%}
+        <div
+          class="frn__set"
+          data-frn-set
+          data-frn-tier2="{{ s.tier2_pct }}"
+          data-frn-tier3="{{ s.tier3_pct }}"
+          data-frn-pill="{{ s.set_pill | escape }}"
+        >
+          <div class="frn__set-head">
+            {%- if s.set_title != blank -%}
+              <p class="frn__set-title">{{ s.set_title }}</p>
+            {%- endif -%}
+            <span class="frn__set-pill" data-frn-pill-out>{{ s.set_pill }}</span>
+          </div>
+
+          {%- if s.show_steps -%}
+            <div class="frn__steps">
+              <div class="frn__bars">
+                <span class="frn__bar"><i data-frn-bar="1"></i></span>
+                <span class="frn__bar"><i data-frn-bar="2"></i></span>
+              </div>
+              <div class="frn__steps-lab">
+                <span>{{ s.tier2_label }}</span>
+                <span>{{ s.tier3_label }}</span>
+              </div>
+            </div>
+          {%- endif -%}
+
+          <div class="frn__items">
+            {%- for block in articles -%}
+              {%- liquid
+                assign a = block.settings
+                assign a_prod = a.produit
+
+                assign a_name = a.titre
+                if a_name == blank and a_prod != blank
+                  assign a_name = a_prod.title
+                endif
+
+                assign a_img = a.image
+                if a_img == blank and a_prod != blank
+                  assign a_img = a_prod.featured_image
+                endif
+
+                comment
+                  Les deux prix sont saisis par le marchand, en toutes lettres.
+                  Laissés vides, ils suivent le produit choisi. Les espaces
+                  insécables d'un copier-coller sont retirées, sinon `times`
+                  rendrait zéro.
+                endcomment
+                capture a_raw
+                  echo a.prix | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
+                endcapture
+                assign a_cents = a_raw | times: 100 | round
+                if a_cents <= 0 and a_prod != blank
+                  assign a_cents = a_prod.selected_or_first_available_variant.price
+                endif
+
+                capture a_was_raw
+                  echo a.prix_barre | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
+                endcapture
+                assign a_was = a_was_raw | times: 100 | round
+                if a_was <= 0 and a_prod != blank
+                  assign a_was = a_prod.selected_or_first_available_variant.compare_at_price
+                endif
+                if a_was <= a_cents
+                  assign a_was = 0
+                endif
+
+                comment
+                  Le montant qui entre dans le total avant remise. Sans prix
+                  barré, c'est le prix de l'article lui-même : `default` ne
+                  remplacerait pas un zéro, et l'article disparaîtrait du
+                  calcul.
+                endcomment
+                assign a_full = a_was
+                if a_full <= 0
+                  assign a_full = a_cents
+                endif
+
+                assign a_vid = 0
+                if a_prod != blank
+                  assign a_vid = a_prod.selected_or_first_available_variant.id
+                endif
+
+                comment
+                  Sans produit rattaché, l'article ne peut pas entrer dans le
+                  panier : on le montre, grisé, plutôt que de le laisser
+                  gonfler un total que l'ajout ne tiendrait pas.
+                endcomment
+                assign a_on = a.coche
+                if a_vid == 0
+                  assign a_on = false
+                endif
+              -%}
+              <button
+                class="frn__item"
+                type="button"
+                data-frn-item
+                data-frn-variant="{{ a_vid }}"
+                data-frn-full="{{ a_full }}"
+                data-frn-net="{{ a_cents }}"
+                aria-pressed="{% if a_on %}true{% else %}false{% endif %}"
+                {% if a_vid == 0 %}disabled title="{{ s.set_no_product | escape }}"{% endif %}
+                {{ block.shopify_attributes }}
+              >
+                {%- if a_img != blank -%}
+                  <span class="frn__item-img">
+                    {{ a_img | image_url: width: 200 | image_tag: widths: '80, 140, 200', loading: 'lazy', alt: '' }}
+                  </span>
+                {%- endif -%}
+                <span class="frn__item-txt">
+                  {%- if a_name != blank -%}<span class="frn__item-name">{{ a_name }}</span>{%- endif -%}
+                  <span class="frn__item-price">{{ a_cents | money }}</span>
+                  {%- if a_was > 0 -%}<span class="frn__item-was">{{ a_was | money }}</span>{%- endif -%}
+                </span>
+                <span class="frn__item-mark" aria-hidden="true">
+                  <span data-frn-mark-on {% unless a_on %}hidden{% endunless %}>{{ ico_check }}</span>
+                  <span data-frn-mark-off {% if a_on %}hidden{% endif %}>{{ ico_plus }}</span>
+                </span>
+              </button>
+            {%- endfor -%}
+          </div>
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} ---------- Achat ---------- {%- endcomment -%}
+      {%- if s.show_buy -%}
+        <button
+          class="frn__buy"
+          type="button"
+          data-frn-buy
+          {% unless v.available %}disabled{% endunless %}
+        >
+          {%- if s.buy_lock -%}{{ ico_lock }}{%- endif -%}
+          <span data-frn-buy-label>{% if v.available %}{{ s.buy_label }}{% else %}{{ s.sold_out_label }}{% endif %}</span>
+          {%- if s.buy_prices -%}
+            <span class="frn__buy-money">
+              <span class="frn__buy-sep" aria-hidden="true">·</span>
+              <s class="frn__buy-was" data-frn-buy-was hidden></s>
+              <span data-frn-buy-total></span>
+            </span>
+          {%- endif -%}
+        </button>
+
+        {%- if s.show_urgent and s.urgent_text != blank -%}
+          <p class="frn__urgent"><span class="frn__dot" aria-hidden="true"></span>{{ s.urgent_text }}</p>
+        {%- endif -%}
+      {%- endif -%}
+
+      {%- comment -%} ---------- Cadeaux ---------- {%- endcomment -%}
+      {%- if s.show_gifts -%}
+        {%- for block in cadeaux -%}
+          {%- assign c = block.settings -%}
+          <div
+            class="frn__gift frn__gift--{{ c.cote | default: 'droite' }}{% if c.debord %} frn__gift--debord{% endif %}"
+            {{ block.shopify_attributes }}
+          >
+            <span class="frn__gift-txt">
+              <span class="frn__gift-name">
+                {{ c.titre }}
+                {%- if c.pastille != blank -%}<span class="frn__offert">{{ c.pastille }}</span>{%- endif -%}
+              </span>
+              {%- if c.texte != blank -%}<span class="frn__gift-sub">{{ c.texte }}</span>{%- endif -%}
+            </span>
+            {%- if c.image != blank -%}
+              <span class="frn__gift-img frn__gift-img--{{ c.forme | default: 'rond' }}">
+                {{ c.image | image_url: width: 300 | image_tag: widths: '120, 200, 300', loading: 'lazy', alt: '' }}
+              </span>
+            {%- endif -%}
+          </div>
+        {%- endfor -%}
+      {%- endif -%}
+
+      {%- comment -%} ---------- Vidéos clientes ---------- {%- endcomment -%}
+      {%- if s.show_ugc and videos.size > 0 -%}
+        <div class="frn__ugc" data-frn-ugc>
+          {%- for block in videos -%}
+            {%- liquid
+              assign u = block.settings
+              assign src = ''
+              assign kind = ''
+              if u.video != blank
+                assign kind = 'file'
+              elsif u.video_url != blank
+                assign kind = u.video_url.type
+                assign src = u.video_url.id
+              endif
+            -%}
+            <button
+              class="frn__ugc-item"
+              type="button"
+              data-frn-ugc-item
+              data-frn-kind="{{ kind }}"
+              data-frn-src="{{ src }}"
+              aria-label="{{ u.titre | default: s.ugc_label | escape }}"
+              {{ block.shopify_attributes }}
+            >
+              {%- if u.image != blank -%}
+                {{ u.image | image_url: width: 400 | image_tag: widths: '120, 240, 400', loading: 'lazy', alt: '' }}
+              {%- elsif u.video != blank -%}
+                {{ u.video.preview_image | image_url: width: 400 | image_tag: widths: '120, 240, 400', loading: 'lazy', alt: '' }}
+              {%- endif -%}
+              <span class="frn__play" aria-hidden="true">{{ ico_play }}</span>
+              {%- if u.video != blank -%}
+                {%- comment -%}
+                  La vidéo hébergée est rendue ici, masquée, puis déplacée dans
+                  le lecteur à l'ouverture : Shopify ne sait la produire qu'en
+                  Liquid, pas depuis le script.
+                {%- endcomment -%}
+                <template data-frn-video>
+                  {{ u.video | video_tag: image_size: '800x', controls: true, playsinline: true }}
+                </template>
+              {%- endif -%}
+            </button>
+          {%- endfor -%}
+        </div>
+
+        <div class="frn__player" data-frn-player hidden>
+          <div class="frn__player-box" data-frn-player-box></div>
+          <button class="frn__player-close" type="button" data-frn-player-close aria-label="{{ s.close_label | escape }}">&times;</button>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+
+  <script type="application/json" data-frn-config>
+    {
+      "variants": {{ p.variants | json }},
+      "optionIndex": {{ option_index | json }},
+      "moneyFormat": {{ shop.money_format | json }},
+      "cartAddUrl": {{ routes.cart_add_url | json }},
+      "cartUrl": {{ routes.cart_url | json }},
+      "afterAdd": {{ s.after_add | json }},
+      "buyLabel": {{ s.buy_label | json }},
+      "soldOutLabel": {{ s.sold_out_label | json }},
+      "addedLabel": {{ s.added_label | json }},
+      "errorLabel": {{ s.error_label | json }}
+    }
+  </script>
+</section>
+
+<script>
+  (function () {
+    var root = document.getElementById('frn-{{ section.id }}');
+    if (!root || root.dataset.frnReady === '1') return;
+    root.dataset.frnReady = '1';
+
+    var cfg = {};
+    try {
+      cfg = JSON.parse(root.querySelector('[data-frn-config]').textContent);
+    } catch (e) {
+      return;
+    }
+
+    function money(cents) {
+      var n = (Number(cents || 0) / 100).toFixed(2);
+      var withComma = n.replace('.', ',');
+      /* Le format de la boutique est repris tel quel : virgule décimale et
+         séparateur de milliers compris. Sans lui — une boutique mal réglée —
+         on écrit le montant à la française plutôt que de ne rien afficher. */
+      var fmt = cfg.moneyFormat;
+      if (!fmt) return withComma + ' €';
+      return fmt
+        .replace(/\{\{\s*amount_with_comma_separator\s*\}\}/g, withComma)
+        .replace(/\{\{\s*amount_no_decimals\s*\}\}/g, String(Math.round(cents / 100)))
+        .replace(/\{\{\s*amount\s*\}\}/g, n)
+        .replace(/<[^>]*>/g, '')
+        .trim();
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Galerie
+     * ---------------------------------------------------------------- */
+
+    var slides = root.querySelector('[data-frn-slides]');
+    var thumbs = [].slice.call(root.querySelectorAll('[data-frn-thumb]'));
+
+    function goTo(i) {
+      if (!slides) return;
+      var slide = slides.children[i];
+      if (!slide) return;
+      slides.scrollTo({ left: slide.offsetLeft - slides.offsetLeft, behavior: 'smooth' });
+    }
+
+    function markThumb(i) {
+      for (var k = 0; k < thumbs.length; k++) {
+        thumbs[k].setAttribute('aria-current', k === i ? 'true' : 'false');
+      }
+    }
+
+    thumbs.forEach(function (btn, i) {
+      btn.addEventListener('click', function () {
+        goTo(i);
+        markThumb(i);
+      });
+    });
+
+    if (slides) {
+      var waiting = false;
+      slides.addEventListener('scroll', function () {
+        if (waiting) return;
+        waiting = true;
+        window.requestAnimationFrame(function () {
+          waiting = false;
+          var i = Math.round(slides.scrollLeft / slides.clientWidth);
+          markThumb(i);
+        });
+      }, { passive: true });
+    }
+
+    var prev = root.querySelector('[data-frn-prev]');
+    var next = root.querySelector('[data-frn-next]');
+    function step(dir) {
+      if (!slides) return;
+      var i = Math.round(slides.scrollLeft / slides.clientWidth) + dir;
+      if (i < 0) i = slides.children.length - 1;
+      if (i >= slides.children.length) i = 0;
+      goTo(i);
+      markThumb(i);
+    }
+    if (prev) prev.addEventListener('click', function () { step(-1); });
+    if (next) next.addEventListener('click', function () { step(1); });
+
+    /* ---------------------------------------------------------------- *
+     * Tailles
+     * ---------------------------------------------------------------- */
+
+    var sizeBtns = [].slice.call(root.querySelectorAll('[data-frn-size]'));
+    var badge = root.querySelector('[data-frn-ideal-badge]');
+    var current = null;
+
+    function variantFor(value) {
+      var list = cfg.variants || [];
+      for (var i = 0; i < list.length; i++) {
+        var opts = list[i].options || [];
+        if (String(opts[cfg.optionIndex]) === String(value)) return list[i];
+      }
+      return null;
+    }
+
+    function placeBadge() {
+      if (!badge) return;
+      /* La première taille qui porte une pastille l'emporte : si le marchand
+         en remplit deux, une seule s'affiche plutôt que deux superposées. */
+      var host = null;
+      for (var i = 0; i < sizeBtns.length; i++) {
+        if ((sizeBtns[i].getAttribute('data-frn-ideal') || '').trim()) {
+          host = sizeBtns[i];
+          break;
+        }
+      }
+      if (!host) {
+        badge.hidden = true;
+        return;
+      }
+      badge.textContent = host.getAttribute('data-frn-ideal');
+      badge.hidden = false;
+      /* Centrée sur son bouton : la position se recalcule, car le nombre de
+         tailles est à la main du marchand. */
+      badge.style.left = host.offsetLeft + host.offsetWidth / 2 + 'px';
+    }
+
+    function paintVariant() {
+      if (!current) return;
+      var priceEl = root.querySelector('[data-frn-price]');
+      var wasEl = root.querySelector('[data-frn-was]');
+      if (priceEl) priceEl.textContent = money(current.price);
+      if (wasEl) {
+        var hasWas = current.compare_at_price && current.compare_at_price > current.price;
+        wasEl.hidden = !hasWas;
+        if (hasWas) wasEl.textContent = money(current.compare_at_price);
+      }
+      var buy = root.querySelector('[data-frn-buy]');
+      var label = root.querySelector('[data-frn-buy-label]');
+      if (buy) buy.disabled = !current.available;
+      if (label) label.textContent = current.available ? cfg.buyLabel : cfg.soldOutLabel;
+    }
+
+    function selectSize(value) {
+      var found = variantFor(value);
+      if (!found) return;
+      current = found;
+      sizeBtns.forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-frn-size') === value ? 'true' : 'false');
+      });
+      paintVariant();
+      paintTotals();
+    }
+
+    sizeBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        selectSize(b.getAttribute('data-frn-size'));
+      });
+    });
+
+    /* État de départ : la taille déjà marquée, sinon la première. */
+    var start = sizeBtns.filter(function (b) {
+      return b.getAttribute('aria-pressed') === 'true';
+    })[0] || sizeBtns[0];
+    if (start) {
+      current = variantFor(start.getAttribute('data-frn-size'));
+      start.setAttribute('aria-pressed', 'true');
+    }
+    if (!current) current = (cfg.variants || [])[0] || null;
+
+    placeBadge();
+    window.addEventListener('resize', placeBadge);
+
+    /* ---------------------------------------------------------------- *
+     * Composeur de set
+     * ---------------------------------------------------------------- */
+
+    var setBox = root.querySelector('[data-frn-set]');
+    var items = [].slice.call(root.querySelectorAll('[data-frn-item]'));
+
+    function selected() {
+      return items.filter(function (b) {
+        return b.getAttribute('aria-pressed') === 'true';
+      });
+    }
+
+    function tierPct(count) {
+      if (!setBox) return 0;
+      var t2 = parseFloat(setBox.getAttribute('data-frn-tier2')) || 0;
+      var t3 = parseFloat(setBox.getAttribute('data-frn-tier3')) || 0;
+      if (count >= 3) return t3;
+      if (count >= 2) return t2;
+      return 0;
+    }
+
+    function paintTotals() {
+      var picked = selected();
+      // Le produit principal compte pour une pièce.
+      var count = 1 + picked.length;
+      var pct = tierPct(count);
+
+      var full = current ? current.price : 0;
+      picked.forEach(function (b) {
+        full += Number(b.getAttribute('data-frn-full')) || 0;
+      });
+
+      var total = Math.round(full * (1 - pct / 100));
+
+      var totalEl = root.querySelector('[data-frn-buy-total]');
+      var wasEl = root.querySelector('[data-frn-buy-was]');
+      if (totalEl) totalEl.textContent = money(total);
+      if (wasEl) {
+        wasEl.hidden = total >= full;
+        if (total < full) wasEl.textContent = money(full);
+      }
+
+      // Les deux segments se remplissent l'un après l'autre.
+      var b1 = root.querySelector('[data-frn-bar="1"]');
+      var b2 = root.querySelector('[data-frn-bar="2"]');
+      if (b1) b1.style.width = count >= 2 ? '100%' : '0%';
+      if (b2) b2.style.width = count >= 3 ? '100%' : '0%';
+
+      var pill = root.querySelector('[data-frn-pill-out]');
+      if (pill && setBox) {
+        var base = setBox.getAttribute('data-frn-pill') || '';
+        pill.textContent = base.replace('[x]', String(pct));
+        pill.hidden = pct <= 0;
+      }
+    }
+
+    items.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var on = b.getAttribute('aria-pressed') === 'true';
+        b.setAttribute('aria-pressed', on ? 'false' : 'true');
+        var mOn = b.querySelector('[data-frn-mark-on]');
+        var mOff = b.querySelector('[data-frn-mark-off]');
+        if (mOn) mOn.hidden = on;
+        if (mOff) mOff.hidden = !on;
+        paintTotals();
+      });
+    });
+
+    paintVariant();
+    paintTotals();
+
+    /* ---------------------------------------------------------------- *
+     * Ajout au panier
+     * ---------------------------------------------------------------- */
+
+    var buy = root.querySelector('[data-frn-buy]');
+
+    if (buy) {
+      buy.addEventListener('click', function () {
+        if (!current || buy.disabled) return;
+        var label = root.querySelector('[data-frn-buy-label]');
+        var before = label ? label.textContent : '';
+
+        /* Une ligne par variante, les quantités agrégées : Shopify ne retient
+           qu'une seule ligne quand le même identifiant revient deux fois. */
+        var byVariant = {};
+        var order = [];
+        function add(id) {
+          if (!id) return;
+          if (byVariant[id] === undefined) {
+            byVariant[id] = 0;
+            order.push(id);
+          }
+          byVariant[id] += 1;
+        }
+        add(current.id);
+        selected().forEach(function (b) {
+          add(Number(b.getAttribute('data-frn-variant')));
+        });
+
+        var payload = order.map(function (id) {
+          return { id: Number(id), quantity: byVariant[id] };
+        });
+
+        buy.disabled = true;
+        window
+          .fetch(cfg.cartAddUrl + '.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: payload })
+          })
+          .then(function (res) {
+            if (!res.ok) throw new Error('cart');
+            return res.json();
+          })
+          .then(function () {
+            document.dispatchEvent(new CustomEvent('frn:cart-added', { bubbles: true }));
+            if (label) label.textContent = cfg.addedLabel;
+
+            if (cfg.afterAdd === 'cart') {
+              window.location.href = cfg.cartUrl;
+              return;
+            }
+            if (cfg.afterAdd === 'checkout') {
+              window.location.href = '/checkout';
+              return;
+            }
+            if (cfg.afterAdd === 'drawer') {
+              /* Le tiroir du thème, quel qu'il soit. Deux passes : le premier
+                 élément trouvé n'est pas toujours celui qui sait s'ouvrir. */
+              var passes = ['[data-cart-drawer]', 'cart-drawer, #cart-drawer, .cart-drawer, cart-notification'];
+              for (var i = 0; i < passes.length; i++) {
+                var found = document.querySelectorAll(passes[i]);
+                for (var j = 0; j < found.length; j++) {
+                  if (typeof found[j].open === 'function') {
+                    found[j].open();
+                    reset();
+                    return;
+                  }
+                }
+              }
+              window.location.href = cfg.cartUrl;
+              return;
+            }
+            reset();
+          })
+          .catch(function () {
+            if (label) label.textContent = cfg.errorLabel;
+            window.setTimeout(reset, 2200);
+          });
+
+        function reset() {
+          buy.disabled = false;
+          if (label) label.textContent = before;
+        }
+      });
+    }
+
+    /* ---------------------------------------------------------------- *
+     * Lecteur de vidéos clientes
+     * ---------------------------------------------------------------- */
+
+    var player = root.querySelector('[data-frn-player]');
+    var box = root.querySelector('[data-frn-player-box]');
+
+    function closePlayer() {
+      if (!player || !box) return;
+      player.hidden = true;
+      // Vider la boîte arrête la lecture, iframe comprise.
+      box.textContent = '';
+    }
+
+    function openPlayer(btn) {
+      if (!player || !box) return;
+      var kind = btn.getAttribute('data-frn-kind');
+      var src = btn.getAttribute('data-frn-src');
+      box.textContent = '';
+
+      if (kind === 'file') {
+        var tpl = btn.querySelector('[data-frn-video]');
+        if (!tpl) return;
+        box.appendChild(tpl.content.cloneNode(true));
+        var vid = box.querySelector('video');
+        if (vid) {
+          vid.setAttribute('controls', '');
+          vid.play().catch(function () {});
+        }
+      } else if (kind === 'youtube' || kind === 'vimeo') {
+        var frame = document.createElement('iframe');
+        frame.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+        frame.setAttribute('allowfullscreen', '');
+        frame.src =
+          kind === 'youtube'
+            ? 'https://www.youtube.com/embed/' + encodeURIComponent(src) + '?autoplay=1&playsinline=1'
+            : 'https://player.vimeo.com/video/' + encodeURIComponent(src) + '?autoplay=1';
+        box.appendChild(frame);
+      } else {
+        return;
+      }
+
+      player.hidden = false;
+    }
+
+    [].slice.call(root.querySelectorAll('[data-frn-ugc-item]')).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        openPlayer(btn);
+      });
+    });
+
+    var closeBtn = root.querySelector('[data-frn-player-close]');
+    if (closeBtn) closeBtn.addEventListener('click', closePlayer);
+    if (player) {
+      player.addEventListener('click', function (e) {
+        if (e.target === player) closePlayer();
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closePlayer();
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Produit Forneau",
+  "tag": "section",
+  "class": "section-produit-forneau",
+  "max_blocks": 30,
+  "settings": [
+    { "type": "header", "content": "Mise en page" },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 600, "max": 1600, "step": 20, "unit": "px", "default": 1320 },
+    { "type": "range", "id": "breakpoint", "label": "Bascule mobile / bureau", "min": 700, "max": 1200, "step": 10, "unit": "px", "default": 990 },
+    { "type": "range", "id": "gallery_width", "label": "Largeur de la galerie (bureau)", "info": "En % de la largeur du bloc.", "min": 30, "max": 70, "step": 1, "unit": "%", "default": 57 },
+    { "type": "range", "id": "column_gap", "label": "Espace entre les colonnes", "min": 16, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "radius", "label": "Arrondi des cartes", "min": 0, "max": 28, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "font_size", "label": "Taille du texte de base", "min": 13, "max": 20, "step": 1, "unit": "px", "default": 15 },
+    { "type": "text", "id": "font_titre", "label": "Police des titres", "info": "Pile CSS. Exemple : Georgia, serif.", "default": "Georgia, 'Times New Roman', serif" },
+    {
+      "type": "select",
+      "id": "align",
+      "label": "Alignement du titre (bureau)",
+      "options": [
+        { "value": "center", "label": "Centré" },
+        { "value": "left", "label": "À gauche" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "align_mobile",
+      "label": "Alignement du titre (mobile)",
+      "options": [
+        { "value": "center", "label": "Centré" },
+        { "value": "left", "label": "À gauche" }
+      ],
+      "default": "center"
+    },
+    { "type": "range", "id": "padding_top", "label": "Marge haute (bureau)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 32 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse (bureau)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "padding_top_mobile", "label": "Marge haute (mobile)", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 12 },
+    { "type": "range", "id": "padding_bottom_mobile", "label": "Marge basse (mobile)", "min": 0, "max": 80, "step": 4, "unit": "px", "default": 28 },
+
+    { "type": "header", "content": "Galerie" },
+    { "type": "checkbox", "id": "show_gallery", "label": "Afficher la galerie", "default": true },
+    { "type": "checkbox", "id": "show_thumbs", "label": "Afficher les vignettes", "default": true },
+    { "type": "checkbox", "id": "show_arrows", "label": "Afficher les flèches (bureau)", "default": true },
+    { "type": "range", "id": "gallery_ratio", "label": "Hauteur de l'image", "info": "En % de sa largeur. 100 = carré.", "min": 60, "max": 160, "step": 5, "unit": "%", "default": 100 },
+    {
+      "type": "select",
+      "id": "gallery_fit",
+      "label": "Cadrage",
+      "options": [
+        { "value": "cover", "label": "Remplir" },
+        { "value": "contain", "label": "Afficher en entier" }
+      ],
+      "default": "cover"
+    },
+    { "type": "range", "id": "thumb_size", "label": "Taille des vignettes", "min": 40, "max": 120, "step": 2, "unit": "px", "default": 58 },
+    { "type": "range", "id": "gallery_sticky_top", "label": "Décollement de la galerie (bureau)", "info": "Distance au haut de l'écran quand la galerie suit le défilement.", "min": 0, "max": 200, "step": 4, "unit": "px", "default": 24 },
+    { "type": "text", "id": "prev_label", "label": "Flèche précédente (accessibilité)", "default": "Image précédente" },
+    { "type": "text", "id": "next_label", "label": "Flèche suivante (accessibilité)", "default": "Image suivante" },
+
+    { "type": "header", "content": "Bandeau récompense" },
+    { "type": "checkbox", "id": "show_award", "label": "Afficher le bandeau", "default": true },
+    { "type": "text", "id": "award_text", "label": "Texte", "default": "#1 Poêle santé 2026 🇫🇷" },
+
+    { "type": "header", "content": "Titre et avis" },
+    { "type": "checkbox", "id": "show_title", "label": "Afficher le titre", "default": true },
+    { "type": "text", "id": "titre", "label": "Titre", "info": "Vide : le nom du produit est repris." },
+    { "type": "range", "id": "titre_size", "label": "Taille du titre (bureau)", "min": 18, "max": 54, "step": 1, "unit": "px", "default": 29 },
+    { "type": "range", "id": "titre_size_mobile", "label": "Taille du titre (mobile)", "min": 16, "max": 40, "step": 1, "unit": "px", "default": 23 },
+    { "type": "checkbox", "id": "show_rating", "label": "Afficher les avis", "default": true },
+    { "type": "text", "id": "rating_text", "label": "Texte des avis", "default": "(4.8) 1 571 avis vérifiés" },
+
+    { "type": "header", "content": "Prix" },
+    { "type": "checkbox", "id": "show_price", "label": "Afficher le prix", "default": true },
+    { "type": "range", "id": "prix_size", "label": "Taille du prix (bureau)", "min": 18, "max": 56, "step": 1, "unit": "px", "default": 34 },
+    { "type": "range", "id": "prix_size_mobile", "label": "Taille du prix (mobile)", "min": 16, "max": 44, "step": 1, "unit": "px", "default": 29 },
+    { "type": "text", "id": "tag_text", "label": "Pastille à côté du prix", "default": "Octobre rose" },
+
+    { "type": "header", "content": "Garanties" },
+    { "type": "checkbox", "id": "show_trust", "label": "Afficher la rangée", "default": true },
+    { "type": "range", "id": "trust_icon_size", "label": "Taille des icônes", "min": 16, "max": 56, "step": 2, "unit": "px", "default": 28 },
+    { "type": "range", "id": "trust_icon_stroke", "label": "Épaisseur du trait des icônes", "min": 0.6, "max": 3, "step": 0.2, "default": 1.4 },
+    { "type": "range", "id": "trust_text_size", "label": "Taille du texte (bureau)", "info": "Baisse-la d'un cran si un libellé passe à la ligne.", "min": 8, "max": 18, "step": 1, "unit": "px", "default": 10 },
+    { "type": "range", "id": "trust_text_size_mobile", "label": "Taille du texte (mobile)", "min": 8, "max": 18, "step": 1, "unit": "px", "default": 11 },
+
+    { "type": "header", "content": "Guide des tailles" },
+    { "type": "checkbox", "id": "show_guide", "label": "Afficher le lien", "default": true },
+    { "type": "text", "id": "guide_text", "label": "Texte du lien", "default": "Guide des tailles" },
+    { "type": "page", "id": "guide_page", "label": "Page du guide" },
+    { "type": "url", "id": "guide_url", "label": "Ou lien direct", "info": "Prioritaire sur la page." },
+
+    { "type": "header", "content": "Sélecteur de taille" },
+    { "type": "checkbox", "id": "show_sizes", "label": "Afficher le sélecteur", "default": true },
+    { "type": "text", "id": "option_taille", "label": "Nom de l'option du produit", "info": "Vide : la première option du produit. Exemple : Taille." },
+    { "type": "text", "id": "sizes_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de la taille" },
+
+    { "type": "header", "content": "Composeur de set" },
+    { "type": "checkbox", "id": "show_set", "label": "Afficher le composeur", "default": true },
+    { "type": "text", "id": "set_title", "label": "Titre", "default": "Composez votre set" },
+    { "type": "text", "id": "set_pill", "label": "Pastille de remise", "info": "[x] est remplacé par le pourcentage du palier atteint.", "default": "−[x] % sur tout" },
+    { "type": "checkbox", "id": "show_steps", "label": "Afficher les paliers", "default": true },
+    { "type": "text", "id": "tier2_label", "label": "Libellé du 2e palier", "default": "2 pièces −10 %" },
+    { "type": "range", "id": "tier2_pct", "label": "Remise à 2 pièces", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 10 },
+    { "type": "text", "id": "tier3_label", "label": "Libellé du 3e palier", "default": "3 pièces −15 %" },
+    { "type": "range", "id": "tier3_pct", "label": "Remise à 3 pièces", "info": "Le thème ne crée aucune remise : il affiche ce pourcentage. Crée la remise automatique correspondante dans Shopify → Réductions, avec les mêmes paliers.", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 15 },
+    { "type": "range", "id": "set_img_size", "label": "Taille des vignettes du set", "min": 28, "max": 90, "step": 2, "unit": "px", "default": 40 },
+    { "type": "range", "id": "set_name_size", "label": "Taille du nom des articles", "info": "Baisse-la d'un ou deux crans si un nom passe à la ligne.", "min": 9, "max": 18, "step": 1, "unit": "px", "default": 11 },
+    { "type": "text", "id": "set_no_product", "label": "Article sans produit — infobulle", "info": "Un article du set sans produit choisi ne peut pas être ajouté au panier : il s'affiche grisé.", "default": "Choisis un produit pour cet article" },
+
+    { "type": "header", "content": "Bouton d'achat" },
+    { "type": "checkbox", "id": "show_buy", "label": "Afficher le bouton", "default": true },
+    { "type": "text", "id": "buy_label", "label": "Libellé", "default": "Ajouter au panier" },
+    { "type": "checkbox", "id": "buy_lock", "label": "Afficher le cadenas", "default": true },
+    { "type": "checkbox", "id": "buy_prices", "label": "Afficher les prix sur le bouton", "default": true },
+    { "type": "text", "id": "sold_out_label", "label": "Texte « épuisé »", "default": "Épuisé" },
+    { "type": "text", "id": "added_label", "label": "Texte de confirmation", "default": "Ajouté" },
+    { "type": "text", "id": "error_label", "label": "Message d'erreur", "default": "Ajout impossible, réessaie" },
+    {
+      "type": "select",
+      "id": "after_add",
+      "label": "Après l'ajout",
+      "options": [
+        { "value": "stay", "label": "Rester sur la page" },
+        { "value": "drawer", "label": "Ouvrir le panier coulissant" },
+        { "value": "cart", "label": "Aller au panier" },
+        { "value": "checkout", "label": "Aller au paiement" }
+      ],
+      "default": "drawer"
+    },
+
+    { "type": "header", "content": "Mention d'urgence" },
+    { "type": "checkbox", "id": "show_urgent", "label": "Afficher la mention", "default": true },
+    { "type": "text", "id": "urgent_text", "label": "Texte", "default": "Forte demande — plus que quelques unités" },
+    { "type": "checkbox", "id": "urgent_pulse", "label": "Faire battre le point", "default": true },
+
+    { "type": "header", "content": "Cadeaux inclus" },
+    { "type": "checkbox", "id": "show_gifts", "label": "Afficher les cadeaux", "default": true },
+    { "type": "range", "id": "gift_img_size", "label": "Taille des visuels", "min": 40, "max": 160, "step": 4, "unit": "px", "default": 84 },
+
+    { "type": "header", "content": "Vidéos clientes" },
+    { "type": "checkbox", "id": "show_ugc", "label": "Afficher les vidéos", "default": true },
+    { "type": "range", "id": "ugc_size", "label": "Taille des pastilles", "min": 48, "max": 160, "step": 4, "unit": "px", "default": 84 },
+    { "type": "range", "id": "ugc_ring_width", "label": "Épaisseur de l'anneau", "min": 0, "max": 8, "step": 1, "unit": "px", "default": 2 },
+    { "type": "text", "id": "ugc_label", "label": "Libellé par défaut (accessibilité)", "default": "Voir la vidéo" },
+    { "type": "text", "id": "close_label", "label": "Fermer le lecteur (accessibilité)", "default": "Fermer" },
+
+    { "type": "header", "content": "Couleurs — général" },
+    { "type": "color", "id": "color_bg", "label": "Fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_text", "label": "Texte", "default": "#1A1A18" },
+    { "type": "color", "id": "color_muted", "label": "Texte secondaire", "default": "#7A7A72" },
+    { "type": "color", "id": "color_line", "label": "Traits et bordures", "default": "#DEDED6" },
+    { "type": "color", "id": "color_accent", "label": "Accent", "default": "#2F5134" },
+    { "type": "color", "id": "color_card", "label": "Fond des cartes", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_trust_ico", "label": "Icônes des garanties", "default": "#8A6D3B" },
+    { "type": "color", "id": "color_check_bg", "label": "Coche d'un article choisi — fond", "default": "#2F5134" },
+    { "type": "color", "id": "color_check_text", "label": "Coche d'un article choisi — signe", "default": "#FFFFFF" },
+
+    { "type": "header", "content": "Couleurs — bandeau et prix" },
+    { "type": "color", "id": "color_award_bg", "label": "Bandeau — fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_award_text", "label": "Bandeau — texte", "default": "#1A1A18" },
+    { "type": "color", "id": "color_award_line", "label": "Bandeau — bordure", "default": "#1A1A18" },
+    { "type": "color", "id": "color_star", "label": "Étoiles", "default": "#2F5134" },
+    { "type": "color", "id": "color_price", "label": "Prix", "default": "#1A1A18" },
+    { "type": "color", "id": "color_was", "label": "Prix barré", "default": "#9B9B92" },
+    { "type": "color", "id": "color_tag_bg", "label": "Pastille du prix — fond", "default": "#A52A4A" },
+    { "type": "color", "id": "color_tag_text", "label": "Pastille du prix — texte", "default": "#FFFFFF" },
+
+    { "type": "header", "content": "Couleurs — tailles" },
+    { "type": "color", "id": "color_size_on_bg", "label": "Taille choisie — fond", "default": "#2F5134" },
+    { "type": "color", "id": "color_size_on_text", "label": "Taille choisie — texte", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_size_off_bg", "label": "Taille libre — fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_size_off_text", "label": "Taille libre — texte", "default": "#1A1A18" },
+    { "type": "color", "id": "color_ideal_bg", "label": "Pastille « idéale » — fond", "default": "#8A6D3B" },
+    { "type": "color", "id": "color_ideal_text", "label": "Pastille « idéale » — texte", "default": "#FFFFFF" },
+
+    { "type": "header", "content": "Couleurs — set et achat" },
+    { "type": "color", "id": "color_set_bg", "label": "Set — fond", "default": "#F4F3EC" },
+    { "type": "color", "id": "color_set_pill_bg", "label": "Set — pastille de remise", "default": "#2F5134" },
+    { "type": "color", "id": "color_set_pill_text", "label": "Set — texte de la pastille", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_set_fill", "label": "Set — paliers remplis", "default": "#2F5134" },
+    { "type": "color", "id": "color_set_track", "label": "Set — paliers vides", "default": "#DEDED6" },
+    { "type": "color", "id": "color_buy_bg", "label": "Bouton — fond", "default": "#8E2740" },
+    { "type": "color", "id": "color_buy_text", "label": "Bouton — texte", "default": "#FFFFFF" },
+
+    { "type": "header", "content": "Couleurs — urgence, cadeaux, vidéos" },
+    { "type": "color", "id": "color_urgent_bg", "label": "Urgence — fond", "default": "#FBF1F3" },
+    { "type": "color", "id": "color_urgent_text", "label": "Urgence — texte", "default": "#1A1A18" },
+    { "type": "color", "id": "color_urgent_dot", "label": "Urgence — point", "default": "#D14D6B" },
+    { "type": "color", "id": "color_gift_bg", "label": "Cadeau — fond", "default": "#FBFAF5" },
+    { "type": "color", "id": "color_offert_bg", "label": "Étiquette « offert » — fond", "default": "#2F5134" },
+    { "type": "color", "id": "color_offert_text", "label": "Étiquette « offert » — texte", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_ugc_ring", "label": "Anneau des vidéos", "default": "#2F5134" }
+  ],
+  "blocks": [
+    {
+      "type": "garantie",
+      "name": "Garantie",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icone",
+          "label": "Icône",
+          "options": [
+            { "value": "shield", "label": "Bouclier" },
+            { "value": "target", "label": "Cible" },
+            { "value": "infinity", "label": "Infini" },
+            { "value": "leaf", "label": "Feuille" },
+            { "value": "flame", "label": "Flamme" },
+            { "value": "gift", "label": "Cadeau" },
+            { "value": "none", "label": "Aucune" }
+          ],
+          "default": "shield"
+        },
+        { "type": "text", "id": "emoji", "label": "Emoji à la place de l'icône" },
+        { "type": "image_picker", "id": "image", "label": "Image à la place de l'icône" },
+        { "type": "text", "id": "texte", "label": "Texte", "default": "Titane pur certifié" }
+      ]
+    },
+    {
+      "type": "taille",
+      "name": "Taille",
+      "settings": [
+        { "type": "text", "id": "valeur", "label": "Valeur de l'option", "info": "Doit correspondre exactement à la valeur de l'option du produit.", "default": "24cm" },
+        { "type": "text", "id": "sous_titre", "label": "Sous-titre", "default": "Standard" },
+        { "type": "text", "id": "badge", "label": "Pastille au-dessus", "info": "Vide : aucune pastille. Une seule taille peut la porter." }
+      ]
+    },
+    {
+      "type": "set_item",
+      "name": "Article du set",
+      "settings": [
+        { "type": "product", "id": "produit", "label": "Produit" },
+        { "type": "text", "id": "titre", "label": "Nom affiché", "info": "Vide : le nom du produit." },
+        { "type": "image_picker", "id": "image", "label": "Visuel", "info": "Vide : le visuel du produit." },
+        { "type": "text", "id": "prix", "label": "Prix", "info": "Virgule ou point. Vide : le prix du produit." },
+        { "type": "text", "id": "prix_barre", "label": "Prix barré", "info": "Virgule ou point. Vide : le prix barré du produit." },
+        { "type": "checkbox", "id": "coche", "label": "Coché à l'ouverture", "default": false }
+      ]
+    },
+    {
+      "type": "cadeau",
+      "name": "Cadeau inclus",
+      "settings": [
+        { "type": "text", "id": "titre", "label": "Titre", "default": "Couvercle en verre trempé" },
+        { "type": "text", "id": "pastille", "label": "Étiquette", "default": "Offert" },
+        { "type": "text", "id": "texte", "label": "Mention", "info": "Les balises <b> mettent un passage en avant.", "default": "Inclus dans votre colis — valeur <b>34,90 €</b>" },
+        { "type": "image_picker", "id": "image", "label": "Visuel" },
+        {
+          "type": "select",
+          "id": "cote",
+          "label": "Côté du visuel",
+          "options": [
+            { "value": "droite", "label": "À droite" },
+            { "value": "gauche", "label": "À gauche" }
+          ],
+          "default": "droite"
+        },
+        {
+          "type": "select",
+          "id": "forme",
+          "label": "Forme du visuel",
+          "options": [
+            { "value": "rond", "label": "Rond" },
+            { "value": "carre", "label": "Carré arrondi" }
+          ],
+          "default": "rond"
+        },
+        { "type": "checkbox", "id": "debord", "label": "Faire déborder le visuel", "default": true }
+      ]
+    },
+    {
+      "type": "ugc",
+      "name": "Vidéo cliente",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Vignette", "info": "Vide : l'aperçu de la vidéo hébergée." },
+        { "type": "video", "id": "video", "label": "Vidéo hébergée par Shopify" },
+        { "type": "video_url", "id": "video_url", "label": "Ou lien YouTube / Vimeo", "accept": ["youtube", "vimeo"] },
+        { "type": "text", "id": "titre", "label": "Libellé (accessibilité)" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Produit Forneau",
+      "blocks": [
+        { "type": "garantie", "settings": { "icone": "shield", "texte": "Titane pur certifié" } },
+        { "type": "garantie", "settings": { "icone": "leaf", "texte": "Sans PFAS ni revêtement" } },
+        { "type": "garantie", "settings": { "icone": "target", "texte": "Compatible induction" } },
+        { "type": "garantie", "settings": { "icone": "infinity", "texte": "Garantie à vie" } },
+        { "type": "taille", "settings": { "valeur": "20cm", "sous_titre": "Petite" } },
+        { "type": "taille", "settings": { "valeur": "24cm", "sous_titre": "Standard", "badge": "Idéale" } },
+        { "type": "taille", "settings": { "valeur": "28cm", "sous_titre": "Large" } },
+        { "type": "set_item", "settings": { "titre": "Planche à découper", "prix": "58,50", "prix_barre": "65,00", "coche": true } },
+        { "type": "set_item", "settings": { "titre": "Casserole", "prix": "76,49", "prix_barre": "89,99" } },
+        { "type": "cadeau" },
+        {
+          "type": "cadeau",
+          "settings": {
+            "titre": "Ebook offert",
+            "texte": "Recevez notre guide complet avec votre achat<br>+50 recettes exclusives Forneau",
+            "cote": "gauche",
+            "forme": "carre",
+            "debord": false
+          }
+        },
+        { "type": "ugc" },
+        { "type": "ugc" },
+        { "type": "ugc" },
+        { "type": "ugc" }
+      ]
+    }
+  ]
+}
+{% endschema %}
