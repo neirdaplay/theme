@@ -96,6 +96,8 @@
   --frn-urgent-dot: {{ s.color_urgent_dot }};
 
   --frn-gift-bg: {{ s.color_gift_bg }};
+  --frn-gift-size: {{ s.gift_img_size }}px;
+  --frn-gift-bleed: {{ s.gift_img_bleed | divided_by: 100.0 }};
   --frn-offert-bg: {{ s.color_offert_bg }};
   --frn-offert-ink: {{ s.color_offert_text }};
 
@@ -684,7 +686,7 @@
   align-items: center;
   gap: 12px;
   margin: 12px 0 0;
-  padding: 12px 14px;
+  padding: 12px;
   border: 1px solid var(--frn-line);
   border-radius: var(--frn-radius);
   background: var(--frn-gift-bg);
@@ -693,23 +695,29 @@
 
 .frn__gift-txt { flex: 1 1 auto; min-width: 0; }
 
+/* Le titre et l'étiquette tiennent sur une seule ligne : c'est le titre qui
+   se replie si la place manque, jamais l'étiquette qui descend sous lui. */
 .frn__gift-name {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   font-family: var(--frn-serif);
-  font-size: calc(var(--frn-size) * 1.02);
-  font-weight: var(--frn-titre-weight);
+  font-size: {{ s.gift_title_size }}px;
+  font-weight: {{ s.gift_title_weight }};
+  line-height: 1.25;
 }
 
+.frn__gift-label { min-width: 0; }
+
 .frn__offert {
-  padding: 3px 9px;
+  flex: 0 0 auto;
+  padding: 2px 7px;
   border-radius: 4px;
   background: var(--frn-offert-bg);
   color: var(--frn-offert-ink);
   font-family: var(--frn-sans);
-  font-size: calc(var(--frn-size) * 0.66);
+  font-size: {{ s.gift_badge_size }}px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -718,17 +726,19 @@
 .frn__gift-sub {
   display: block;
   margin: 3px 0 0;
-  font-size: calc(var(--frn-size) * 0.78);
+  font-size: {{ s.gift_text_size }}px;
   line-height: 1.35;
   color: var(--frn-muted);
 }
 
 .frn__gift-sub b { color: var(--frn-ink); }
 
+/* La taille du visuel est une variable : chaque carte peut la redéfinir
+   pour elle seule, sans que la feuille de style ait à connaître les blocs. */
 .frn__gift-img {
   flex: 0 0 auto;
-  width: {{ s.gift_img_size }}px;
-  height: {{ s.gift_img_size }}px;
+  width: var(--frn-gift-size);
+  height: var(--frn-gift-size);
   overflow: hidden;
 }
 
@@ -751,20 +761,21 @@
 }
 
 .frn__gift--debord.frn__gift--droite .frn__gift-img {
-  right: calc({{ s.gift_img_size }}px * -0.22);
+  right: calc(var(--frn-gift-size) * var(--frn-gift-bleed) * -1);
 }
 
 .frn__gift--debord.frn__gift--gauche .frn__gift-img {
-  left: calc({{ s.gift_img_size }}px * -0.22);
+  left: calc(var(--frn-gift-size) * var(--frn-gift-bleed) * -1);
 }
 
-/* La place réservée au visiteur pour que le texte ne passe pas dessous. */
+/* La place réservée au visuel pour que le texte ne passe pas dessous : ce
+   qui reste de lui à l'intérieur de la carte, plus un peu d'air. */
 .frn__gift--debord.frn__gift--droite .frn__gift-txt {
-  padding-right: calc({{ s.gift_img_size }}px * 0.82);
+  padding-right: calc(var(--frn-gift-size) * (1 - var(--frn-gift-bleed)) + 4px);
 }
 
 .frn__gift--debord.frn__gift--gauche .frn__gift-txt {
-  padding-left: calc({{ s.gift_img_size }}px * 0.82);
+  padding-left: calc(var(--frn-gift-size) * (1 - var(--frn-gift-bleed)) + 4px);
 }
 
 /* --------------------------------------------------------------------------
@@ -1363,11 +1374,16 @@
           {%- assign c = block.settings -%}
           <div
             class="frn__gift frn__gift--{{ c.cote | default: 'droite' }}{% if c.debord %} frn__gift--debord{% endif %}"
+            {%- comment -%}
+              La taille du visuel se règle carte par carte. À zéro, la carte
+              ne redéfinit rien et suit le curseur de la section.
+            {%- endcomment -%}
+            {% if c.taille_image > 0 %}style="--frn-gift-size: {{ c.taille_image }}px;"{% endif %}
             {{ block.shopify_attributes }}
           >
             <span class="frn__gift-txt">
               <span class="frn__gift-name">
-                {{ c.titre }}
+                <span class="frn__gift-label">{{ c.titre }}</span>
                 {%- if c.pastille != blank -%}<span class="frn__offert">{{ c.pastille }}</span>{%- endif -%}
               </span>
               {%- if c.texte != blank -%}<span class="frn__gift-sub">{{ c.texte }}</span>{%- endif -%}
@@ -2094,7 +2110,23 @@
 
     { "type": "header", "content": "Cadeaux inclus" },
     { "type": "checkbox", "id": "show_gifts", "label": "Afficher les cadeaux", "default": true },
-    { "type": "range", "id": "gift_img_size", "label": "Taille des visuels", "min": 40, "max": 160, "step": 4, "unit": "px", "default": 84 },
+    { "type": "range", "id": "gift_img_size", "label": "Taille des visuels", "info": "Valeur commune à toutes les cartes. Chaque carte peut la remplacer dans son propre bloc.", "min": 40, "max": 240, "step": 4, "unit": "px", "default": 88 },
+    { "type": "range", "id": "gift_img_bleed", "label": "Débordement des visuels", "info": "Part du visuel qui sort de la carte, quand le débordement est coché sur le bloc.", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 30 },
+    { "type": "range", "id": "gift_title_size", "label": "Taille du titre", "min": 10, "max": 26, "step": 1, "unit": "px", "default": 13 },
+    {
+      "type": "select",
+      "id": "gift_title_weight",
+      "label": "Graisse du titre",
+      "options": [
+        { "value": "400", "label": "Normale" },
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" }
+      ],
+      "default": "600"
+    },
+    { "type": "range", "id": "gift_text_size", "label": "Taille de la mention", "min": 8, "max": 20, "step": 1, "unit": "px", "default": 11 },
+    { "type": "range", "id": "gift_badge_size", "label": "Taille de l'étiquette", "min": 7, "max": 16, "step": 1, "unit": "px", "default": 9 },
 
     { "type": "header", "content": "Vidéos clientes" },
     { "type": "checkbox", "id": "show_ugc", "label": "Afficher les vidéos", "default": true },
@@ -2212,6 +2244,17 @@
         { "type": "text", "id": "pastille", "label": "Étiquette", "default": "Offert" },
         { "type": "text", "id": "texte", "label": "Mention", "info": "Les balises <b> mettent un passage en avant.", "default": "Inclus dans votre colis — valeur <b>34,90 €</b>" },
         { "type": "image_picker", "id": "image", "label": "Visuel" },
+        {
+          "type": "range",
+          "id": "taille_image",
+          "label": "Taille du visuel",
+          "info": "0 : la taille commune réglée plus haut, dans « Cadeaux inclus ».",
+          "min": 0,
+          "max": 240,
+          "step": 4,
+          "unit": "px",
+          "default": 0
+        },
         {
           "type": "select",
           "id": "cote",
