@@ -527,6 +527,7 @@
 
 .frn__item[aria-pressed="true"] { border-color: var(--frn-item-on); }
 .frn__item[disabled] { opacity: 0.5; cursor: not-allowed; }
+.frn__item--vide { border-style: dashed; }
 
 .frn__item-img {
   flex: 0 0 auto;
@@ -1197,7 +1198,13 @@
               {%- liquid
                 assign a = block.settings
                 assign a_prod = a.produit
+                assign a_var = a_prod.selected_or_first_available_variant
 
+                comment
+                  Le produit choisi fournit tout : nom, visuel, prix et prix
+                  barré. Les trois champs de texte ne servent qu'à passer
+                  outre, au cas par cas.
+                endcomment
                 assign a_name = a.titre
                 if a_name == blank and a_prod != blank
                   assign a_name = a_prod.title
@@ -1209,8 +1216,7 @@
                 endif
 
                 comment
-                  Les deux prix sont saisis par le marchand, en toutes lettres.
-                  Laissés vides, ils suivent le produit choisi. Les espaces
+                  Les prix saisis le sont en toutes lettres. Les espaces
                   insécables d'un copier-coller sont retirées, sinon `times`
                   rendrait zéro.
                 endcomment
@@ -1218,57 +1224,67 @@
                   echo a.prix | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
                 endcapture
                 assign a_cents = a_raw | times: 100 | round
-                if a_cents <= 0 and a_prod != blank
-                  assign a_cents = a_prod.selected_or_first_available_variant.price
+                if a_cents <= 0 and a_var != blank
+                  assign a_cents = a_var.price
                 endif
 
                 capture a_was_raw
                   echo a.prix_barre | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
                 endcapture
                 assign a_was = a_was_raw | times: 100 | round
-                if a_was <= 0 and a_prod != blank
-                  assign a_was = a_prod.selected_or_first_available_variant.compare_at_price
+                if a_was <= 0 and a_var != blank and a_var.compare_at_price > a_var.price
+                  assign a_was = a_var.compare_at_price
                 endif
                 if a_was <= a_cents
                   assign a_was = 0
                 endif
 
                 comment
-                  Le montant qui entre dans le total avant remise. Sans prix
-                  barré, c'est le prix de l'article lui-même : `default` ne
-                  remplacerait pas un zéro, et l'article disparaîtrait du
-                  calcul.
+                  Le plein tarif, c'est-à-dire le montant qui entre dans le
+                  total avant remise. Sans prix barré, c'est le prix de
+                  l'article lui-même : `default` ne remplacerait pas un zéro,
+                  et l'article disparaîtrait du calcul.
                 endcomment
                 assign a_full = a_was
                 if a_full <= 0
                   assign a_full = a_cents
                 endif
 
+                comment
+                  Un article n'entre au panier que s'il a une déclinaison
+                  disponible. Sans produit, ou en rupture, il est montré mais
+                  inerte : il ne doit pas gonfler un total que l'ajout ne
+                  tiendrait pas.
+                endcomment
                 assign a_vid = 0
-                if a_prod != blank
-                  assign a_vid = a_prod.selected_or_first_available_variant.id
+                assign a_ok = false
+                if a_var != blank
+                  assign a_vid = a_var.id
+                  assign a_ok = a_var.available
                 endif
 
-                comment
-                  Sans produit rattaché, l'article ne peut pas entrer dans le
-                  panier : on le montre, grisé, plutôt que de le laisser
-                  gonfler un total que l'ajout ne tiendrait pas.
-                endcomment
                 assign a_on = a.coche
-                if a_vid == 0
+                unless a_ok
                   assign a_on = false
+                endunless
+
+                comment
+                  Dans l'éditeur, un article sans produit se nomme lui-même :
+                  une carte vide n'apprendrait rien au marchand.
+                endcomment
+                if a_name == blank and a_prod == blank and request.design_mode
+                  assign a_name = s.set_no_product
                 endif
               -%}
               <button
-                class="frn__item"
+                class="frn__item{% unless a_ok %} frn__item--vide{% endunless %}"
                 type="button"
                 data-frn-item
                 data-frn-variant="{{ a_vid }}"
                 data-frn-full="{{ a_full }}"
                 data-frn-net="{{ a_cents }}"
-                data-frn-hasfull="{% if a_was > 0 %}1{% else %}0{% endif %}"
                 aria-pressed="{% if a_on %}true{% else %}false{% endif %}"
-                {% if a_vid == 0 %}disabled title="{{ s.set_no_product | escape }}"{% endif %}
+                {% unless a_ok %}disabled title="{{ s.set_no_product | escape }}"{% endunless %}
                 {{ block.shopify_attributes }}
               >
                 {%- if a_img != blank -%}
@@ -1278,10 +1294,12 @@
                 {%- endif -%}
                 <span class="frn__item-txt">
                   {%- if a_name != blank -%}<span class="frn__item-name">{{ a_name }}</span>{%- endif -%}
-                  <span class="frn__item-price" data-frn-item-price>{{ a_cents | money }}</span>
-                  <span class="frn__item-was" data-frn-item-was {% unless a_was > 0 %}hidden{% endunless %}>
-                    {{- a_was | money -}}
-                  </span>
+                  {%- if a_full > 0 -%}
+                    <span class="frn__item-price" data-frn-item-price>{{ a_cents | money }}</span>
+                    <span class="frn__item-was" data-frn-item-was {% unless a_was > 0 %}hidden{% endunless %}>
+                      {{- a_was | money -}}
+                    </span>
+                  {%- endif -%}
                 </span>
                 <span class="frn__item-mark" aria-hidden="true">
                   <span data-frn-mark-on {% unless a_on %}hidden{% endunless %}>{{ ico_check }}</span>
@@ -1666,20 +1684,29 @@
      * l'argument de l'offre — « ajoute-le et tout le panier descend d'un
      * cran ». Le prix barré, lui, ne bouge jamais.
      *
-     * Sans prix barré saisi, il n'y a pas de plein tarif d'où partir : le
-     * prix écrit par le marchand est alors laissé tel quel.
+     * Le plein tarif est celui qui entre dans le total du bouton : le prix
+     * montré ici en découle, si bien que les deux ne peuvent pas diverger.
      */
     function paintItemPrices(count) {
       if (cfg.setPriceMode !== 'auto') return;
 
       items.forEach(function (b) {
         var priceEl = b.querySelector('[data-frn-item-price]');
-        if (!priceEl || b.getAttribute('data-frn-hasfull') !== '1') return;
+        var full = Number(b.getAttribute('data-frn-full')) || 0;
+        if (!priceEl || full <= 0) return;
 
         var on = b.getAttribute('aria-pressed') === 'true';
-        var full = Number(b.getAttribute('data-frn-full')) || 0;
         var pct = tierPct(on ? count : count + 1);
-        priceEl.textContent = money(Math.round(full * (1 - pct / 100)));
+        var price = Math.round(full * (1 - pct / 100));
+        priceEl.textContent = money(price);
+
+        /* Le prix barré n'est montré que lorsqu'il y a vraiment un écart :
+           un produit sans prix barré en gagne un dès qu'un palier mord. */
+        var wasEl = b.querySelector('[data-frn-item-was]');
+        if (wasEl) {
+          wasEl.textContent = money(full);
+          wasEl.hidden = price >= full;
+        }
 
         /* La mise en avant ne vaut que pour ce qui n'est pas encore pris, et
            seulement si l'ajouter améliore vraiment le prix. */
@@ -2013,7 +2040,7 @@
     },
     { "type": "range", "id": "set_img_size", "label": "Taille des vignettes du set", "min": 28, "max": 90, "step": 2, "unit": "px", "default": 40 },
     { "type": "range", "id": "set_name_size", "label": "Taille du nom des articles", "info": "Baisse-la d'un ou deux crans si un nom passe à la ligne.", "min": 9, "max": 18, "step": 1, "unit": "px", "default": 11 },
-    { "type": "text", "id": "set_no_product", "label": "Article sans produit — infobulle", "info": "Un article du set sans produit choisi ne peut pas être ajouté au panier : il s'affiche grisé.", "default": "Choisis un produit pour cet article" },
+    { "type": "text", "id": "set_no_product", "label": "Article sans produit — mention", "info": "Chaque bloc « Article du set » attend un produit : son nom, son visuel et ses prix en sont repris. Sans produit — ou en rupture — l'article s'affiche grisé et ne peut pas être ajouté.", "default": "Choisis un produit pour cet article" },
 
     { "type": "header", "content": "Bouton d'achat" },
     { "type": "checkbox", "id": "show_buy", "label": "Afficher le bouton", "default": true },
@@ -2140,11 +2167,16 @@
       "type": "set_item",
       "name": "Article du set",
       "settings": [
-        { "type": "product", "id": "produit", "label": "Produit" },
-        { "type": "text", "id": "titre", "label": "Nom affiché", "info": "Vide : le nom du produit." },
-        { "type": "image_picker", "id": "image", "label": "Visuel", "info": "Vide : le visuel du produit." },
-        { "type": "text", "id": "prix", "label": "Prix", "info": "Virgule ou point. Vide : le prix du produit." },
-        { "type": "text", "id": "prix_barre", "label": "Prix barré", "info": "Virgule ou point. Vide : le prix barré du produit." },
+        {
+          "type": "product",
+          "id": "produit",
+          "label": "Produit",
+          "info": "Nom, visuel, prix et prix barré en sont repris automatiquement. Sans produit, l'article s'affiche grisé : il ne pourrait pas entrer dans le panier."
+        },
+        { "type": "text", "id": "titre", "label": "Nom affiché", "info": "Seulement pour remplacer celui du produit." },
+        { "type": "image_picker", "id": "image", "label": "Visuel", "info": "Seulement pour remplacer celui du produit." },
+        { "type": "text", "id": "prix", "label": "Prix", "info": "Seulement pour remplacer celui du produit. Virgule ou point." },
+        { "type": "text", "id": "prix_barre", "label": "Prix barré", "info": "Seulement pour remplacer celui du produit. Virgule ou point." },
         { "type": "checkbox", "id": "coche", "label": "Coché à l'ouverture", "default": false }
       ]
     },
@@ -2201,8 +2233,8 @@
         { "type": "taille", "settings": { "valeur": "20cm", "sous_titre": "Petite" } },
         { "type": "taille", "settings": { "valeur": "24cm", "sous_titre": "Standard", "badge": "Idéale" } },
         { "type": "taille", "settings": { "valeur": "28cm", "sous_titre": "Large" } },
-        { "type": "set_item", "settings": { "titre": "Planche à découper", "prix": "58,50", "prix_barre": "65,00", "coche": true } },
-        { "type": "set_item", "settings": { "titre": "Casserole", "prix": "76,49", "prix_barre": "89,99" } },
+        { "type": "set_item", "settings": { "coche": true } },
+        { "type": "set_item" },
         { "type": "cadeau" },
         {
           "type": "cadeau",
