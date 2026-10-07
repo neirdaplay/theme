@@ -62,6 +62,9 @@
   --frn-trust-ico: {{ s.color_trust_ico }};
   --frn-check-bg: {{ s.color_check_bg }};
   --frn-check-ink: {{ s.color_check_text }};
+  --frn-item-on: {{ s.color_item_on }};
+  --frn-promo-bg: {{ s.color_promo_bg }};
+  --frn-promo-ink: {{ s.color_promo_text }};
 
   --frn-award-bg: {{ s.color_award_bg }};
   --frn-award-ink: {{ s.color_award_text }};
@@ -396,6 +399,22 @@
 
 .frn__size[disabled] { opacity: 0.4; cursor: not-allowed; }
 
+/* Taille épuisée : elle reste cliquable — le visiteur doit pouvoir la
+   choisir pour comprendre pourquoi le bouton d'achat se ferme. */
+.frn__size--out .frn__size-v { text-decoration: line-through; }
+.frn__size--out { opacity: 0.55; }
+
+/* Avertissement réservé à l'éditeur de thème. */
+.frn__warn {
+  margin: -10px 0 16px;
+  padding: 8px 11px;
+  border: 1px dashed var(--frn-line);
+  border-radius: 8px;
+  font-size: calc(var(--frn-size) * 0.76);
+  line-height: 1.35;
+  color: var(--frn-muted);
+}
+
 .frn__size-v { display: block; font-size: calc(var(--frn-size) * 0.98); font-weight: 700; }
 .frn__size-s { display: block; font-size: calc(var(--frn-size) * 0.76); opacity: 0.85; }
 
@@ -506,7 +525,7 @@
   color: inherit;
 }
 
-.frn__item[aria-pressed="true"] { border-color: var(--frn-ink); }
+.frn__item[aria-pressed="true"] { border-color: var(--frn-item-on); }
 .frn__item[disabled] { opacity: 0.5; cursor: not-allowed; }
 
 .frn__item-img {
@@ -530,10 +549,21 @@
 }
 
 .frn__item-price {
-  display: block;
+  display: inline-block;
   margin-top: 2px;
+  padding: 1px 0;
+  border-radius: 5px;
   font-size: calc(var(--frn-size) * 0.82);
   font-weight: 700;
+}
+
+/* Le prix d'un article pas encore pris : c'est celui qu'il aurait une fois
+   ajouté, et il mérite donc d'être vu. */
+.frn__item--promo .frn__item-price {
+  padding-inline: 6px;
+  margin-inline-start: -6px;
+  background: var(--frn-promo-bg);
+  color: var(--frn-promo-ink);
 }
 
 .frn__item-was {
@@ -1071,15 +1101,35 @@
             {%- for block in tailles -%}
               {%- liquid
                 assign t = block.settings
+
+                comment
+                  La déclinaison est retrouvée ici, pas dans le script : la
+                  comparaison se fait sans tenir compte de la casse ni des
+                  espaces, si bien que « 20 cm », « 20cm » et « 20CM »
+                  désignent la même chose. Le bouton porte ensuite
+                  l'identifiant trouvé, et le script n'a plus rien à deviner.
+                endcomment
+                assign key = t.valeur | strip | downcase | replace: ' ', ''
+                assign match_id = 0
+                assign match_ok = false
+                for variant in p.variants
+                  assign vkey = variant.options[option_index] | strip | downcase | replace: ' ', ''
+                  if vkey == key and match_id == 0
+                    assign match_id = variant.id
+                    assign match_ok = variant.available
+                  endif
+                endfor
+
                 assign chosen = false
-                if v.options[option_index] == t.valeur
+                if match_id != 0 and v.id == match_id
                   assign chosen = true
                 endif
               -%}
               <button
-                class="frn__size"
+                class="frn__size{% if match_id != 0 and match_ok == false %} frn__size--out{% endif %}"
                 type="button"
                 data-frn-size="{{ t.valeur | escape }}"
+                data-frn-variant="{{ match_id }}"
                 data-frn-ideal="{{ t.badge | escape }}"
                 aria-pressed="{% if chosen %}true{% else %}false{% endif %}"
                 {{ block.shopify_attributes }}
@@ -1089,6 +1139,15 @@
                   <span class="frn__size-s">{{ t.sous_titre }}</span>
                 {%- endif -%}
               </button>
+
+              {%- comment -%}
+                Aucune déclinaison ne porte cette valeur : le bouton reste
+                cliquable, mais le marchand doit le savoir. Le message ne
+                paraît que dans l'éditeur de thème.
+              {%- endcomment -%}
+              {%- if match_id == 0 and request.design_mode -%}
+                {%- assign size_warning = true -%}
+              {%- endif -%}
             {%- endfor -%}
           </div>
           {%- comment -%}
@@ -1098,6 +1157,10 @@
           {%- endcomment -%}
           <span class="frn__ideal" data-frn-ideal-badge hidden></span>
         </div>
+
+        {%- if size_warning -%}
+          <p class="frn__warn">{{ s.sizes_warning }}</p>
+        {%- endif -%}
       {%- endif -%}
 
       {%- comment -%} ---------- Composeur de set ---------- {%- endcomment -%}
@@ -1203,6 +1266,7 @@
                 data-frn-variant="{{ a_vid }}"
                 data-frn-full="{{ a_full }}"
                 data-frn-net="{{ a_cents }}"
+                data-frn-hasfull="{% if a_was > 0 %}1{% else %}0{% endif %}"
                 aria-pressed="{% if a_on %}true{% else %}false{% endif %}"
                 {% if a_vid == 0 %}disabled title="{{ s.set_no_product | escape }}"{% endif %}
                 {{ block.shopify_attributes }}
@@ -1214,8 +1278,10 @@
                 {%- endif -%}
                 <span class="frn__item-txt">
                   {%- if a_name != blank -%}<span class="frn__item-name">{{ a_name }}</span>{%- endif -%}
-                  <span class="frn__item-price">{{ a_cents | money }}</span>
-                  {%- if a_was > 0 -%}<span class="frn__item-was">{{ a_was | money }}</span>{%- endif -%}
+                  <span class="frn__item-price" data-frn-item-price>{{ a_cents | money }}</span>
+                  <span class="frn__item-was" data-frn-item-was {% unless a_was > 0 %}hidden{% endunless %}>
+                    {{- a_was | money -}}
+                  </span>
                 </span>
                 <span class="frn__item-mark" aria-hidden="true">
                   <span data-frn-mark-on {% unless a_on %}hidden{% endunless %}>{{ ico_check }}</span>
@@ -1335,6 +1401,9 @@
       "cartAddUrl": {{ routes.cart_add_url | json }},
       "cartUrl": {{ routes.cart_url | json }},
       "afterAdd": {{ s.after_add | json }},
+      "setPriceMode": {{ s.set_price_mode | json }},
+      "setPriceHighlight": {{ s.set_price_highlight | json }},
+      "sizeProperty": {{ s.sizes_property | json }},
       "buyLabel": {{ s.buy_label | json }},
       "soldOutLabel": {{ s.sold_out_label | json }},
       "addedLabel": {{ s.added_label | json }},
@@ -1433,11 +1502,16 @@
     var badge = root.querySelector('[data-frn-ideal-badge]');
     var current = null;
 
-    function variantFor(value) {
+    /* La taille retenue, et si elle correspond bien à une déclinaison. Sans
+       déclinaison, le choix part quand même au panier, en mention de ligne :
+       la commande dit alors ce que le client a demandé. */
+    var chosenSize = '';
+    var sizeHasVariant = true;
+
+    function variantById(id) {
       var list = cfg.variants || [];
       for (var i = 0; i < list.length; i++) {
-        var opts = list[i].options || [];
-        if (String(opts[cfg.optionIndex]) === String(value)) return list[i];
+        if (Number(list[i].id) === Number(id)) return list[i];
       }
       return null;
     }
@@ -1480,20 +1554,32 @@
       if (label) label.textContent = current.available ? cfg.buyLabel : cfg.soldOutLabel;
     }
 
-    function selectSize(value) {
-      var found = variantFor(value);
-      if (!found) return;
-      current = found;
+    /**
+     * Retenir une taille.
+     *
+     * Le marquage est appliqué d'abord, et sans condition : un bouton qui ne
+     * trouve pas sa déclinaison doit quand même répondre au clic. Il ne
+     * répondait pas, et le sélecteur paraissait mort dès que les valeurs
+     * saisies ne tombaient pas exactement sur celles du produit.
+     */
+    function selectSize(btn) {
+      if (!btn) return;
       sizeBtns.forEach(function (b) {
-        b.setAttribute('aria-pressed', b.getAttribute('data-frn-size') === value ? 'true' : 'false');
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
       });
+
+      chosenSize = btn.getAttribute('data-frn-size') || '';
+      var found = variantById(btn.getAttribute('data-frn-variant'));
+      sizeHasVariant = !!found;
+      if (found) current = found;
+
       paintVariant();
       paintTotals();
     }
 
     sizeBtns.forEach(function (b) {
       b.addEventListener('click', function () {
-        selectSize(b.getAttribute('data-frn-size'));
+        selectSize(b);
       });
     });
 
@@ -1502,7 +1588,10 @@
       return b.getAttribute('aria-pressed') === 'true';
     })[0] || sizeBtns[0];
     if (start) {
-      current = variantFor(start.getAttribute('data-frn-size'));
+      chosenSize = start.getAttribute('data-frn-size') || '';
+      var startVariant = variantById(start.getAttribute('data-frn-variant'));
+      sizeHasVariant = !!startVariant;
+      if (startVariant) current = startVariant;
       start.setAttribute('aria-pressed', 'true');
     }
     if (!current) current = (cfg.variants || [])[0] || null;
@@ -1565,6 +1654,37 @@
         pill.textContent = base.replace('[x]', String(pct));
         pill.hidden = pct <= 0;
       }
+
+      paintItemPrices(count);
+    }
+
+    /**
+     * Le prix de chaque article du set.
+     *
+     * Un article déjà choisi est affiché au palier atteint. Un article qui ne
+     * l'est pas est affiché au palier qu'il ferait atteindre : c'est tout
+     * l'argument de l'offre — « ajoute-le et tout le panier descend d'un
+     * cran ». Le prix barré, lui, ne bouge jamais.
+     *
+     * Sans prix barré saisi, il n'y a pas de plein tarif d'où partir : le
+     * prix écrit par le marchand est alors laissé tel quel.
+     */
+    function paintItemPrices(count) {
+      if (cfg.setPriceMode !== 'auto') return;
+
+      items.forEach(function (b) {
+        var priceEl = b.querySelector('[data-frn-item-price]');
+        if (!priceEl || b.getAttribute('data-frn-hasfull') !== '1') return;
+
+        var on = b.getAttribute('aria-pressed') === 'true';
+        var full = Number(b.getAttribute('data-frn-full')) || 0;
+        var pct = tierPct(on ? count : count + 1);
+        priceEl.textContent = money(Math.round(full * (1 - pct / 100)));
+
+        /* La mise en avant ne vaut que pour ce qui n'est pas encore pris, et
+           seulement si l'ajouter améliore vraiment le prix. */
+        b.classList.toggle('frn__item--promo', cfg.setPriceHighlight && !on && pct > tierPct(count));
+      });
     }
 
     items.forEach(function (b) {
@@ -1614,6 +1734,14 @@
         var payload = order.map(function (id) {
           return { id: Number(id), quantity: byVariant[id] };
         });
+
+        /* Une taille choisie sans déclinaison correspondante partirait dans
+           le vide : elle voyage alors en mention de ligne sur le produit
+           principal, pour que la commande dise ce qui a été demandé. */
+        if (!sizeHasVariant && chosenSize && cfg.sizeProperty && payload.length) {
+          payload[0].properties = {};
+          payload[0].properties[cfg.sizeProperty] = chosenSize;
+        }
 
         buy.disabled = true;
         window
@@ -1841,6 +1969,20 @@
     { "type": "checkbox", "id": "show_sizes", "label": "Afficher le sélecteur", "default": true },
     { "type": "text", "id": "option_taille", "label": "Nom de l'option du produit", "info": "Vide : la première option du produit. Exemple : Taille." },
     { "type": "text", "id": "sizes_label", "label": "Libellé du groupe (accessibilité)", "default": "Choix de la taille" },
+    {
+      "type": "text",
+      "id": "sizes_property",
+      "label": "Mention de ligne si la taille n'a pas de déclinaison",
+      "info": "Quand la valeur saisie dans un bloc « Taille » ne correspond à aucune déclinaison du produit, le choix part au panier sous ce nom. Vide : rien n'est transmis.",
+      "default": "Taille"
+    },
+    {
+      "type": "text",
+      "id": "sizes_warning",
+      "label": "Avertissement dans l'éditeur",
+      "info": "Affiché à toi seul, dans l'éditeur de thème, quand une taille ne correspond à aucune déclinaison.",
+      "default": "Une des tailles ne correspond à aucune déclinaison du produit. Vérifie que la valeur saisie dans le bloc est exactement celle de l'option Shopify."
+    },
 
     { "type": "header", "content": "Composeur de set" },
     { "type": "checkbox", "id": "show_set", "label": "Afficher le composeur", "default": true },
@@ -1851,6 +1993,24 @@
     { "type": "range", "id": "tier2_pct", "label": "Remise à 2 pièces", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 10 },
     { "type": "text", "id": "tier3_label", "label": "Libellé du 3e palier", "default": "3 pièces −15 %" },
     { "type": "range", "id": "tier3_pct", "label": "Remise à 3 pièces", "info": "Le thème ne crée aucune remise : il affiche ce pourcentage. Crée la remise automatique correspondante dans Shopify → Réductions, avec les mêmes paliers.", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 15 },
+    {
+      "type": "select",
+      "id": "set_price_mode",
+      "label": "Prix des articles",
+      "info": "« Au palier » calcule le prix depuis le prix barré : un article choisi est au palier atteint, un article pas encore pris est au palier qu'il ferait atteindre. C'est l'argument de l'offre groupée. « Fixe » affiche le prix saisi, tel quel.",
+      "options": [
+        { "value": "auto", "label": "Au palier atteint" },
+        { "value": "fixe", "label": "Fixe, tel que saisi" }
+      ],
+      "default": "auto"
+    },
+    {
+      "type": "checkbox",
+      "id": "set_price_highlight",
+      "label": "Mettre en avant le prix d'un article pas encore pris",
+      "info": "Le prix qu'il aurait une fois ajouté se détache sur un fond coloré.",
+      "default": true
+    },
     { "type": "range", "id": "set_img_size", "label": "Taille des vignettes du set", "min": 28, "max": 90, "step": 2, "unit": "px", "default": 40 },
     { "type": "range", "id": "set_name_size", "label": "Taille du nom des articles", "info": "Baisse-la d'un ou deux crans si un nom passe à la ligne.", "min": 9, "max": 18, "step": 1, "unit": "px", "default": 11 },
     { "type": "text", "id": "set_no_product", "label": "Article sans produit — infobulle", "info": "Un article du set sans produit choisi ne peut pas être ajouté au panier : il s'affiche grisé.", "default": "Choisis un produit pour cet article" },
@@ -1902,6 +2062,9 @@
     { "type": "color", "id": "color_trust_ico", "label": "Icônes des garanties", "default": "#8A6D3B" },
     { "type": "color", "id": "color_check_bg", "label": "Coche d'un article choisi — fond", "default": "#2F5134" },
     { "type": "color", "id": "color_check_text", "label": "Coche d'un article choisi — signe", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_item_on", "label": "Bordure d'un article choisi", "default": "#2F5134" },
+    { "type": "color", "id": "color_promo_bg", "label": "Prix mis en avant — fond", "default": "#E7F0E2" },
+    { "type": "color", "id": "color_promo_text", "label": "Prix mis en avant — texte", "default": "#1F3D24" },
 
     { "type": "header", "content": "Couleurs — bandeau et prix" },
     { "type": "color", "id": "color_award_bg", "label": "Bandeau — fond", "default": "#FFFFFF" },
