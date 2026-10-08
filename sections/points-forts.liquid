@@ -1,0 +1,508 @@
+{% comment %}
+  points-forts.liquid
+  Un bandeau sombre : un titre centré, le produit d'un côté, ses points forts
+  de l'autre, chacun porté par une icône.
+
+  Les icônes sont dessinées ici, au trait et en deux tons — un corps neutre,
+  un détail accentué. Chaque bloc peut leur préférer une image déposée par le
+  marchand ; l'image l'emporte toujours.
+
+  Le visuel du produit déborde du bloc par son côté, d'une valeur réglable et
+  distincte sur mobile et sur bureau : c'est ce débordement qui donne au
+  produit son échelle sans l'écraser.
+
+  Fichier autonome : styles et comportement sont en ligne, rien à déposer
+  dans assets/.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign atouts = section.blocks | where: 'type', 'atout'
+-%}
+
+{% style %}
+/* ==========================================================================
+   Points forts — tout est porté par .pfo
+   ========================================================================== */
+
+#shopify-section-{{ section.id }} .pfo {
+  --pfo-bg: {{ s.color_bg }};
+  --pfo-title: {{ s.color_title }};
+  --pfo-text: {{ s.color_text }};
+  --pfo-ico: {{ s.color_ico }};
+  --pfo-accent: {{ s.color_accent }};
+
+  --pfo-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  display: block;
+  background: var(--pfo-bg);
+  color: var(--pfo-text);
+  font-family: var(--pfo-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+#shopify-section-{{ section.id }} .pfo *,
+#shopify-section-{{ section.id }} .pfo *::before,
+#shopify-section-{{ section.id }} .pfo *::after { box-sizing: border-box; }
+
+.pfo__wrap {
+  max-width: {{ s.container_width }}px;
+  margin-inline: auto;
+  /* Le débordement du visuel sort du bloc : sans cette coupe, il ferait
+     apparaître une barre de défilement horizontale sur toute la page. */
+  overflow: hidden;
+  padding: {{ s.padding_top_mobile }}px {{ s.gutter_mobile }}px {{ s.padding_bottom_mobile }}px;
+}
+
+.pfo__title {
+  max-width: {{ s.titre_max_mobile }}px;
+  margin: 0 auto {{ s.titre_gap_mobile }}px;
+  color: var(--pfo-title);
+  font-size: {{ s.titre_size_mobile }}px;
+  font-weight: {{ s.titre_weight }};
+  line-height: 1.18;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   Les deux colonnes
+   -------------------------------------------------------------------------- */
+
+.pfo__grid {
+  display: grid;
+  grid-template-columns: {{ s.media_width_mobile }}fr {{ 100 | minus: s.media_width_mobile }}fr;
+  align-items: {{ s.media_align }};
+  gap: {{ s.column_gap_mobile }}px;
+}
+
+.pfo__media { min-width: 0; }
+
+.pfo__media img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Le visuel sort du bloc par son côté. La largeur est rendue à l'identique,
+   si bien que l'image grandit au lieu d'être tirée hors cadre. */
+.pfo__media--gauche {
+  margin-left: calc({{ s.media_bleed_mobile }}px * -1);
+  width: calc(100% + {{ s.media_bleed_mobile }}px);
+}
+
+.pfo__media--droite {
+  margin-right: calc({{ s.media_bleed_mobile }}px * -1);
+  width: calc(100% + {{ s.media_bleed_mobile }}px);
+}
+
+/* Visuel à droite : l'ordre du balisage ne change pas, seule la grille
+   inverse les colonnes. Le texte reste lu en premier. */
+.pfo__grid--droite .pfo__media { grid-column: 2; grid-row: 1; }
+.pfo__grid--droite .pfo__list { grid-column: 1; grid-row: 1; }
+
+/* --------------------------------------------------------------------------
+   La liste des points forts
+   -------------------------------------------------------------------------- */
+
+.pfo__list {
+  display: grid;
+  align-content: {{ s.list_align }};
+  gap: {{ s.row_gap_mobile }}px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.pfo__row {
+  display: flex;
+  align-items: center;
+  gap: {{ s.icon_gap_mobile }}px;
+  min-width: 0;
+}
+
+.pfo__ico {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: {{ s.icon_size_mobile }}px;
+  height: {{ s.icon_size_mobile }}px;
+}
+
+.pfo__ico svg { width: 100%; height: 100%; }
+.pfo__ico img { width: 100%; height: 100%; object-fit: contain; }
+
+/* Les deux tons de l'icône. Le corps au trait, l'accent par-dessus ; la
+   découpe reprend le fond, ce qui creuse la coche sans la peindre. */
+.pfo__ico .pfo-body {
+  fill: none;
+  stroke: var(--pfo-ico);
+  stroke-width: {{ s.icon_stroke }};
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pfo__ico .pfo-body-plein { fill: var(--pfo-ico); stroke: none; }
+
+.pfo__ico .pfo-accent {
+  fill: none;
+  stroke: var(--pfo-accent);
+  stroke-width: {{ s.icon_stroke }};
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pfo__ico .pfo-accent-plein { fill: var(--pfo-accent); stroke: none; }
+
+.pfo__ico .pfo-cut {
+  fill: none;
+  stroke: var(--pfo-bg);
+  stroke-width: {{ s.icon_stroke | plus: 0.4 }};
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pfo__label {
+  min-width: 0;
+  color: var(--pfo-text);
+  font-size: {{ s.label_size_mobile }}px;
+  font-weight: {{ s.label_weight }};
+  line-height: 1.3;
+}
+
+/* --------------------------------------------------------------------------
+   Bureau
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: {{ s.breakpoint }}px) {
+  .pfo__wrap {
+    padding: {{ s.padding_top }}px {{ s.gutter }}px {{ s.padding_bottom }}px;
+  }
+
+  .pfo__title {
+    max-width: {{ s.titre_max }}px;
+    margin-bottom: {{ s.titre_gap }}px;
+    font-size: {{ s.titre_size }}px;
+  }
+
+  .pfo__grid {
+    grid-template-columns: {{ s.media_width }}fr {{ 100 | minus: s.media_width }}fr;
+    gap: {{ s.column_gap }}px;
+  }
+
+  .pfo__media--gauche {
+    margin-left: calc({{ s.media_bleed }}px * -1);
+    width: calc(100% + {{ s.media_bleed }}px);
+  }
+
+  .pfo__media--droite {
+    margin-right: calc({{ s.media_bleed }}px * -1);
+    width: calc(100% + {{ s.media_bleed }}px);
+  }
+
+  .pfo__list { gap: {{ s.row_gap }}px; }
+  .pfo__row { gap: {{ s.icon_gap }}px; }
+  .pfo__ico { width: {{ s.icon_size }}px; height: {{ s.icon_size }}px; }
+  .pfo__label { font-size: {{ s.label_size }}px; }
+}
+{% endstyle %}
+
+{%- comment -%}
+  ---------- Les icônes ----------
+  Chacune est capturée une fois, puis choisie par bloc. Deux groupes : le
+  corps au trait, et l'accent coloré. Aucune couleur n'est écrite ici — tout
+  vient de la feuille de style, donc des réglages.
+{%- endcomment -%}
+
+{%- capture ico_lave_vaisselle -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><rect x="3.4" y="2.6" width="17.2" height="18.8" rx="2.2"/><path d="M3.4 7.6h17.2"/></g>
+  <g class="pfo-body-plein"><circle cx="6.6" cy="5.1" r="0.62"/><circle cx="9.1" cy="5.1" r="0.62"/></g>
+  <g class="pfo-accent"><circle cx="12" cy="14.5" r="4.3"/></g>
+  <g class="pfo-accent-plein"><circle cx="12" cy="14.5" r="1.5"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_temperature -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><path d="M8.6 13.9V5.4a2.1 2.1 0 014.2 0v8.5"/><circle cx="10.7" cy="17.3" r="3.2"/><path d="M14.6 6.4h2.2M14.6 9.6h2.2"/></g>
+  <g class="pfo-accent-plein"><circle cx="10.7" cy="17.3" r="1.7"/><path d="M19.2 11.4c-.9-1-1.4-2-1.4-3 0-1.3.8-2.5 2.3-3.6-.2 1.5.3 2.4 1 3.2.8.9 1.3 1.8 1.3 2.9a3 3 0 01-5.9.7c.6.4 1.4.4 2.7-.2z"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_ustensiles -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><path d="M5.2 3.2v4.4M7.4 3.2v4.4M9.6 3.2v4.4"/><path d="M4.8 7.8c0 1.5 1 2.5 2.6 2.7v10.3"/></g>
+  <g class="pfo-accent"><path d="M16.4 12.6v8.2"/></g>
+  <g class="pfo-accent-plein"><path d="M13.6 3.6h5.6a1.2 1.2 0 011.2 1.2v5.4a1.2 1.2 0 01-1.2 1.2h-5.6a1.2 1.2 0 01-1.2-1.2V4.8a1.2 1.2 0 011.2-1.2z"/></g>
+  <g class="pfo-cut"><path d="M15.2 5.8v3.4M18 5.8v3.4"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_sans_pfas -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><rect x="2.8" y="2.8" width="13.4" height="17.4" rx="2.4"/><circle cx="9.5" cy="9.2" r="2.7"/></g>
+  <g class="pfo-accent-plein"><path d="M16.8 11.9l4.4 1.6v3.2c0 2.5-1.9 4.8-4.4 5.4-2.5-.6-4.4-2.9-4.4-5.4v-3.2z"/></g>
+  <g class="pfo-cut"><path d="M14.9 16.6l1.5 1.5 2.8-3"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_induction -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><rect x="2.6" y="3.4" width="18.8" height="17.2" rx="2.2"/></g>
+  <g class="pfo-accent"><circle cx="8.6" cy="9.4" r="3"/><circle cx="15.6" cy="9.4" r="3"/><circle cx="8.6" cy="16.2" r="2.2"/><circle cx="15.6" cy="16.2" r="2.2"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_garantie -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><path d="M12 12c1.8-2.4 3.1-3.7 5.2-3.7a3.7 3.7 0 010 7.4c-2.1 0-3.4-1.3-5.2-3.7zm0 0c-1.8 2.4-3.1 3.7-5.2 3.7a3.7 3.7 0 010-7.4c2.1 0 3.4 1.3 5.2 3.7z"/></g>
+  <g class="pfo-accent-plein"><circle cx="12" cy="12" r="1.5"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_four -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><rect x="3" y="3" width="18" height="18" rx="2.2"/><path d="M3 8.4h18"/><rect x="6.4" y="11.4" width="11.2" height="6.6" rx="1.2"/></g>
+  <g class="pfo-body-plein"><circle cx="6.4" cy="5.7" r="0.62"/><circle cx="9" cy="5.7" r="0.62"/></g>
+  <g class="pfo-accent"><path d="M14.8 5.7h3.2"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_eco -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pfo-body"><path d="M20.4 3.6c.6 5.6-.5 10-3.4 12.8-2.9 2.9-6.9 3-9.4 1.1-2.3-1.8-2.7-5.8.2-8.7 2.8-2.8 7.2-3.8 12.6-3.5"/></g>
+  <g class="pfo-accent"><path d="M4 20.4L12 12.2"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- liquid
+  assign has_media = false
+  if s.image != blank
+    assign has_media = true
+  endif
+-%}
+
+<section class="pfo" {{ section.shopify_attributes }}>
+  <div class="pfo__wrap">
+    {%- if s.show_title and s.titre != blank -%}
+      <h2 class="pfo__title">{{ s.titre }}</h2>
+    {%- endif -%}
+
+    <div class="pfo__grid pfo__grid--{{ s.media_side }}">
+      {%- if has_media -%}
+        <div class="pfo__media pfo__media--{{ s.media_side }}">
+          {{
+            s.image
+            | image_url: width: 1400
+            | image_tag:
+              widths: '400, 600, 900, 1200, 1400',
+              sizes: '(min-width: 900px) 50vw, 55vw',
+              loading: 'lazy',
+              alt: s.image_alt
+          }}
+        </div>
+      {%- elsif request.design_mode -%}
+        {%- comment -%}
+          Sans visuel, la colonne de gauche serait un vide inexpliqué. Dans
+          l'éditeur seulement, on dit quoi y mettre.
+        {%- endcomment -%}
+        <div class="pfo__media pfo__media--{{ s.media_side }}">
+          <p class="pfo__label">{{ s.image_todo }}</p>
+        </div>
+      {%- endif -%}
+
+      <ul class="pfo__list">
+        {%- for block in atouts -%}
+          {%- liquid
+            assign a = block.settings
+            case a.icone
+              when 'lave_vaisselle'
+                assign svg = ico_lave_vaisselle
+              when 'temperature'
+                assign svg = ico_temperature
+              when 'ustensiles'
+                assign svg = ico_ustensiles
+              when 'sans_pfas'
+                assign svg = ico_sans_pfas
+              when 'induction'
+                assign svg = ico_induction
+              when 'garantie'
+                assign svg = ico_garantie
+              when 'four'
+                assign svg = ico_four
+              when 'eco'
+                assign svg = ico_eco
+              else
+                assign svg = ''
+            endcase
+          -%}
+          <li class="pfo__row" {{ block.shopify_attributes }}>
+            {%- if a.image != blank -%}
+              <span class="pfo__ico">
+                {{ a.image | image_url: width: 160 | image_tag: widths: '40, 80, 120, 160', loading: 'lazy', alt: '' }}
+              </span>
+            {%- elsif svg != blank -%}
+              <span class="pfo__ico" aria-hidden="true">{{ svg }}</span>
+            {%- endif -%}
+            {%- if a.texte != blank -%}
+              <span class="pfo__label">{{ a.texte }}</span>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Points forts",
+  "tag": "section",
+  "class": "section-points-forts",
+  "max_blocks": 10,
+  "settings": [
+    { "type": "header", "content": "Mise en page" },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 600, "max": 1800, "step": 20, "unit": "px", "default": 1180 },
+    { "type": "range", "id": "breakpoint", "label": "Bascule mobile / bureau", "min": 600, "max": 1200, "step": 10, "unit": "px", "default": 900 },
+    {
+      "type": "select",
+      "id": "media_side",
+      "label": "Côté du visuel",
+      "options": [
+        { "value": "gauche", "label": "À gauche" },
+        { "value": "droite", "label": "À droite" }
+      ],
+      "default": "gauche"
+    },
+    {
+      "type": "select",
+      "id": "media_align",
+      "label": "Alignement vertical",
+      "options": [
+        { "value": "center", "label": "Centré" },
+        { "value": "start", "label": "En haut" }
+      ],
+      "default": "center"
+    },
+    { "type": "range", "id": "media_width", "label": "Largeur du visuel (bureau)", "info": "En % de la largeur du bloc.", "min": 25, "max": 70, "step": 1, "unit": "%", "default": 50 },
+    { "type": "range", "id": "media_width_mobile", "label": "Largeur du visuel (mobile)", "min": 25, "max": 70, "step": 1, "unit": "%", "default": 45 },
+    { "type": "range", "id": "column_gap", "label": "Espace entre les colonnes (bureau)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 48 },
+    { "type": "range", "id": "column_gap_mobile", "label": "Espace entre les colonnes (mobile)", "min": 0, "max": 80, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "gutter", "label": "Marge latérale (bureau)", "min": 0, "max": 80, "step": 2, "unit": "px", "default": 32 },
+    { "type": "range", "id": "gutter_mobile", "label": "Marge latérale (mobile)", "min": 0, "max": 48, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute (bureau)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 64 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse (bureau)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 64 },
+    { "type": "range", "id": "padding_top_mobile", "label": "Marge haute (mobile)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 36 },
+    { "type": "range", "id": "padding_bottom_mobile", "label": "Marge basse (mobile)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 36 },
+
+    { "type": "header", "content": "Visuel du produit" },
+    { "type": "image_picker", "id": "image", "label": "Image", "info": "Un PNG à fond transparent donne le meilleur résultat sur un fond sombre." },
+    { "type": "text", "id": "image_alt", "label": "Texte alternatif" },
+    { "type": "range", "id": "media_bleed", "label": "Débordement (bureau)", "info": "De combien le visuel sort du bloc par son côté.", "min": 0, "max": 300, "step": 4, "unit": "px", "default": 0 },
+    { "type": "range", "id": "media_bleed_mobile", "label": "Débordement (mobile)", "min": 0, "max": 300, "step": 4, "unit": "px", "default": 80 },
+    { "type": "text", "id": "image_todo", "label": "Rappel dans l'éditeur", "default": "Dépose ici le visuel du produit." },
+
+    { "type": "header", "content": "Titre" },
+    { "type": "checkbox", "id": "show_title", "label": "Afficher le titre", "default": true },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Conçue pour tout encaisser" },
+    { "type": "range", "id": "titre_size", "label": "Taille (bureau)", "min": 16, "max": 64, "step": 1, "unit": "px", "default": 36 },
+    { "type": "range", "id": "titre_size_mobile", "label": "Taille (mobile)", "min": 14, "max": 48, "step": 1, "unit": "px", "default": 26 },
+    {
+      "type": "select",
+      "id": "titre_weight",
+      "label": "Graisse",
+      "options": [
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" },
+        { "value": "800", "label": "Très grasse" }
+      ],
+      "default": "800"
+    },
+    { "type": "range", "id": "titre_max", "label": "Largeur maximale (bureau)", "info": "Au-delà, le titre passe à la ligne.", "min": 200, "max": 1200, "step": 20, "unit": "px", "default": 900 },
+    { "type": "range", "id": "titre_max_mobile", "label": "Largeur maximale (mobile)", "min": 140, "max": 600, "step": 10, "unit": "px", "default": 260 },
+    { "type": "range", "id": "titre_gap", "label": "Espace sous le titre (bureau)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 40 },
+    { "type": "range", "id": "titre_gap_mobile", "label": "Espace sous le titre (mobile)", "min": 0, "max": 80, "step": 2, "unit": "px", "default": 24 },
+
+    { "type": "header", "content": "Points forts" },
+    {
+      "type": "select",
+      "id": "list_align",
+      "label": "Alignement vertical de la liste",
+      "options": [
+        { "value": "center", "label": "Centré" },
+        { "value": "start", "label": "En haut" },
+        { "value": "space-between", "label": "Réparti sur la hauteur" }
+      ],
+      "default": "center"
+    },
+    { "type": "range", "id": "row_gap", "label": "Espace entre les lignes (bureau)", "min": 4, "max": 60, "step": 2, "unit": "px", "default": 26 },
+    { "type": "range", "id": "row_gap_mobile", "label": "Espace entre les lignes (mobile)", "min": 4, "max": 48, "step": 2, "unit": "px", "default": 20 },
+    { "type": "range", "id": "icon_size", "label": "Taille des icônes (bureau)", "min": 16, "max": 80, "step": 2, "unit": "px", "default": 34 },
+    { "type": "range", "id": "icon_size_mobile", "label": "Taille des icônes (mobile)", "min": 14, "max": 64, "step": 2, "unit": "px", "default": 28 },
+    { "type": "range", "id": "icon_stroke", "label": "Épaisseur du trait des icônes", "min": 0.6, "max": 3, "step": 0.2, "default": 1.4 },
+    { "type": "range", "id": "icon_gap", "label": "Espace icône / texte (bureau)", "min": 4, "max": 40, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "icon_gap_mobile", "label": "Espace icône / texte (mobile)", "min": 4, "max": 32, "step": 2, "unit": "px", "default": 12 },
+    { "type": "range", "id": "label_size", "label": "Taille du texte (bureau)", "min": 11, "max": 30, "step": 1, "unit": "px", "default": 17 },
+    { "type": "range", "id": "label_size_mobile", "label": "Taille du texte (mobile)", "min": 10, "max": 24, "step": 1, "unit": "px", "default": 15 },
+    {
+      "type": "select",
+      "id": "label_weight",
+      "label": "Graisse du texte",
+      "options": [
+        { "value": "400", "label": "Normale" },
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" }
+      ],
+      "default": "600"
+    },
+
+    { "type": "header", "content": "Couleurs" },
+    { "type": "color", "id": "color_bg", "label": "Fond", "default": "#2B2B2B" },
+    { "type": "color", "id": "color_title", "label": "Titre", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_text", "label": "Texte des points forts", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_ico", "label": "Icônes — trait principal", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_accent", "label": "Icônes — accent", "default": "#E8762C" }
+  ],
+  "blocks": [
+    {
+      "type": "atout",
+      "name": "Point fort",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icone",
+          "label": "Icône",
+          "options": [
+            { "value": "lave_vaisselle", "label": "Lave-vaisselle" },
+            { "value": "temperature", "label": "Température" },
+            { "value": "ustensiles", "label": "Ustensiles" },
+            { "value": "sans_pfas", "label": "Sans PFAS" },
+            { "value": "induction", "label": "Induction" },
+            { "value": "garantie", "label": "Garantie à vie" },
+            { "value": "four", "label": "Four" },
+            { "value": "eco", "label": "Écologique" },
+            { "value": "aucune", "label": "Aucune" }
+          ],
+          "default": "lave_vaisselle"
+        },
+        { "type": "image_picker", "id": "image", "label": "Image à la place de l'icône", "info": "Prioritaire sur l'icône dessinée. Un PNG ou un SVG à fond transparent." },
+        { "type": "text", "id": "texte", "label": "Texte", "default": "Passe au lave-vaisselle" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Points forts",
+      "blocks": [
+        { "type": "atout", "settings": { "icone": "lave_vaisselle", "texte": "Passe au lave-vaisselle" } },
+        { "type": "atout", "settings": { "icone": "temperature", "texte": "Résiste jusqu'à 400 °C" } },
+        { "type": "atout", "settings": { "icone": "ustensiles", "texte": "Ustensiles en métal acceptés" } },
+        { "type": "atout", "settings": { "icone": "sans_pfas", "texte": "Sans PFAS ni PTFE" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
