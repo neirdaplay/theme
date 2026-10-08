@@ -1453,40 +1453,19 @@
                 endif
 
                 comment
-                  Les prix saisis le sont en toutes lettres. Les espaces
-                  insécables d'un copier-coller sont retirées, sinon `times`
-                  rendrait zéro.
+                  Les deux prix viennent de la fiche Shopify, et de nulle part
+                  ailleurs : le thème ne les calcule pas et ne permet pas de
+                  les réécrire. Un montant affiché ici qui ne serait pas celui
+                  de la base finirait tôt ou tard par contredire le panier.
                 endcomment
-                capture a_raw
-                  echo a.prix | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
-                endcapture
-                assign a_cents = a_raw | times: 100 | round
-                if a_cents <= 0 and a_var != blank
+                assign a_cents = 0
+                assign a_was = 0
+                if a_var != blank
                   assign a_cents = a_var.price
+                  if a_var.compare_at_price > a_var.price
+                    assign a_was = a_var.compare_at_price
+                  endif
                 endif
-
-                capture a_was_raw
-                  echo a.prix_barre | strip | replace: ' ', '' | replace: ' ', '' | replace: ' ', '' | replace: '€', '' | replace: ',', '.'
-                endcapture
-                assign a_was = a_was_raw | times: 100 | round
-                if a_was <= 0 and a_var != blank and a_var.compare_at_price > a_var.price
-                  assign a_was = a_var.compare_at_price
-                endif
-                if a_was <= a_cents
-                  assign a_was = 0
-                endif
-
-                comment
-                  Deux montants, et il ne faut surtout pas les confondre.
-                  a_cents est le prix de vente : c'est lui qui entre dans le
-                  total du bouton, et c'est de lui que découle le prix affiché
-                  une fois le palier appliqué.
-                  a_was est le tarif de référence, celui qu'on barre. Il ne
-                  participe jamais au calcul du total.
-                  Les deux étaient repliés sur une seule valeur, le prix barré,
-                  si bien qu'un article vendu 49 euros avec 65 euros barrés
-                  s'affichait à 58,50 : le prix de vente n'était lu nulle part.
-                endcomment
 
                 comment
                   Un article n'entre au panier que s'il a une déclinaison
@@ -1694,7 +1673,7 @@
       "animSpeed": {{ s.anim_speed | json }},
       "confirmHold": {{ s.confirm_hold | json }},
       "buyWasCompare": {{ s.buy_was_compare | json }},
-      "setPriceMode": {{ s.set_price_mode | json }},
+      "tierOnTotal": {{ s.tier_on_total | json }},
       "setPriceHighlight": {{ s.set_price_highlight | json }},
       "sizeProperty": {{ s.sizes_property | json }},
       "buyLabel": {{ s.buy_label | json }},
@@ -2001,14 +1980,11 @@
       var count = 1 + picked.length;
       var pct = tierPct(count);
 
-      /* Deux sommes, et il faut les deux.
-         `full` est ce qu'on paie avant le palier : le prix de vente de la
-         poêle, plus le plein tarif de chaque article retenu. C'est de lui
-         que découle le total.
-         `barre` est la valeur affichée comme étant celle d'avant : elle part
-         du prix barré de la déclinaison quand il y en a un, sinon du prix de
-         vente. Sans elle, le bouton n'affichait aucun prix barré tant qu'on
-         n'avait rien ajouté au set. */
+      /* Deux sommes, toutes deux faites de prix venus de Shopify.
+         `full` additionne les prix de vente : c'est ce que le panier
+         contiendra réellement.
+         `barre` additionne les prix barrés, en retombant sur le prix de
+         vente pour ce qui n'en a pas. */
       var full = current ? current.price : 0;
       var barre = current ? Math.max(current.price, current.compare_at_price || 0) : 0;
       if (!cfg.buyWasCompare) barre = full;
@@ -2021,7 +1997,11 @@
         barre += list > base ? list : base;
       });
 
-      var total = Math.round(full * (1 - pct / 100));
+      /* Le palier n'est retranché du total que si le marchand a créé la
+         remise automatique correspondante dans Shopify. Un thème ne peut pas
+         la créer : sans elle, retrancher ici annoncerait un montant que le
+         panier ne tiendrait pas. */
+      var total = cfg.tierOnTotal ? Math.round(full * (1 - pct / 100)) : full;
 
       var totalEl = root.querySelector('[data-frn-buy-total]');
       var wasEl = root.querySelector('[data-frn-buy-was]');
@@ -2050,16 +2030,15 @@
     /**
      * Le prix de chaque article du set.
      *
-     * Un article déjà choisi est affiché au palier atteint. Un article qui ne
-     * l'est pas est affiché au palier qu'il ferait atteindre : c'est tout
-     * l'argument de l'offre — « ajoute-le et tout le panier descend d'un
-     * cran ». Le prix barré, lui, ne bouge jamais.
+     * Par défaut il n'y a rien à faire : Liquid a déjà écrit le prix et le
+     * prix barré de la fiche Shopify, et ils ne doivent pas bouger.
      *
-     * Le plein tarif est celui qui entre dans le total du bouton : le prix
-     * montré ici en découle, si bien que les deux ne peuvent pas diverger.
+     * Quand le marchand déclare avoir créé la remise automatique, le palier
+     * est montré ici aussi : un article retenu au palier atteint, un article
+     * encore libre au palier qu'il ferait atteindre — l'argument de l'offre.
      */
     function paintItemPrices(count) {
-      if (cfg.setPriceMode !== 'auto') return;
+      if (!cfg.tierOnTotal) return;
 
       items.forEach(function (b) {
         var priceEl = b.querySelector('[data-frn-item-price]');
@@ -2449,25 +2428,21 @@
     { "type": "text", "id": "set_pill", "label": "Pastille de remise", "info": "[x] est remplacé par le pourcentage du palier atteint.", "default": "−[x] % sur tout" },
     { "type": "checkbox", "id": "show_steps", "label": "Afficher les paliers", "default": true },
     { "type": "text", "id": "tier2_label", "label": "Libellé du 2e palier", "default": "2 pièces −10 %" },
-    { "type": "range", "id": "tier2_pct", "label": "Remise à 2 pièces", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 10 },
+    { "type": "range", "id": "tier2_pct", "label": "Remise à 2 pièces", "info": "Ce pourcentage est seulement affiché. La vraie remise se crée dans Shopify → Réductions.", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 10 },
     { "type": "text", "id": "tier3_label", "label": "Libellé du 3e palier", "default": "3 pièces −15 %" },
-    { "type": "range", "id": "tier3_pct", "label": "Remise à 3 pièces", "info": "Le thème ne crée aucune remise : il affiche ce pourcentage. Crée la remise automatique correspondante dans Shopify → Réductions, avec les mêmes paliers.", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 15 },
+    { "type": "range", "id": "tier3_pct", "label": "Remise à 3 pièces", "info": "Ce pourcentage est seulement affiché. La vraie remise se crée dans Shopify → Réductions.", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 15 },
     {
-      "type": "select",
-      "id": "set_price_mode",
-      "label": "Prix des articles",
-      "info": "« Au palier » calcule le prix depuis le prix barré : un article choisi est au palier atteint, un article pas encore pris est au palier qu'il ferait atteindre. C'est l'argument de l'offre groupée. « Fixe » affiche le prix saisi, tel quel.",
-      "options": [
-        { "value": "auto", "label": "Au palier atteint" },
-        { "value": "fixe", "label": "Fixe, tel que saisi" }
-      ],
-      "default": "auto"
+      "type": "checkbox",
+      "id": "tier_on_total",
+      "label": "J'ai créé la remise automatique dans Shopify",
+      "info": "Un thème ne peut pas créer de remise : elle se règle dans Shopify → Réductions, en remise automatique, avec exactement les paliers ci-dessus. Coche seulement une fois que c'est fait : le total du bouton retranchera alors le palier. Décoché, le bouton annonce la somme réelle des prix, et la pastille se contente d'annoncer la remise à venir.",
+      "default": false
     },
     {
       "type": "checkbox",
       "id": "set_price_highlight",
       "label": "Mettre en avant le prix d'un article pas encore pris",
-      "info": "Le prix qu'il aurait une fois ajouté se détache sur un fond coloré.",
+      "info": "Sans effet tant que la case ci-dessus n'est pas cochée.",
       "default": true
     },
     { "type": "range", "id": "set_img_size", "label": "Taille des vignettes du set", "min": 28, "max": 90, "step": 2, "unit": "px", "default": 40 },
@@ -2625,12 +2600,10 @@
           "type": "product",
           "id": "produit",
           "label": "Produit",
-          "info": "Nom, visuel, prix et prix barré en sont repris automatiquement. Sans produit, l'article s'affiche grisé : il ne pourrait pas entrer dans le panier."
+          "info": "Nom, visuel, prix et prix barré viennent de la fiche Shopify — le thème n'en écrit aucun. Pour changer un prix affiché ici, change-le sur la fiche produit. Sans produit, l'article s'affiche grisé : il ne pourrait pas entrer dans le panier."
         },
         { "type": "text", "id": "titre", "label": "Nom affiché — laisser vide", "info": "À remplir seulement pour écrire autre chose que le nom du produit." },
         { "type": "image_picker", "id": "image", "label": "Visuel — laisser vide", "info": "À remplir seulement pour montrer autre chose que le visuel du produit." },
-        { "type": "text", "id": "prix", "label": "Prix de vente — laisser vide", "info": "Vide, c'est le prix Shopify du produit qui est utilisé, et c'est presque toujours ce qu'il faut. À remplir seulement pour afficher un autre montant. Virgule ou point." },
-        { "type": "text", "id": "prix_barre", "label": "Prix barré — laisser vide", "info": "Vide, c'est le prix barré Shopify du produit qui est utilisé. Ce montant ne sert qu'à être barré : il n'entre jamais dans le total. Virgule ou point." },
         { "type": "checkbox", "id": "coche", "label": "Coché à l'ouverture", "default": false }
       ]
     },
