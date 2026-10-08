@@ -9,9 +9,11 @@
   beaucoup de thèmes animent leurs sections à l'apparition. Rattaché au corps
   du document, plus rien ne peut s'interposer.
 
-  Le compte à rebours part à la première visite et ne repart jamais : son
-  échéance est gardée en localStorage. À l'expiration, un texte de repli
-  s'affiche — il ne redémarre pas et ne ment pas sur le stock.
+  Le compte à rebours a deux points de départ, au choix du marchand. Par
+  défaut il repart de la durée entière à chaque chargement de la page : il
+  n'expire donc jamais, et n'annonce pas une échéance réelle. L'autre mode
+  pose l'échéance à la première visite et la garde en localStorage ; à
+  l'expiration, un texte de repli s'affiche.
 
   Fichier autonome : styles et comportement sont en ligne.
 {% endcomment %}
@@ -160,6 +162,7 @@
       id="anl-{{ section.id }}"
       data-anl
       data-anl-hours="{{ s.hours }}"
+      data-anl-restart="{% if s.clock_mode == 'chargement' %}true{% else %}false{% endif %}"
       data-anl-key="anl-{{ section.id }}"
       data-anl-labels="{{ s.labels | escape }}"
       data-anl-end="{{ s.end_text | escape }}"
@@ -230,6 +233,25 @@
     function deadline() {
       var key = root.dataset.anlKey + ':deadline';
       var hours = parseFloat(root.dataset.anlHours) || 9;
+
+      /* Deux façons de compter.
+
+         « chargement » repart de la durée entière à chaque ouverture de la
+         page : le compteur ne tombe donc jamais à zéro, et n'annonce pas une
+         échéance réelle.
+
+         « visite » pose l'échéance une fois pour toutes et s'y tient : le
+         compte à rebours dit alors quelque chose de vrai, et finit par
+         expirer. */
+      if (root.dataset.anlRestart === 'true') {
+        /* L'échéance gardée d'un réglage précédent n'a plus cours : on la
+           retire, sinon elle ressortirait au moindre retour en arrière. */
+        try {
+          window.localStorage.removeItem(key);
+        } catch (e) {}
+        return Date.now() + hours * 3600 * 1000;
+      }
+
       var stored = null;
       try {
         stored = window.localStorage.getItem(key);
@@ -238,7 +260,6 @@
       var at = stored ? parseInt(stored, 10) : NaN;
       if (!isNaN(at) && at > 0) return at;
 
-      /* Première visite seulement : une fois posée, l'échéance ne bouge plus. */
       at = Date.now() + hours * 3600 * 1000;
       try {
         window.localStorage.setItem(key, String(at));
@@ -358,7 +379,18 @@
 
     { "type": "header", "content": "Compte à rebours" },
     { "type": "checkbox", "id": "show_clock", "label": "Afficher le compte à rebours", "default": true },
-    { "type": "range", "id": "hours", "label": "Durée", "info": "Décomptée depuis la première visite. Ne repart jamais à zéro.", "min": 1, "max": 72, "step": 1, "unit": "h", "default": 9 },
+    {
+      "type": "select",
+      "id": "clock_mode",
+      "label": "Point de départ",
+      "info": "« À chaque chargement » redonne la durée entière à chaque ouverture de la page : le compteur ne tombe jamais à zéro, mais il n'annonce pas une échéance réelle. « À la première visite » pose l'échéance une fois et s'y tient : le décompte dit alors quelque chose de vrai, et finit par expirer.",
+      "options": [
+        { "value": "chargement", "label": "À chaque chargement de la page" },
+        { "value": "visite", "label": "À la première visite" }
+      ],
+      "default": "chargement"
+    },
+    { "type": "range", "id": "hours", "label": "Durée", "min": 1, "max": 72, "step": 1, "unit": "h", "default": 9 },
     { "type": "text", "id": "labels", "label": "Libellés des pavés", "info": "Trois libellés séparés par des virgules.", "default": "HRS, MIN, SEC" },
     { "type": "text", "id": "end_text", "label": "Texte une fois terminé", "default": "Offre terminée" },
 
