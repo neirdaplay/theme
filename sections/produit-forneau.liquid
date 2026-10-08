@@ -1477,15 +1477,16 @@
                 endif
 
                 comment
-                  Le plein tarif, c'est-à-dire le montant qui entre dans le
-                  total avant remise. Sans prix barré, c'est le prix de
-                  l'article lui-même : `default` ne remplacerait pas un zéro,
-                  et l'article disparaîtrait du calcul.
+                  Deux montants, et il ne faut surtout pas les confondre.
+                  a_cents est le prix de vente : c'est lui qui entre dans le
+                  total du bouton, et c'est de lui que découle le prix affiché
+                  une fois le palier appliqué.
+                  a_was est le tarif de référence, celui qu'on barre. Il ne
+                  participe jamais au calcul du total.
+                  Les deux étaient repliés sur une seule valeur, le prix barré,
+                  si bien qu'un article vendu 49 euros avec 65 euros barrés
+                  s'affichait à 58,50 : le prix de vente n'était lu nulle part.
                 endcomment
-                assign a_full = a_was
-                if a_full <= 0
-                  assign a_full = a_cents
-                endif
 
                 comment
                   Un article n'entre au panier que s'il a une déclinaison
@@ -1518,8 +1519,8 @@
                 type="button"
                 data-frn-item
                 data-frn-variant="{{ a_vid }}"
-                data-frn-full="{{ a_full }}"
-                data-frn-net="{{ a_cents }}"
+                data-frn-base="{{ a_cents }}"
+                data-frn-list="{{ a_was }}"
                 aria-pressed="{% if a_on %}true{% else %}false{% endif %}"
                 {% unless a_ok %}disabled title="{{ s.set_no_product | escape }}"{% endunless %}
                 {{ block.shopify_attributes }}
@@ -1531,7 +1532,7 @@
                 {%- endif -%}
                 <span class="frn__item-txt">
                   {%- if a_name != blank -%}<span class="frn__item-name">{{ a_name }}</span>{%- endif -%}
-                  {%- if a_full > 0 -%}
+                  {%- if a_cents > 0 -%}
                     <span class="frn__item-price" data-frn-item-price>{{ a_cents | money }}</span>
                     <span class="frn__item-was" data-frn-item-was {% unless a_was > 0 %}hidden{% endunless %}>
                       {{- a_was | money -}}
@@ -2013,9 +2014,11 @@
       if (!cfg.buyWasCompare) barre = full;
 
       picked.forEach(function (b) {
-        var f = Number(b.getAttribute('data-frn-full')) || 0;
-        full += f;
-        barre += f;
+        var base = Number(b.getAttribute('data-frn-base')) || 0;
+        var list = Number(b.getAttribute('data-frn-list')) || 0;
+        /* Le prix de vente paie, le tarif de référence se barre. */
+        full += base;
+        barre += list > base ? list : base;
       });
 
       var total = Math.round(full * (1 - pct / 100));
@@ -2060,20 +2063,25 @@
 
       items.forEach(function (b) {
         var priceEl = b.querySelector('[data-frn-item-price]');
-        var full = Number(b.getAttribute('data-frn-full')) || 0;
-        if (!priceEl || full <= 0) return;
+        var base = Number(b.getAttribute('data-frn-base')) || 0;
+        if (!priceEl || base <= 0) return;
 
+        /* Le palier s'applique au prix de vente, jamais au tarif barré :
+           c'est bien ce prix-là que le client paiera. */
         var on = b.getAttribute('aria-pressed') === 'true';
         var pct = tierPct(on ? count : count + 1);
-        var price = Math.round(full * (1 - pct / 100));
+        var price = Math.round(base * (1 - pct / 100));
         setMoney(priceEl, price);
 
-        /* Le prix barré n'est montré que lorsqu'il y a vraiment un écart :
-           un produit sans prix barré en gagne un dès qu'un palier mord. */
+        /* Le barré est le plus élevé du tarif de référence et du prix de
+           vente : un produit sans prix barré en gagne un dès qu'un palier
+           mord, puisqu'il descend alors sous son propre prix. */
+        var list = Number(b.getAttribute('data-frn-list')) || 0;
+        var haut = list > base ? list : base;
         var wasEl = b.querySelector('[data-frn-item-was]');
         if (wasEl) {
-          wasEl.textContent = money(full);
-          wasEl.hidden = price >= full;
+          wasEl.textContent = money(haut);
+          wasEl.hidden = price >= haut;
         }
 
         /* La mise en avant ne vaut que pour ce qui n'est pas encore pris, et
@@ -2619,10 +2627,10 @@
           "label": "Produit",
           "info": "Nom, visuel, prix et prix barré en sont repris automatiquement. Sans produit, l'article s'affiche grisé : il ne pourrait pas entrer dans le panier."
         },
-        { "type": "text", "id": "titre", "label": "Nom affiché", "info": "Seulement pour remplacer celui du produit." },
-        { "type": "image_picker", "id": "image", "label": "Visuel", "info": "Seulement pour remplacer celui du produit." },
-        { "type": "text", "id": "prix", "label": "Prix", "info": "Seulement pour remplacer celui du produit. Virgule ou point." },
-        { "type": "text", "id": "prix_barre", "label": "Prix barré", "info": "Seulement pour remplacer celui du produit. Virgule ou point." },
+        { "type": "text", "id": "titre", "label": "Nom affiché — laisser vide", "info": "À remplir seulement pour écrire autre chose que le nom du produit." },
+        { "type": "image_picker", "id": "image", "label": "Visuel — laisser vide", "info": "À remplir seulement pour montrer autre chose que le visuel du produit." },
+        { "type": "text", "id": "prix", "label": "Prix de vente — laisser vide", "info": "Vide, c'est le prix Shopify du produit qui est utilisé, et c'est presque toujours ce qu'il faut. À remplir seulement pour afficher un autre montant. Virgule ou point." },
+        { "type": "text", "id": "prix_barre", "label": "Prix barré — laisser vide", "info": "Vide, c'est le prix barré Shopify du produit qui est utilisé. Ce montant ne sert qu'à être barré : il n'entre jamais dans le total. Virgule ou point." },
         { "type": "checkbox", "id": "coche", "label": "Coché à l'ouverture", "default": false }
       ]
     },
