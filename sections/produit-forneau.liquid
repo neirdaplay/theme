@@ -648,7 +648,19 @@
 
 .frn__item[aria-pressed="true"] { border-color: var(--frn-item-on); }
 .frn__item[disabled] { opacity: 0.5; cursor: not-allowed; }
-.frn__item--vide { border-style: dashed; }
+.frn__item--vide,
+.frn__item--rupture { border-style: dashed; }
+
+/* La raison, écrite sur la carte : « Épuisé » se lit, un gris ne se lit pas. */
+.frn__item-out {
+  display: block;
+  margin-top: 2px;
+  font-size: calc(var(--frn-size) * 0.68);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--frn-muted);
+}
 
 .frn__item-img {
   flex: 0 0 auto;
@@ -1469,15 +1481,29 @@
 
                 comment
                   Un article n'entre au panier que s'il a une déclinaison
-                  disponible. Sans produit, ou en rupture, il est montré mais
-                  inerte : il ne doit pas gonfler un total que l'ajout ne
-                  tiendrait pas.
+                  disponible. Trois états, et il faut les distinguer : sans
+                  eux, une carte grisée ne dit pas si le marchand a oublié le
+                  produit ou si le stock est à zéro.
                 endcomment
                 assign a_vid = 0
-                assign a_ok = false
+                assign a_etat = 'vide'
                 if a_var != blank
                   assign a_vid = a_var.id
-                  assign a_ok = a_var.available
+                  if a_var.available
+                    assign a_etat = 'ok'
+                  else
+                    assign a_etat = 'rupture'
+                  endif
+                endif
+
+                assign a_ok = false
+                if a_etat == 'ok'
+                  assign a_ok = true
+                endif
+
+                assign a_raison = s.set_no_product
+                if a_etat == 'rupture'
+                  assign a_raison = s.set_sold_out
                 endif
 
                 assign a_on = a.coche
@@ -1493,15 +1519,22 @@
                   assign a_name = s.set_no_product
                 endif
               -%}
+
+              {%- comment -%}
+                En rupture, le marchand peut préférer masquer l'article plutôt
+                que de montrer une carte morte.
+              {%- endcomment -%}
+              {%- unless a_etat == 'rupture' and s.set_hide_sold_out -%}
               <button
-                class="frn__item{% unless a_ok %} frn__item--vide{% endunless %}"
+                class="frn__item frn__item--{{ a_etat }}"
                 type="button"
                 data-frn-item
+                data-frn-etat="{{ a_etat }}"
                 data-frn-variant="{{ a_vid }}"
                 data-frn-base="{{ a_cents }}"
                 data-frn-list="{{ a_was }}"
                 aria-pressed="{% if a_on %}true{% else %}false{% endif %}"
-                {% unless a_ok %}disabled title="{{ s.set_no_product | escape }}"{% endunless %}
+                {% unless a_ok %}disabled title="{{ a_raison | escape }}"{% endunless %}
                 {{ block.shopify_attributes }}
               >
                 {%- if a_img != blank -%}
@@ -1511,6 +1544,13 @@
                 {%- endif -%}
                 <span class="frn__item-txt">
                   {%- if a_name != blank -%}<span class="frn__item-name">{{ a_name }}</span>{%- endif -%}
+                  {%- if a_etat == 'rupture' -%}
+                    {%- comment -%}
+                      Une carte grisée sans explication ressemble à une panne.
+                      Elle dit donc pourquoi elle ne répond pas.
+                    {%- endcomment -%}
+                    <span class="frn__item-out">{{ s.set_sold_out }}</span>
+                  {%- endif -%}
                   {%- if a_cents > 0 -%}
                     <span class="frn__item-price" data-frn-item-price>{{ a_cents | money }}</span>
                     <span class="frn__item-was" data-frn-item-was {% unless a_was > 0 %}hidden{% endunless %}>
@@ -1518,11 +1558,14 @@
                     </span>
                   {%- endif -%}
                 </span>
-                <span class="frn__item-mark" aria-hidden="true">
-                  <span data-frn-mark-on {% unless a_on %}hidden{% endunless %}>{{ ico_check }}</span>
-                  <span data-frn-mark-off {% if a_on %}hidden{% endif %}>{{ ico_plus }}</span>
-                </span>
+                {%- if a_ok -%}
+                  <span class="frn__item-mark" aria-hidden="true">
+                    <span data-frn-mark-on {% unless a_on %}hidden{% endunless %}>{{ ico_check }}</span>
+                    <span data-frn-mark-off {% if a_on %}hidden{% endif %}>{{ ico_plus }}</span>
+                  </span>
+                {%- endif -%}
               </button>
+              {%- endunless -%}
             {%- endfor -%}
           </div>
         </div>
@@ -2426,7 +2469,7 @@
     { "type": "checkbox", "id": "show_set", "label": "Afficher le composeur", "default": true },
     { "type": "text", "id": "set_title", "label": "Titre", "default": "Composez votre set" },
     { "type": "text", "id": "set_pill", "label": "Pastille de remise", "info": "[x] est remplacé par le pourcentage du palier atteint.", "default": "−[x] % sur tout" },
-    { "type": "checkbox", "id": "show_steps", "label": "Afficher les paliers", "default": true },
+    { "type": "checkbox", "id": "show_steps", "label": "Afficher les paliers", "info": "Le palier dépend du nombre d'articles retenus, pas desquels : un article au choix ouvre le premier palier, deux ouvrent le second.", "default": true },
     { "type": "text", "id": "tier2_label", "label": "Libellé du 2e palier", "default": "2 pièces −10 %" },
     { "type": "range", "id": "tier2_pct", "label": "Remise à 2 pièces", "info": "Ce pourcentage est seulement affiché. La vraie remise se crée dans Shopify → Réductions.", "min": 0, "max": 50, "step": 1, "unit": "%", "default": 10 },
     { "type": "text", "id": "tier3_label", "label": "Libellé du 3e palier", "default": "3 pièces −15 %" },
@@ -2447,6 +2490,8 @@
     },
     { "type": "range", "id": "set_img_size", "label": "Taille des vignettes du set", "min": 28, "max": 90, "step": 2, "unit": "px", "default": 40 },
     { "type": "range", "id": "set_name_size", "label": "Taille du nom des articles", "info": "Baisse-la d'un ou deux crans si un nom passe à la ligne.", "min": 9, "max": 18, "step": 1, "unit": "px", "default": 11 },
+    { "type": "text", "id": "set_sold_out", "label": "Article épuisé — mention", "info": "Un article dont le produit n'a plus aucune déclinaison en stock ne peut pas être ajouté. Il s'affiche grisé avec cette mention. Vérifie le stock de la fiche, ou « Continuer la vente en rupture de stock ».", "default": "Épuisé" },
+    { "type": "checkbox", "id": "set_hide_sold_out", "label": "Masquer les articles épuisés", "info": "Plutôt que de montrer une carte grisée.", "default": false },
     { "type": "text", "id": "set_no_product", "label": "Article sans produit — mention", "info": "Chaque bloc « Article du set » attend un produit : son nom, son visuel et ses prix en sont repris. Sans produit — ou en rupture — l'article s'affiche grisé et ne peut pas être ajouté.", "default": "Choisis un produit pour cet article" },
 
     { "type": "header", "content": "Bouton d'achat" },
