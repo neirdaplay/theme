@@ -1,0 +1,796 @@
+{% comment %}
+  profils-clients.liquid
+  Une pastille, un titre, une accroche, puis une carte blanche où chaque
+  profil de client se déplie sur un avis : photo, étoiles, citation, auteur.
+
+  Le dépliement passe par une grille dont la rangée va de 0fr à 1fr : la
+  hauteur s'anime sans qu'on ait à la mesurer, donc sans recalcul au
+  redimensionnement ni à la mise à jour du contenu.
+
+  Les icônes sont dessinées ici, au trait et en deux tons. Chaque profil peut
+  leur préférer une image déposée, qui l'emporte toujours.
+
+  Fichier autonome : styles et comportement sont en ligne.
+{% endcomment %}
+
+{%- liquid
+  assign s = section.settings
+  assign profils = section.blocks | where: 'type', 'profil'
+-%}
+
+{% style %}
+/* ==========================================================================
+   Profils clients — tout est porté par .pcl
+   ========================================================================== */
+
+#shopify-section-{{ section.id }} .pcl {
+  --pcl-bg: {{ s.color_bg }};
+  --pcl-title: {{ s.color_title }};
+  --pcl-intro: {{ s.color_intro }};
+  --pcl-card: {{ s.color_card }};
+  --pcl-line: {{ s.color_line }};
+  --pcl-label: {{ s.color_label }};
+  --pcl-sign: {{ s.color_sign }};
+  --pcl-tile: {{ s.color_tile }};
+  --pcl-ico: {{ s.color_ico }};
+  --pcl-accent: {{ s.color_accent }};
+  --pcl-star: {{ s.color_star }};
+  --pcl-quote: {{ s.color_quote }};
+  --pcl-author: {{ s.color_author }};
+  --pcl-city: {{ s.color_city }};
+  --pcl-check: {{ s.color_check }};
+
+  --pcl-font: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  display: block;
+  background: var(--pcl-bg);
+  font-family: var(--pcl-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+#shopify-section-{{ section.id }} .pcl *,
+#shopify-section-{{ section.id }} .pcl *::before,
+#shopify-section-{{ section.id }} .pcl *::after { box-sizing: border-box; }
+
+.pcl__wrap {
+  max-width: {{ s.container_width }}px;
+  margin-inline: auto;
+  padding: {{ s.padding_top_mobile }}px {{ s.gutter_mobile }}px {{ s.padding_bottom_mobile }}px;
+}
+
+/* --------------------------------------------------------------------------
+   En-tête
+   -------------------------------------------------------------------------- */
+
+.pcl__head { text-align: center; }
+
+.pcl__pill {
+  display: inline-block;
+  margin: 0 0 {{ s.pill_gap }}px;
+  padding: {{ s.pill_pad_y }}px {{ s.pill_pad_x }}px;
+  border-radius: {{ s.pill_radius }}px;
+  background: {{ s.color_pill_bg }};
+  color: {{ s.color_pill_text }};
+  font-size: {{ s.pill_size }}px;
+  font-weight: {{ s.pill_weight }};
+  line-height: 1.2;
+}
+
+.pcl__title {
+  max-width: {{ s.titre_max_mobile }}px;
+  margin: 0 auto {{ s.titre_gap_mobile }}px;
+  color: var(--pcl-title);
+  font-size: {{ s.titre_size_mobile }}px;
+  font-weight: {{ s.titre_weight }};
+  line-height: 1.18;
+}
+
+.pcl__intro {
+  max-width: {{ s.intro_max_mobile }}px;
+  margin: 0 auto {{ s.intro_gap_mobile }}px;
+  color: var(--pcl-intro);
+  font-size: {{ s.intro_size_mobile }}px;
+  font-weight: {{ s.intro_weight }};
+  line-height: 1.5;
+}
+
+.pcl__intro p { margin: 0; }
+.pcl__intro p + p { margin-top: 0.6em; }
+
+/* --------------------------------------------------------------------------
+   La carte et ses rangées
+   -------------------------------------------------------------------------- */
+
+.pcl__card {
+  border-radius: {{ s.card_radius }}px;
+  background: var(--pcl-card);
+  overflow: hidden;
+}
+
+.pcl__row + .pcl__row { border-top: 1px solid var(--pcl-line); }
+
+.pcl__head-btn {
+  display: flex;
+  align-items: center;
+  gap: {{ s.tile_gap_mobile }}px;
+  width: 100%;
+  padding: {{ s.row_pad_mobile }}px {{ s.row_pad_x_mobile }}px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pcl__tile {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: {{ s.tile_size_mobile }}px;
+  height: {{ s.tile_size_mobile }}px;
+  border-radius: {{ s.tile_radius }}px;
+  background: var(--pcl-tile);
+}
+
+.pcl__tile svg,
+.pcl__tile img {
+  width: {{ s.icon_ratio }}%;
+  height: {{ s.icon_ratio }}%;
+}
+
+.pcl__tile img { object-fit: contain; }
+
+/* Les deux tons de l'icône, repris des réglages : aucune couleur n'est
+   écrite dans les tracés. */
+.pcl__tile .pcl-body {
+  fill: none;
+  stroke: var(--pcl-ico);
+  stroke-width: {{ s.icon_stroke }};
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pcl__tile .pcl-body-plein { fill: var(--pcl-ico); stroke: none; }
+
+.pcl__tile .pcl-accent {
+  fill: none;
+  stroke: var(--pcl-accent);
+  stroke-width: {{ s.icon_stroke }};
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pcl__tile .pcl-accent-plein { fill: var(--pcl-accent); stroke: none; }
+
+.pcl__tile .pcl-cut {
+  fill: none;
+  stroke: var(--pcl-tile);
+  stroke-width: {{ s.icon_stroke | plus: 0.4 }};
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pcl__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--pcl-label);
+  font-size: {{ s.label_size_mobile }}px;
+  font-weight: {{ s.label_weight }};
+  line-height: 1.3;
+}
+
+/* Le signe : deux traits, dont l'un disparaît à l'ouverture. Un « + » qui
+   devient « − » sans changer de caractère, donc sans saut de largeur. */
+.pcl__sign {
+  position: relative;
+  flex: 0 0 auto;
+  width: {{ s.sign_size }}px;
+  height: {{ s.sign_size }}px;
+}
+
+.pcl__sign::before,
+.pcl__sign::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: {{ s.sign_size }}px;
+  height: {{ s.sign_thickness }}px;
+  margin: calc({{ s.sign_thickness }}px / -2) 0 0 calc({{ s.sign_size }}px / -2);
+  border-radius: 999px;
+  background: var(--pcl-sign);
+}
+
+.pcl__sign::after {
+  transform: rotate(90deg);
+  transition: transform {{ s.anim_speed }}ms ease, opacity {{ s.anim_speed }}ms ease;
+}
+
+.pcl__row.is-open .pcl__sign::after { transform: rotate(0deg); opacity: 0; }
+
+/* --------------------------------------------------------------------------
+   Le volet dépliant
+   -------------------------------------------------------------------------- */
+
+.pcl__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows {{ s.anim_speed }}ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pcl__row.is-open .pcl__panel { grid-template-rows: 1fr; }
+
+/* min-height: 0 est indispensable : sans lui la rangée refuse de se
+   réduire sous la hauteur de son contenu, et rien ne se replie. */
+.pcl__panel-in {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pcl__panel,
+  .pcl__sign::after { transition: none; }
+}
+
+.pcl__avis {
+  display: grid;
+  grid-template-columns: {{ s.photo_width_mobile }}px 1fr;
+  gap: {{ s.avis_gap_mobile }}px;
+  align-items: start;
+  padding: 0 {{ s.row_pad_x_mobile }}px {{ s.row_pad_mobile }}px;
+}
+
+.pcl__avis--nophoto { grid-template-columns: 1fr; }
+
+.pcl__photo {
+  border-radius: {{ s.photo_radius }}px;
+  overflow: hidden;
+  background: var(--pcl-tile);
+}
+
+.pcl__photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: {{ s.photo_ratio }};
+  object-fit: cover;
+}
+
+.pcl__stars {
+  display: flex;
+  gap: 2px;
+  margin: 0 0 {{ s.stars_gap }}px;
+  color: var(--pcl-star);
+}
+
+.pcl__stars svg { width: {{ s.stars_size }}px; height: {{ s.stars_size }}px; fill: currentColor; }
+.pcl__stars svg.is-off { opacity: {{ s.stars_off_opacity | divided_by: 100.0 }}; }
+
+.pcl__quote {
+  margin: 0 0 {{ s.quote_gap }}px;
+  color: var(--pcl-quote);
+  font-size: {{ s.quote_size_mobile }}px;
+  font-weight: {{ s.quote_weight }};
+  line-height: 1.45;
+}
+
+.pcl__by {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: {{ s.author_size_mobile }}px;
+  line-height: 1.3;
+}
+
+.pcl__check {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: {{ s.check_size }}px;
+  height: {{ s.check_size }}px;
+  color: var(--pcl-check);
+}
+
+.pcl__check svg { width: 100%; height: 100%; }
+.pcl__check .pcl-disc { fill: currentColor; }
+.pcl__check .pcl-tick { fill: none; stroke: var(--pcl-card); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.pcl__name { color: var(--pcl-author); font-weight: 700; }
+.pcl__city { color: var(--pcl-city); font-weight: 400; }
+
+/* --------------------------------------------------------------------------
+   Bureau
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: {{ s.breakpoint }}px) {
+  .pcl__wrap { padding: {{ s.padding_top }}px {{ s.gutter }}px {{ s.padding_bottom }}px; }
+
+  .pcl__title {
+    max-width: {{ s.titre_max }}px;
+    margin-bottom: {{ s.titre_gap }}px;
+    font-size: {{ s.titre_size }}px;
+  }
+
+  .pcl__intro {
+    max-width: {{ s.intro_max }}px;
+    margin-bottom: {{ s.intro_gap }}px;
+    font-size: {{ s.intro_size }}px;
+  }
+
+  .pcl__head-btn {
+    gap: {{ s.tile_gap }}px;
+    padding: {{ s.row_pad }}px {{ s.row_pad_x }}px;
+  }
+
+  .pcl__tile { width: {{ s.tile_size }}px; height: {{ s.tile_size }}px; }
+  .pcl__label { font-size: {{ s.label_size }}px; }
+
+  .pcl__avis {
+    grid-template-columns: {{ s.photo_width }}px 1fr;
+    gap: {{ s.avis_gap }}px;
+    padding: 0 {{ s.row_pad_x }}px {{ s.row_pad }}px;
+  }
+
+  .pcl__avis--nophoto { grid-template-columns: 1fr; }
+  .pcl__quote { font-size: {{ s.quote_size }}px; }
+  .pcl__by { font-size: {{ s.author_size }}px; }
+}
+{% endstyle %}
+
+{%- comment -%}
+  ---------- Les icônes ----------
+  Un corps au trait, un détail accentué. Les couleurs viennent de la feuille
+  de style, donc des réglages.
+{%- endcomment -%}
+
+{%- capture ico_cuisinier -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><path d="M6.6 10.4a3 3 0 01.5-5.9h.2A3.4 3.4 0 0112 3.2a3.4 3.4 0 014.7 1.3h.2a3 3 0 01.5 5.9"/><circle cx="12" cy="15.6" r="4"/><path d="M5.2 21.4c.8-2.4 3.5-3.6 6.8-3.6s6 1.2 6.8 3.6"/></g>
+  <g class="pcl-accent-plein"><path d="M6.6 10.4h10.8v2.2H6.6z"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_poele -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><circle cx="10.2" cy="13.6" r="7.2"/><path d="M15.4 8.5l5.2-5.2"/></g>
+  <g class="pcl-accent-plein"><circle cx="10.2" cy="13.6" r="3.4"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_famille -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><circle cx="6.4" cy="6.8" r="2.6"/><path d="M2.4 15.8c0-2.4 1.8-4.2 4-4.2s4 1.8 4 4.2"/><circle cx="17.6" cy="6.8" r="2.6"/><path d="M13.6 15.8c0-2.4 1.8-4.2 4-4.2s4 1.8 4 4.2"/><circle cx="12" cy="12.2" r="2.2"/><path d="M8.6 21.2c0-2 1.5-3.4 3.4-3.4s3.4 1.4 3.4 3.4"/></g>
+  <g class="pcl-accent-plein"><path d="M18.8 15.4l3.2 1.1v2.3c0 1.8-1.4 3.5-3.2 3.9-1.8-.4-3.2-2.1-3.2-3.9v-2.3z"/></g>
+  <g class="pcl-cut"><path d="M17.4 18.8l1.1 1.1 2-2.2"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_usure -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><circle cx="10" cy="13" r="6.8"/><path d="M14.8 8.2l4.6-4.6"/></g>
+  <g class="pcl-accent-plein"><path d="M6.6 10.6c2.4-.5 4.3.3 5.6 2.4-2 .4-3.4 1.5-4.2 3.3-1.4-1.6-1.9-3.5-1.4-5.7z"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_budget -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><rect x="2.6" y="5.6" width="18.8" height="13.2" rx="2.2"/><path d="M2.6 10h18.8"/></g>
+  <g class="pcl-accent-plein"><circle cx="17" cy="15" r="1.8"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_sport -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><path d="M4 9.2v5.6M7.2 6.6v10.8M20 9.2v5.6M16.8 6.6v10.8M7.2 12h9.6"/></g>
+  <g class="pcl-accent-plein"><circle cx="12" cy="12" r="1.8"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_chef -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><path d="M3.4 9.4h17.2v2.2a8.6 8.6 0 01-17.2 0z"/><path d="M2.6 20.4h18.8"/></g>
+  <g class="pcl-accent-plein"><circle cx="12" cy="5.4" r="1.5"/><circle cx="7.6" cy="6.6" r="1.2"/><circle cx="16.4" cy="6.6" r="1.2"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_eco -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <g class="pcl-body"><path d="M20.4 3.6c.6 5.6-.5 10-3.4 12.8-2.9 2.9-6.9 3-9.4 1.1-2.3-1.8-2.7-5.8.2-8.7 2.8-2.8 7.2-3.8 12.6-3.5"/></g>
+  <g class="pcl-accent"><path d="M4 20.4L12 12.2"/></g>
+</svg>
+{%- endcapture -%}
+
+{%- capture ico_star -%}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/></svg>{%- endcapture -%}
+
+{%- capture ico_check -%}
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <circle class="pcl-disc" cx="12" cy="12" r="10"/>
+  <path class="pcl-tick" d="M7.4 12.4l3.2 3.2 6-6.4"/>
+</svg>
+{%- endcapture -%}
+
+<section class="pcl" {{ section.shopify_attributes }}>
+  <div class="pcl__wrap">
+    <div class="pcl__head">
+      {%- if s.show_pill and s.pill_text != blank -%}
+        <p class="pcl__pill">{{ s.pill_text }}</p>
+      {%- endif -%}
+
+      {%- if s.titre != blank -%}
+        <h2 class="pcl__title">{{ s.titre }}</h2>
+      {%- endif -%}
+
+      {%- if s.intro != blank -%}
+        <div class="pcl__intro">{{ s.intro }}</div>
+      {%- endif -%}
+    </div>
+
+    {%- if profils.size > 0 -%}
+      <div class="pcl__card" data-pcl-card data-pcl-multi="{{ s.allow_multi }}">
+        {%- for block in profils -%}
+          {%- liquid
+            assign b = block.settings
+            assign uid = block.id | replace: '_', '' | slice: 0, 12
+
+            comment
+              Le premier profil s'ouvre d'office si le marchand le demande :
+              un accordéon entièrement fermé ne montre rien de son contenu.
+            endcomment
+            assign ouvert = b.ouvert
+            if s.open_first and forloop.first
+              assign ouvert = true
+            endif
+
+            case b.icone
+              when 'cuisinier'
+                assign svg = ico_cuisinier
+              when 'poele'
+                assign svg = ico_poele
+              when 'famille'
+                assign svg = ico_famille
+              when 'usure'
+                assign svg = ico_usure
+              when 'budget'
+                assign svg = ico_budget
+              when 'sport'
+                assign svg = ico_sport
+              when 'chef'
+                assign svg = ico_chef
+              when 'eco'
+                assign svg = ico_eco
+              else
+                assign svg = ''
+            endcase
+          -%}
+          <div class="pcl__row{% if ouvert %} is-open{% endif %}" data-pcl-row {{ block.shopify_attributes }}>
+            <button
+              class="pcl__head-btn"
+              type="button"
+              data-pcl-head
+              id="pcl-h-{{ uid }}"
+              aria-expanded="{% if ouvert %}true{% else %}false{% endif %}"
+              aria-controls="pcl-p-{{ uid }}"
+            >
+              {%- if b.image != blank or svg != blank -%}
+                <span class="pcl__tile" aria-hidden="true">
+                  {%- if b.image != blank -%}
+                    {{ b.image | image_url: width: 160 | image_tag: widths: '40, 80, 120, 160', loading: 'lazy', alt: '' }}
+                  {%- else -%}
+                    {{ svg }}
+                  {%- endif -%}
+                </span>
+              {%- endif -%}
+              <span class="pcl__label">{{ b.titre }}</span>
+              <span class="pcl__sign" aria-hidden="true"></span>
+            </button>
+
+            <div
+              class="pcl__panel"
+              id="pcl-p-{{ uid }}"
+              role="region"
+              aria-labelledby="pcl-h-{{ uid }}"
+            >
+              <div class="pcl__panel-in">
+                <div class="pcl__avis{% if b.photo == blank %} pcl__avis--nophoto{% endif %}">
+                  {%- if b.photo != blank -%}
+                    <div class="pcl__photo">
+                      {{
+                        b.photo
+                        | image_url: width: 600
+                        | image_tag: widths: '160, 280, 400, 600', loading: 'lazy', alt: b.photo_alt
+                      }}
+                    </div>
+                  {%- endif -%}
+
+                  <div class="pcl__texte">
+                    {%- if s.show_stars and b.note > 0 -%}
+                      <div class="pcl__stars" role="img" aria-label="{{ b.note }}/5">
+                        {%- for i in (1..5) -%}
+                          {%- if i <= b.note -%}
+                            {{ ico_star }}
+                          {%- else -%}
+                            {{ ico_star | replace: '<svg ', '<svg class="is-off" ' }}
+                          {%- endif -%}
+                        {%- endfor -%}
+                      </div>
+                    {%- endif -%}
+
+                    {%- if b.citation != blank -%}
+                      <p class="pcl__quote">{{ b.citation }}</p>
+                    {%- endif -%}
+
+                    {%- if b.nom != blank or b.ville != blank -%}
+                      <p class="pcl__by">
+                        {%- if s.show_check -%}
+                          <span class="pcl__check" aria-hidden="true">{{ ico_check }}</span>
+                        {%- endif -%}
+                        {%- if b.nom != blank -%}<span class="pcl__name">{{ b.nom }}</span>{%- endif -%}
+                        {%- if b.ville != blank -%}<span class="pcl__city">{{ b.ville }}</span>{%- endif -%}
+                      </p>
+                    {%- endif -%}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+<script>
+  (function () {
+    var card = document.querySelector('#shopify-section-{{ section.id }} [data-pcl-card]');
+    if (!card || card.dataset.pclReady === '1') return;
+    card.dataset.pclReady = '1';
+
+    var multi = card.getAttribute('data-pcl-multi') === 'true';
+
+    function rows() {
+      return [].slice.call(card.querySelectorAll('[data-pcl-row]'));
+    }
+
+    function set(row, open) {
+      row.classList.toggle('is-open', open);
+      var head = row.querySelector('[data-pcl-head]');
+      if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    card.addEventListener('click', function (event) {
+      var head = event.target.closest ? event.target.closest('[data-pcl-head]') : null;
+      if (!head || !card.contains(head)) return;
+
+      var row = head.closest('[data-pcl-row]');
+      var open = row.classList.contains('is-open');
+
+      /* Un seul volet ouvert à la fois, sauf si le marchand en décide
+         autrement : refermer les autres évite une carte qui s'étire sur
+         plusieurs écrans. */
+      if (!multi) {
+        rows().forEach(function (other) {
+          if (other !== row) set(other, false);
+        });
+      }
+
+      set(row, !open);
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Profils clients",
+  "tag": "section",
+  "class": "section-profils-clients",
+  "max_blocks": 12,
+  "settings": [
+    { "type": "header", "content": "Mise en page" },
+    { "type": "range", "id": "container_width", "label": "Largeur du contenu", "min": 480, "max": 1400, "step": 20, "unit": "px", "default": 820 },
+    { "type": "range", "id": "breakpoint", "label": "Bascule mobile / bureau", "min": 600, "max": 1200, "step": 10, "unit": "px", "default": 760 },
+    { "type": "range", "id": "gutter", "label": "Marge latérale (bureau)", "min": 0, "max": 80, "step": 2, "unit": "px", "default": 24 },
+    { "type": "range", "id": "gutter_mobile", "label": "Marge latérale (mobile)", "min": 0, "max": 48, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "padding_top", "label": "Marge haute (bureau)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 64 },
+    { "type": "range", "id": "padding_bottom", "label": "Marge basse (bureau)", "min": 0, "max": 160, "step": 4, "unit": "px", "default": 64 },
+    { "type": "range", "id": "padding_top_mobile", "label": "Marge haute (mobile)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 36 },
+    { "type": "range", "id": "padding_bottom_mobile", "label": "Marge basse (mobile)", "min": 0, "max": 120, "step": 4, "unit": "px", "default": 36 },
+
+    { "type": "header", "content": "Pastille" },
+    { "type": "checkbox", "id": "show_pill", "label": "Afficher la pastille", "default": true },
+    { "type": "text", "id": "pill_text", "label": "Texte", "default": "Ce qui nous distingue" },
+    { "type": "range", "id": "pill_size", "label": "Taille du texte", "min": 9, "max": 22, "step": 1, "unit": "px", "default": 13 },
+    {
+      "type": "select",
+      "id": "pill_weight",
+      "label": "Graisse",
+      "options": [
+        { "value": "400", "label": "Normale" },
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" }
+      ],
+      "default": "500"
+    },
+    { "type": "range", "id": "pill_pad_x", "label": "Marge intérieure horizontale", "min": 4, "max": 40, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "pill_pad_y", "label": "Marge intérieure verticale", "min": 2, "max": 24, "step": 1, "unit": "px", "default": 8 },
+    { "type": "range", "id": "pill_radius", "label": "Arrondi", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 6 },
+    { "type": "range", "id": "pill_gap", "label": "Espace sous la pastille", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 20 },
+
+    { "type": "header", "content": "Titre" },
+    { "type": "text", "id": "titre", "label": "Titre", "default": "Qui a le plus besoin d'une poêle en titane ?" },
+    { "type": "range", "id": "titre_size", "label": "Taille (bureau)", "min": 16, "max": 64, "step": 1, "unit": "px", "default": 34 },
+    { "type": "range", "id": "titre_size_mobile", "label": "Taille (mobile)", "min": 14, "max": 48, "step": 1, "unit": "px", "default": 25 },
+    {
+      "type": "select",
+      "id": "titre_weight",
+      "label": "Graisse",
+      "options": [
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" },
+        { "value": "800", "label": "Très grasse" }
+      ],
+      "default": "800"
+    },
+    { "type": "range", "id": "titre_max", "label": "Largeur maximale (bureau)", "min": 200, "max": 1200, "step": 20, "unit": "px", "default": 620 },
+    { "type": "range", "id": "titre_max_mobile", "label": "Largeur maximale (mobile)", "min": 140, "max": 600, "step": 10, "unit": "px", "default": 350 },
+    { "type": "range", "id": "titre_gap", "label": "Espace sous le titre (bureau)", "min": 0, "max": 80, "step": 2, "unit": "px", "default": 16 },
+    { "type": "range", "id": "titre_gap_mobile", "label": "Espace sous le titre (mobile)", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 14 },
+
+    { "type": "header", "content": "Accroche" },
+    { "type": "richtext", "id": "intro", "label": "Texte", "default": "<p>Si vous faites attention à ce que vous mettez dans votre assiette, il est temps de regarder ce dans quoi vous cuisinez.</p>" },
+    { "type": "range", "id": "intro_size", "label": "Taille (bureau)", "min": 11, "max": 28, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "intro_size_mobile", "label": "Taille (mobile)", "min": 10, "max": 24, "step": 1, "unit": "px", "default": 14 },
+    {
+      "type": "select",
+      "id": "intro_weight",
+      "label": "Graisse",
+      "options": [
+        { "value": "400", "label": "Normale" },
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" }
+      ],
+      "default": "500"
+    },
+    { "type": "range", "id": "intro_max", "label": "Largeur maximale (bureau)", "min": 200, "max": 1000, "step": 20, "unit": "px", "default": 560 },
+    { "type": "range", "id": "intro_max_mobile", "label": "Largeur maximale (mobile)", "min": 140, "max": 600, "step": 10, "unit": "px", "default": 340 },
+    { "type": "range", "id": "intro_gap", "label": "Espace sous l'accroche (bureau)", "min": 0, "max": 80, "step": 2, "unit": "px", "default": 32 },
+    { "type": "range", "id": "intro_gap_mobile", "label": "Espace sous l'accroche (mobile)", "min": 0, "max": 60, "step": 2, "unit": "px", "default": 22 },
+
+    { "type": "header", "content": "Accordéon" },
+    { "type": "checkbox", "id": "allow_multi", "label": "Plusieurs volets ouverts à la fois", "default": false },
+    { "type": "checkbox", "id": "open_first", "label": "Ouvrir le premier profil", "default": false },
+    { "type": "range", "id": "anim_speed", "label": "Durée du dépliement", "min": 0, "max": 800, "step": 20, "unit": "ms", "default": 320 },
+    { "type": "range", "id": "card_radius", "label": "Arrondi de la carte", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "row_pad", "label": "Hauteur des rangées (bureau)", "min": 6, "max": 40, "step": 2, "unit": "px", "default": 18 },
+    { "type": "range", "id": "row_pad_mobile", "label": "Hauteur des rangées (mobile)", "min": 6, "max": 36, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "row_pad_x", "label": "Marge intérieure latérale (bureau)", "min": 6, "max": 48, "step": 2, "unit": "px", "default": 20 },
+    { "type": "range", "id": "row_pad_x_mobile", "label": "Marge intérieure latérale (mobile)", "min": 6, "max": 36, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "label_size", "label": "Taille du libellé (bureau)", "min": 11, "max": 26, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "label_size_mobile", "label": "Taille du libellé (mobile)", "min": 10, "max": 22, "step": 1, "unit": "px", "default": 14 },
+    {
+      "type": "select",
+      "id": "label_weight",
+      "label": "Graisse du libellé",
+      "options": [
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" },
+        { "value": "700", "label": "Grasse" }
+      ],
+      "default": "700"
+    },
+    { "type": "range", "id": "sign_size", "label": "Taille du signe + / −", "min": 8, "max": 32, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "sign_thickness", "label": "Épaisseur du signe", "min": 1, "max": 5, "step": 1, "unit": "px", "default": 2 },
+
+    { "type": "header", "content": "Icônes" },
+    { "type": "range", "id": "tile_size", "label": "Taille du pavé (bureau)", "min": 20, "max": 80, "step": 2, "unit": "px", "default": 42 },
+    { "type": "range", "id": "tile_size_mobile", "label": "Taille du pavé (mobile)", "min": 18, "max": 64, "step": 2, "unit": "px", "default": 36 },
+    { "type": "range", "id": "tile_radius", "label": "Arrondi du pavé", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 8 },
+    { "type": "range", "id": "icon_ratio", "label": "Taille de l'icône dans son pavé", "min": 40, "max": 100, "step": 5, "unit": "%", "default": 70 },
+    { "type": "range", "id": "icon_stroke", "label": "Épaisseur du trait", "min": 0.6, "max": 3, "step": 0.2, "default": 1.4 },
+    { "type": "range", "id": "tile_gap", "label": "Espace pavé / libellé (bureau)", "min": 4, "max": 40, "step": 2, "unit": "px", "default": 14 },
+    { "type": "range", "id": "tile_gap_mobile", "label": "Espace pavé / libellé (mobile)", "min": 4, "max": 32, "step": 2, "unit": "px", "default": 12 },
+
+    { "type": "header", "content": "Avis" },
+    { "type": "range", "id": "photo_width", "label": "Largeur de la photo (bureau)", "min": 60, "max": 320, "step": 4, "unit": "px", "default": 160 },
+    { "type": "range", "id": "photo_width_mobile", "label": "Largeur de la photo (mobile)", "min": 50, "max": 240, "step": 2, "unit": "px", "default": 96 },
+    { "type": "text", "id": "photo_ratio", "label": "Format de la photo", "info": "Par exemple 1 / 1, 4 / 5 ou 3 / 4.", "default": "1 / 1" },
+    { "type": "range", "id": "photo_radius", "label": "Arrondi de la photo", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 8 },
+    { "type": "range", "id": "avis_gap", "label": "Espace photo / texte (bureau)", "min": 4, "max": 48, "step": 2, "unit": "px", "default": 20 },
+    { "type": "range", "id": "avis_gap_mobile", "label": "Espace photo / texte (mobile)", "min": 4, "max": 36, "step": 2, "unit": "px", "default": 14 },
+    { "type": "checkbox", "id": "show_stars", "label": "Afficher les étoiles", "default": true },
+    { "type": "range", "id": "stars_size", "label": "Taille des étoiles", "min": 8, "max": 32, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "stars_off_opacity", "label": "Opacité des étoiles vides", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 20 },
+    { "type": "range", "id": "stars_gap", "label": "Espace sous les étoiles", "min": 0, "max": 32, "step": 2, "unit": "px", "default": 8 },
+    { "type": "range", "id": "quote_size", "label": "Taille de la citation (bureau)", "min": 11, "max": 28, "step": 1, "unit": "px", "default": 15 },
+    { "type": "range", "id": "quote_size_mobile", "label": "Taille de la citation (mobile)", "min": 10, "max": 24, "step": 1, "unit": "px", "default": 13 },
+    {
+      "type": "select",
+      "id": "quote_weight",
+      "label": "Graisse de la citation",
+      "options": [
+        { "value": "400", "label": "Normale" },
+        { "value": "500", "label": "Moyenne" },
+        { "value": "600", "label": "Demi-grasse" }
+      ],
+      "default": "500"
+    },
+    { "type": "range", "id": "quote_gap", "label": "Espace sous la citation", "min": 0, "max": 40, "step": 2, "unit": "px", "default": 12 },
+    { "type": "checkbox", "id": "show_check", "label": "Afficher la coche « vérifié »", "default": true },
+    { "type": "range", "id": "check_size", "label": "Taille de la coche", "min": 8, "max": 32, "step": 1, "unit": "px", "default": 16 },
+    { "type": "range", "id": "author_size", "label": "Taille de l'auteur (bureau)", "min": 10, "max": 24, "step": 1, "unit": "px", "default": 15 },
+    { "type": "range", "id": "author_size_mobile", "label": "Taille de l'auteur (mobile)", "min": 9, "max": 20, "step": 1, "unit": "px", "default": 13 },
+
+    { "type": "header", "content": "Couleurs — fond et en-tête" },
+    { "type": "color", "id": "color_bg", "label": "Fond de la section", "default": "#121212" },
+    { "type": "color", "id": "color_pill_bg", "label": "Pastille — fond", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_pill_text", "label": "Pastille — texte", "default": "#121212" },
+    { "type": "color", "id": "color_title", "label": "Titre", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_intro", "label": "Accroche", "default": "#FFFFFF" },
+
+    { "type": "header", "content": "Couleurs — carte et rangées" },
+    { "type": "color", "id": "color_card", "label": "Fond de la carte", "default": "#FFFFFF" },
+    { "type": "color", "id": "color_line", "label": "Filet de séparation", "default": "#E6E4DF" },
+    { "type": "color", "id": "color_label", "label": "Libellé du profil", "default": "#1A1A18" },
+    { "type": "color", "id": "color_sign", "label": "Signe + / −", "default": "#1A1A18" },
+    { "type": "color", "id": "color_tile", "label": "Pavé de l'icône — fond", "default": "#F4F1EA" },
+    { "type": "color", "id": "color_ico", "label": "Icône — trait principal", "default": "#1A1A18" },
+    { "type": "color", "id": "color_accent", "label": "Icône — accent", "default": "#E8762C" },
+
+    { "type": "header", "content": "Couleurs — avis" },
+    { "type": "color", "id": "color_star", "label": "Étoiles", "default": "#F5A623" },
+    { "type": "color", "id": "color_quote", "label": "Citation", "default": "#2B2B2B" },
+    { "type": "color", "id": "color_author", "label": "Nom", "default": "#1A1A18" },
+    { "type": "color", "id": "color_city", "label": "Ville", "default": "#6E6E68" },
+    { "type": "color", "id": "color_check", "label": "Coche « vérifié »", "default": "#2E9E4F" }
+  ],
+  "blocks": [
+    {
+      "type": "profil",
+      "name": "Profil",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icone",
+          "label": "Icône",
+          "options": [
+            { "value": "cuisinier", "label": "Cuisinier" },
+            { "value": "poele", "label": "Poêle" },
+            { "value": "famille", "label": "Famille" },
+            { "value": "usure", "label": "Poêle usée" },
+            { "value": "budget", "label": "Budget" },
+            { "value": "sport", "label": "Sport" },
+            { "value": "chef", "label": "Chef" },
+            { "value": "eco", "label": "Écologique" },
+            { "value": "aucune", "label": "Aucune" }
+          ],
+          "default": "cuisinier"
+        },
+        { "type": "image_picker", "id": "image", "label": "Image à la place de l'icône", "info": "Prioritaire sur l'icône dessinée." },
+        { "type": "text", "id": "titre", "label": "Nom du profil", "default": "Les cuisiniers du quotidien" },
+        { "type": "checkbox", "id": "ouvert", "label": "Ouvert à l'arrivée", "default": false },
+
+        { "type": "header", "content": "Avis" },
+        { "type": "image_picker", "id": "photo", "label": "Photo" },
+        { "type": "text", "id": "photo_alt", "label": "Texte alternatif de la photo" },
+        { "type": "range", "id": "note", "label": "Note", "min": 0, "max": 5, "step": 1, "unit": "★", "default": 5 },
+        { "type": "textarea", "id": "citation", "label": "Citation", "default": "Cette poêle rend la cuisine de tous les jours facile : nettoyage express, zéro prise de tête. Et la tranquillité de savoir qu'aucun produit nocif ne finit dans nos assiettes." },
+        { "type": "text", "id": "nom", "label": "Nom", "default": "Camille M." },
+        { "type": "text", "id": "ville", "label": "Ville", "default": "Lyon" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Profils clients",
+      "blocks": [
+        { "type": "profil", "settings": { "icone": "cuisinier", "titre": "Les cuisiniers du quotidien", "nom": "Camille M.", "ville": "Lyon" } },
+        { "type": "profil", "settings": { "icone": "poele", "titre": "Les familles soucieuses de leur santé", "nom": "Esther L.", "ville": "Bordeaux" } },
+        { "type": "profil", "settings": { "icone": "famille", "titre": "Les adeptes du bien-manger", "nom": "Patricia H.", "ville": "Nantes" } },
+        { "type": "profil", "settings": { "icone": "usure", "titre": "Ceux qui en ont assez de changer de poêle", "nom": "Joël N.", "ville": "Toulouse" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
